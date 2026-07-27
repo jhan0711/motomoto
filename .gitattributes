@@ -1,0 +1,32 @@
+# Normalizacion de saltos de linea.
+#
+# Contexto: la configuracion global de Git usa core.autocrlf=false (decision D20),
+# por lo que Git no convierte nada por su cuenta. Este archivo asume ese control y
+# lo hace explicito por proyecto, que es lo unico que sobrevive a cambios de equipo.
+#
+# Regla general: todo archivo de texto se guarda en el repositorio con saltos LF.
+# Es lo que esperan ESLint, Prettier, Metro y cualquier servidor de compilacion.
+* text=auto eol=lf
+
+# Excepciones: scripts de Windows que exigen CRLF para ejecutarse correctamente.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Binarios: Git no debe intentar normalizarlos nunca. Hacerlo los corrompe.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.mp4 binary
+*.zip binary
+*.jks binary
+*.keystore binary
+*.p12 binary
+*.pdf binary

@@ -30,8 +30,16 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# Variables de entorno.
+# NUNCA deben subirse al repositorio: contienen claves de Supabase y de mapas.
+# Se ignoran todos los .env salvo la plantilla de ejemplo, que no lleva valores.
+.env
+.env.*
+!.env.example
+
+# Credenciales de servicios
+google-services.json
+GoogleService-Info.plist
 
 # typescript
 *.tsbuildinfo

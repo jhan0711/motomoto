@@ -1,0 +1,21 @@
+# Dependencias
+node_modules/
+
+# Codigo de referencia de la plantilla, no forma parte del proyecto
+example/
+
+# Salidas de compilacion
+dist/
+web-build/
+.expo/
+
+# Carpetas nativas generadas
+android/
+ios/
+
+# Archivos generados o de bloqueo
+package-lock.json
+expo-env.d.ts
+
+# Documentacion con formato deliberado
+PROJECT_STATUS.md
