@@ -141,13 +141,48 @@ esqueleto sin contenido solo es ruido.
 
 ---
 
-## Carpeta `example/`
+## Sistema de diseno
 
-Contiene la aplicacion de demostracion que traia la plantilla de Expo, apartada con el
-script oficial `reset-project`. Se conserva como referencia hasta terminar la Fase 3 y
-esta excluida de Git, de TypeScript, de ESLint y de Prettier.
+Vive en dos carpetas y ninguna pantalla debe saltarselas.
 
-Puede borrarse sin consecuencias.
+`src/theme/` contiene los tokens: colores, tipografia, espaciados, radios, sombras y
+tamanos de icono. **Ningun componente escribe un color, un tamano o un espaciado literal.**
+Los colores no se importan directamente porque dependen del tema activo: se leen con el
+hook `useTheme()`.
+
+`src/components/ui/` contiene los componentes:
+
+```
+text.tsx          Unico componente de texto de la app. Nueve variantes
+button.tsx        Cinco variantes, tres tamanos, estados de carga y deshabilitado
+input.tsx         Con icono, ayuda, error y alternador de contrasena
+card.tsx          Tres variantes: outlined, filled, elevated
+screen.tsx        Contenedor de pantalla: area segura, fondo, teclado
+header.tsx        Cabecera propia. Variante flotante para superponer al mapa
+skeleton.tsx      Placeholder animado para cargas
+spinner.tsx       Indicador para esperas cortas
+empty-state.tsx   Estado vacio con icono, texto y accion
+error-state.tsx   Estado de error, con variante sin conexion
+modal.tsx         Dialogo de confirmacion, con tono destructivo
+bottom-sheet.tsx  Panel deslizante. Superficie principal del pasajero
+```
+
+### Catalogo visual
+
+La ruta `/` es una pantalla temporal que muestra todos los componentes juntos, y `/sheet-demo`
+demuestra el bottom sheet sobre un marcador de posicion del mapa. Ambas se eliminan cuando
+llegue la primera pantalla real del producto.
+
+Sirven para validar cambios del sistema de diseno de un vistazo, en modo claro y oscuro.
+
+### Reglas
+
+- Los iconos se pasan **sin instanciar**: `icon={MapPin}`, no `<MapPin />`. El componente
+  contenedor decide tamano, color y grosor de trazo
+- Los colores se pasan por **nombre semantico tipado**: `color="textSecondary"`. Una errata
+  es un error de compilacion, no un texto invisible
+- Todo elemento pulsable alcanza 48dp de area tactil, con `hitSlop` si hace falta
+- Los iconos se tipan como `LucideIcon`, lo que hace **imposible** pasar un emoji
 
 ---
 
@@ -171,7 +206,9 @@ Consulta [.env.example](./.env.example) para el detalle de cada variable.
 
 ## Convenciones
 
-- Codigo, comentarios y nombres de variables en ingles. Textos de interfaz en espanol
+- Codigo, comentarios y nombres de variables en ingles
+- Textos de interfaz en espanol correcto: con tildes, enyes y signos de apertura. Los
+  archivos fuente se guardan en UTF-8 sin BOM. Verificado en Android
 - **Prohibido el uso de emojis en la interfaz.** Toda representacion visual mediante iconos
   de la libreria elegida
 - Mensajes de commit en ingles con prefijo de tipo: `feat:`, `fix:`, `refactor:`, `docs:`,

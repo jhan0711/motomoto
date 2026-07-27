@@ -5,9 +5,12 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 
 - **Proyecto:** MotoMoto (nombre provisional)
 - **Ultima actualizacion:** 2026-07-26
-- **Fases completadas:** FASE 0 — Definicion funcional (APROBADA), FASE 1 — Preparacion del equipo (APROBADA)
-- **Fase siguiente:** FASE 2 — Creacion y organizacion del proyecto (NO INICIADA)
+- **Fases completadas:** FASE 0 — Definicion funcional (APROBADA), FASE 1 — Preparacion del
+  equipo (APROBADA), FASE 2 — Creacion y organizacion del proyecto (APROBADA),
+  FASE 3 — Sistema de diseno (completada, pendiente de aprobacion)
+- **Fase siguiente:** FASE 4 — Navegacion (NO INICIADA)
 - **Carpeta del proyecto:** C:\dev\motomoto
+- **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
 ---
 
@@ -63,6 +66,52 @@ el sistema.
 | D29 | Vulnerabilidades de npm | Nunca npm audit fix en proyectos Expo. Se usa expo install --check |
 | D30 | Version de npm | Permanece en 11.12.1. No se actualiza a 12 durante la configuracion |
 | D31 | Stack confirmado | Expo 57.0.8, React Native 0.86.0, React 19.2.3, TypeScript 6.0.3 |
+
+### Decisiones de la Fase 2
+
+| # | Decision | Valor |
+|---|---|---|
+| D32 | Repositorio | github.com/jhan0711/motomoto, privado |
+| D33 | Flujo con GitHub | GitHub Desktop, por preferencia del usuario |
+| D34 | Archivos de la plantilla | Se conservan AGENTS.md, CLAUDE.md y .claude/ |
+| D35 | Git inicial | La plantilla ya inicializo el repositorio. Rama main |
+| D36 | Organizacion del codigo | Por dominio, con src/features/ |
+| D37 | Carpeta src/app | Contiene unicamente rutas y layouts de expo-router |
+| D38 | Creacion de carpetas | Bajo demanda. No se crean directorios vacios |
+| D39 | TypeScript | strict mas noUncheckedIndexedAccess, noUnusedLocals, noUnusedParameters y noFallthroughCasesInSwitch |
+| D40 | eslint-config-prettier | No se instala. Se comprobo que no hay conflicto real entre ESLint y Prettier |
+| D41 | Prettier | Comillas simples, comas finales, ancho 100, saltos LF |
+| D42 | Carpeta example/ | Excluida de Git, TypeScript, ESLint y Prettier. Se borra al cerrar la Fase 3 |
+| D43 | Licencia | Aviso de propiedad privada. Se retiro la licencia MIT heredada de la plantilla de Expo |
+
+### Decisiones de la Fase 3
+
+| # | Decision | Valor |
+|---|---|---|
+| D44 | Libreria de iconos | lucide-react-native, familia unica. Plan B: Feather dentro de @expo/vector-icons |
+| D45 | Color de marca | Naranja ambar #F27127. Elegido por visibilidad sobre el mapa |
+| D46 | Tipografia | Fuente del sistema (Roboto en Android). Sin fuente empaquetada |
+| D47 | Colores | Paleta cruda separada de nombres semanticos. Los componentes solo usan los semanticos |
+| D48 | Area tactil minima | 48dp. Los controles menores se amplian con hitSlop, no visualmente |
+| D49 | Nombres | Archivos en kebab-case, componentes en PascalCase |
+| D50 | Colores en props | Se pasan por nombre semantico tipado, nunca como cadena libre |
+| D51 | Iconos en props | Se pasan sin instanciar. El componente contenedor decide tamano, color y trazo |
+| D52 | Error en campos | Se deriva de la presencia del mensaje, no de un booleano independiente |
+| D53 | Contrasenas | Siempre incluyen alternador de visibilidad |
+| D54 | Foco en campos | El borde toma el color de marca |
+| D55 | Numero de motorraton | Entero, obligatorio y unico por vehiculo. Se muestra destacado al pasajero, con la placa como apoyo |
+| D56 | Textos de interfaz | Espanol correcto, con tildes, enyes y signos de apertura. Archivos en UTF-8 sin BOM. Verificado en Android |
+| D57 | Cabecera nativa | Desactivada globalmente con headerShown: false. Se usa el componente Header propio |
+| D58 | Header y navegacion | Header no importa el enrutador. Recibe onBack como funcion |
+| D59 | Screen y cabecera | Screen recibe la cabecera como propiedad, para mantenerla fija fuera del area desplazable |
+| D60 | Teclado en Android | KeyboardAvoidingView sin behavior. Android ya redimensiona la ventana |
+| D61 | ErrorState | Compone EmptyState en lugar de duplicar su maquetacion |
+| D62 | Iconos tipados | La propiedad icon se tipa como LucideIcon. Hace imposible pasar un emoji |
+| D63 | Animaciones continuas | Reanimated, para que corran en el hilo de interfaz |
+| D64 | Bottom sheet | Implementacion propia sobre Reanimated y gesture-handler. Se descarto @expo/ui por ser modal y bloquear el mapa, y @gorhom/bottom-sheet por su historial de rupturas con cada version mayor de Reanimated |
+| D65 | Excepcion de linting | react-hooks/immutability desactivada solo en bottom-sheet.tsx. El compilador de React y los valores compartidos de Reanimated son incompatibles por diseno |
+| D66 | Alcance del bottom sheet | Sin listas desplazables anidadas en el MVP |
+| D67 | Confirmaciones | Componente Modal propio en lugar de Alert de React Native. Alert ignora el tema y se ve distinto en cada capa de personalizacion de Android |
 
 ### Decisiones revertidas
 
@@ -185,8 +234,8 @@ documentos.
 8. Pantalla de confirmacion con origen, destino, pasajeros, distancia y tiempo estimados.
    Sin ningun monto
 9. Confirma. Estado SEARCHING con opcion de cancelar sin penalizacion
-10. Un conductor acepta. Estado ASSIGNED. Tarjeta con foto, nombre, calificacion, placa,
-    modelo y telefono del conductor
+10. Un conductor acepta. Estado ASSIGNED. Tarjeta con el numero de motorraton destacado y,
+    como apoyo, foto, nombre, calificacion, placa, modelo y telefono del conductor
 11. Seguimiento del conductor en el mapa. Estado DRIVER_ON_THE_WAY
 12. El conductor confirma llegada. Estado DRIVER_ARRIVED y notificacion push
 13. El conductor inicia el recorrido. Estado IN_PROGRESS
@@ -227,7 +276,8 @@ estado desde el servidor.
 2. Dashboard: servicios activos, conductores conectados, solicitudes sin asignar, alertas
 3. Conductores: alta con creacion de la cuenta de acceso, edicion, documentos, aprobacion,
    bloqueo, reactivacion, historial y calificaciones
-4. Vehiculos: alta con placa, tipo, modelo y capacidad maxima. Asignacion a un conductor
+4. Vehiculos: alta con numero de unidad, placa, tipo, modelo y capacidad maxima. El numero
+   de unidad es obligatorio y unico. Asignacion a un conductor
 5. Pasajeros: listado, detalle, historial, bloqueo
 6. Lugares frecuentes: alta y edicion de los puntos de referencia del municipio
 7. Servicios: listado filtrable, detalle con linea de tiempo de estados y recorrido en mapa.
@@ -305,7 +355,7 @@ Ninguna tabla se crea hasta haber dibujado y aprobado el modelo entidad-relacion
 ```
 profiles                    Datos comunes de todo usuario y su rol
 drivers                     Datos especificos del conductor y su estado de aprobacion
-vehicles                    Placa, tipo, modelo y capacidad maxima de pasajeros
+vehicles                    Numero de unidad, placa, tipo, modelo y capacidad maxima
 driver_vehicle_assignments  Que conductor opera que vehiculo y desde cuando
 document_types              Tipos de documento configurables desde el panel
 documents                   Documentos de conductores y vehiculos, con vencimiento opcional
@@ -398,9 +448,9 @@ Nunca confiar unicamente en validaciones del frontend.
 |---|---|---|
 | 0 | Definicion funcional | COMPLETADA Y APROBADA |
 | 1 | Preparacion del equipo | COMPLETADA Y APROBADA |
-| 2 | Creacion y organizacion del proyecto | NO INICIADA |
-| 3 | Sistema de diseno | Pendiente |
-| 4 | Navegacion | Pendiente |
+| 2 | Creacion y organizacion del proyecto | COMPLETADA |
+| 3 | Sistema de diseno | COMPLETADA |
+| 4 | Navegacion | NO INICIADA |
 | 5 | Supabase y base de datos | Pendiente |
 | 6 | Autenticacion | Pendiente |
 | 7 | Perfil del pasajero | Pendiente |
@@ -475,25 +525,81 @@ captura de pantalla del emulador. La app de prueba fue eliminada al cerrar la fa
 
 ---
 
-## 15.1 ESTADO ACTUAL
+## 15.2 PROYECTO Y HERRAMIENTAS (Fase 2)
 
-- **Fase actual:** Fase 1 completada y aprobada. Fase 2 pendiente de autorizacion
+Repositorio: https://github.com/jhan0711/motomoto — **privado**. Rama unica `main`.
+
+### Comandos del proyecto
+
+Recordatorio: en PowerShell hay que invocarlos siempre con sufijo `.cmd`.
+
+| Comando | Que hace |
+|---|---|
+| `npm.cmd start` | Arranca el servidor de desarrollo |
+| `npm.cmd run android` | Arranca y abre directamente en Android |
+| `npm.cmd run typecheck` | Verifica tipos sin ejecutar. `tsc --noEmit` |
+| `npm.cmd run lint` | ESLint mediante `expo lint` |
+| `npm.cmd run format` | Formatea con Prettier |
+| `npm.cmd run format:check` | Comprueba formato sin modificar |
+
+**Antes de cada commit los tres controles deben salir en 0:** `typecheck`, `lint`,
+`format:check`.
+
+### Archivos de configuracion creados
+
+```
+tsconfig.json       strict mas 4 comprobaciones adicionales. Excluye node_modules y example
+eslint.config.js    eslint-config-expo en formato plano. Ignora dist, example, node_modules
+.prettierrc         Comillas simples, comas finales, ancho 100, endOfLine lf
+.prettierignore     Excluye example, node_modules, salidas de compilacion y PROJECT_STATUS.md
+.gitattributes      Normaliza a LF. CRLF en .bat, .cmd y .ps1. Binarios sin normalizar
+.gitignore          Protege .env, .env.*, google-services.json. Rescata .env.example
+.env.example        Documenta las variables y la advertencia sobre EXPO_PUBLIC_
+.vscode/settings.json    Formateo al guardar con Prettier, EOL en LF
+.vscode/extensions.json  Recomienda Expo Tools, ESLint y Prettier
+LICENSE             Aviso de propiedad privada, sin nombre de titular todavia
+```
+
+### Nota operativa: emulador con sesion en cache
+
+Al reabrir el emulador, Expo Go restaura la ultima sesion en cache. Si vienes de otro
+proyecto veras la aplicacion anterior con el aviso `Cannot connect to Expo CLI`. Solucion:
+
+```
+adb reverse tcp:8081 tcp:8081
+adb shell am force-stop host.exp.exponent
+adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081"
+```
+
+La redireccion de puerto por adb es mas fiable que depender de la IP de la red local, que
+desde dentro del emulador no siempre es alcanzable.
+
+---
+
+## 15.3 ESTADO ACTUAL
+
+- **Fase actual:** Fase 2 completada, pendiente de aprobacion. Fase 3 sin autorizar
 - **Paso actual:** Ninguno en curso
-- **Ultimo paso completado:** Aprobacion del checklist de validacion de la Fase 1
+- **Ultimo paso completado:** Publicacion del repositorio y correccion de la licencia
 - **Funcionalidades terminadas:** Ninguna. No se ha escrito codigo de producto
-- **Pruebas realizadas:** Validacion completa del entorno, 13 puntos
+- **Pruebas realizadas:** Entorno validado (13 puntos). Proyecto validado (15 puntos)
 - **Errores pendientes:** Ninguno
 - **Errores resueltos en la Fase 1:** E1 core.autocrlf no aplicado. E2 cmdline-tools ausente.
   E3 plataforma android-36 ausente. E4 imagen Wear OS instalada por error. E5 21 versiones
   redundantes de cmdline-tools, 2,77 GB liberados. E6 politica de ejecucion de PowerShell
-- **Archivos creados:** PROJECT_STATUS.md
-- **Repositorio Git:** no inicializado. Se crea en la Fase 2
-- **Proximo paso autorizado:** Ninguno hasta aprobacion de la Fase 2
+- **Hallazgos resueltos en la Fase 2:** H1 el .gitignore de la plantilla no protegia los
+  archivos .env. H2 la plantilla incluia una licencia MIT a nombre de Expo
+- **Commits:** 21a12b7 Initial commit, 8ad6705 configuracion del proyecto,
+  442e7ce correccion de licencia
+- **Proximo paso autorizado:** Ninguno hasta aprobacion de la Fase 3
 
 ---
 
 ## 16. PENDIENTES CONOCIDOS
 
+- Titular de los derechos del software. El archivo LICENSE dice "Todos los derechos
+  reservados" pero no nombra a nadie. Falta decidir si el codigo pertenece al desarrollador
+  o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)
 - Nombre comercial definitivo e identidad de marca (antes de la Fase 25)
 - Color de marca (antes de la Fase 3)
 - Eleccion del proveedor de mapas, tras probar el autocompletado real en Amalfi (Fase 8)
