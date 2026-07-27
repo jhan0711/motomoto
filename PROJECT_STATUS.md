@@ -7,7 +7,7 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **Ultima actualizacion:** 2026-07-26
 - **Fases completadas:** FASE 0 — Definicion funcional (APROBADA), FASE 1 — Preparacion del
   equipo (APROBADA), FASE 2 — Creacion y organizacion del proyecto (APROBADA),
-  FASE 3 — Sistema de diseno (completada, pendiente de aprobacion)
+  FASE 3 — Sistema de diseno (APROBADA)
 - **Fase siguiente:** FASE 4 — Navegacion (NO INICIADA)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
@@ -112,6 +112,19 @@ el sistema.
 | D65 | Excepcion de linting | react-hooks/immutability desactivada solo en bottom-sheet.tsx. El compilador de React y los valores compartidos de Reanimated son incompatibles por diseno |
 | D66 | Alcance del bottom sheet | Sin listas desplazables anidadas en el MVP |
 | D67 | Confirmaciones | Componente Modal propio en lugar de Alert de React Native. Alert ignora el tema y se ve distinto en cada capa de personalizacion de Android |
+
+### Decisiones de la Fase 4
+
+| # | Decision | Valor |
+|---|---|---|
+| D68 | Estructura de rutas | passenger y driver en carpetas reales, no en grupos. Dos grupos con la misma hoja colisionarian en la misma URL |
+| D69 | Sesion temporal | src/features/auth/session.tsx expone user, isLoading, signInAs y signOut. En la Fase 6 cambia el interior, no la forma |
+| D70 | Guardias | Viven en los _layout.tsx, no en cada pantalla. Una pantalla nueva queda protegida sin que haya que acordarse |
+| D71 | Navegacion inferior | Sin pestanas para el pasajero: el bottom sheet ocupa ese espacio. Con pestanas para el conductor |
+| D72 | Alcance de las guardias | Deciden que se renderiza, no que se permite. La autorizacion real vive en las politicas RLS de la Fase 5 |
+| D73 | Catalogo | Movido a /catalog. Se retira al terminar la Fase 7 |
+| D74 | Recuperacion de contrasena | La confirmacion no revela si el correo existe, para no permitir enumerar cuentas |
+| D75 | useSession fuera del proveedor | Lanza excepcion. Devolver null se confundiria con una sesion cerrada y produciria redirecciones en bucle dificiles de diagnosticar |
 
 ### Decisiones revertidas
 
@@ -449,9 +462,9 @@ Nunca confiar unicamente en validaciones del frontend.
 | 0 | Definicion funcional | COMPLETADA Y APROBADA |
 | 1 | Preparacion del equipo | COMPLETADA Y APROBADA |
 | 2 | Creacion y organizacion del proyecto | COMPLETADA |
-| 3 | Sistema de diseno | COMPLETADA |
-| 4 | Navegacion | NO INICIADA |
-| 5 | Supabase y base de datos | Pendiente |
+| 3 | Sistema de diseno | COMPLETADA Y APROBADA |
+| 4 | Navegacion | COMPLETADA |
+| 5 | Supabase y base de datos | NO INICIADA |
 | 6 | Autenticacion | Pendiente |
 | 7 | Perfil del pasajero | Pendiente |
 | 8 | Mapa principal | Pendiente |

@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { SessionProvider } from '@/features/auth/session';
 import { useTheme } from '@/theme';
 
 /**
@@ -24,7 +25,9 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaProvider>
-        <RootNavigator />
+        <SessionProvider>
+          <RootNavigator />
+        </SessionProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );
