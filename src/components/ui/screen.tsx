@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 
-import { spacing, useTheme } from '@/theme';
+import { MAX_CONTENT_WIDTH, spacing, useTheme } from '@/theme';
 
 export interface ScreenProps {
   children: ReactNode;
@@ -30,6 +30,13 @@ export interface ScreenProps {
   edges?: readonly Edge[];
   /** `background` for plain screens, `surface` for card-like ones. */
   background?: 'background' | 'surface';
+  /**
+   * Caps the content column at MAX_CONTENT_WIDTH and centers it, so the layout
+   * stays readable on tablets. On a phone it has no effect, since the screen is
+   * already narrower than the cap. Turn it off for screens that must fill the
+   * display edge to edge.
+   */
+  constrained?: boolean;
   contentContainerStyle?: StyleProp<ViewStyle>;
   style?: StyleProp<ViewStyle>;
 }
@@ -55,6 +62,7 @@ export function Screen({
   padded = true,
   edges = DEFAULT_EDGES,
   background = 'background',
+  constrained = true,
   contentContainerStyle,
   style,
 }: ScreenProps) {
@@ -86,14 +94,23 @@ export function Screen({
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        {header}
-        {body}
+        {/* The header goes inside the constrained column too, so its title lines
+            up with the content below instead of drifting to the far edge. */}
+        <View style={[styles.flex, constrained && styles.constrained]}>
+          {header}
+          {body}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  constrained: {
+    alignSelf: 'center',
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: '100%',
+  },
   flex: {
     flex: 1,
   },

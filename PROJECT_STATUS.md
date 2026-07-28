@@ -7,8 +7,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **Ultima actualizacion:** 2026-07-26
 - **Fases completadas:** FASE 0 — Definicion funcional (APROBADA), FASE 1 — Preparacion del
   equipo (APROBADA), FASE 2 — Creacion y organizacion del proyecto (APROBADA),
-  FASE 3 — Sistema de diseno (APROBADA)
-- **Fase siguiente:** FASE 4 — Navegacion (NO INICIADA)
+  FASE 3 — Sistema de diseno (APROBADA), FASE 4 — Navegacion (APROBADA)
+- **Fase siguiente:** FASE 5 — Supabase y base de datos (NO INICIADA)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -125,6 +125,7 @@ el sistema.
 | D73 | Catalogo | Movido a /catalog. Se retira al terminar la Fase 7 |
 | D74 | Recuperacion de contrasena | La confirmacion no revela si el correo existe, para no permitir enumerar cuentas |
 | D75 | useSession fuera del proveedor | Lanza excepcion. Devolver null se confundiria con una sesion cerrada y produciria redirecciones en bucle dificiles de diagnosticar |
+| D76 | Ancho maximo de contenido | 520 dp, centrado, en Screen y en el contenido del BottomSheet. Detectado al probar en una tablet de 800 dp de ancho logico. Las pantallas que deben ocupar todo el ancho, como el mapa, se excluyen con constrained={false} |
 
 ### Decisiones revertidas
 
@@ -463,7 +464,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 1 | Preparacion del equipo | COMPLETADA Y APROBADA |
 | 2 | Creacion y organizacion del proyecto | COMPLETADA |
 | 3 | Sistema de diseno | COMPLETADA Y APROBADA |
-| 4 | Navegacion | COMPLETADA |
+| 4 | Navegacion | COMPLETADA Y APROBADA |
 | 5 | Supabase y base de datos | NO INICIADA |
 | 6 | Autenticacion | Pendiente |
 | 7 | Perfil del pasajero | Pendiente |
@@ -509,6 +510,8 @@ requisito para la aceleracion del emulador en procesadores AMD.
 | cmdline-tools | latest, unica version | |
 | Imagen de emulador | google_apis_playstore x86_64, API 36.1 | Unica imagen instalada |
 | Emulador (AVD) | motomoto_phone | 2 GB RAM, GPU hardware, teclado fisico. Arranca en 93 s |
+| Tablet fisica | Lenovo TB-X306X | Android 11, API 30, arm64-v8a. 800x1280 a 160 dpi, es decir 800 dp de ancho logico frente a los 411 dp del emulador. GPS por hardware presente. Sin tarjeta SIM. 3,85 GB de RAM. Serie HVA59QB5 |
+| Expo Go en la tablet | 57.0.2 | Play Store solo ofrecia la 54.0.8. Instalado el APK oficial desde github.com/expo/expo-go-releases. minSdk=24, asi que Android 11 siempre estuvo soportado |
 | VS Code | 1.129.0 | ESLint, Prettier, Expo Tools, GitLens, Postgres ya instalados |
 
 Rutas anadidas al PATH de usuario, preservando el tipo ExpandString:
@@ -610,6 +613,11 @@ desde dentro del emulador no siempre es alcanzable.
 
 ## 16. PENDIENTES CONOCIDOS
 
+- Telefono Android con GPS y datos moviles, para las pruebas de campo del criterio de
+  aceptacion 4. La tablet cubre hardware real y pantalla grande, pero no tiene SIM y no
+  representa a los usuarios finales, que usaran telefonos
+- Conectividad de datos durante las pruebas de campo en Amalfi. Sin ella el dispositivo
+  obtiene su posicion por GPS pero no puede enviarla al servidor
 - Titular de los derechos del software. El archivo LICENSE dice "Todos los derechos
   reservados" pero no nombra a nadie. Falta decidir si el codigo pertenece al desarrollador
   o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)

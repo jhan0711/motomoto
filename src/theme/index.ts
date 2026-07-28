@@ -15,6 +15,8 @@ export type { ThemeColors } from './colors';
 export { iconSize, iconStrokeWidth } from './icons';
 export type { IconSizeToken } from './icons';
 
+export { MAX_CONTENT_WIDTH } from './layout';
+
 export { radius } from './radius';
 export type { RadiusToken } from './radius';
 

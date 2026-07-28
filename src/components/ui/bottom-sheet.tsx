@@ -29,7 +29,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { radius, shadows, spacing, useTheme } from '@/theme';
+import { MAX_CONTENT_WIDTH, radius, shadows, spacing, useTheme } from '@/theme';
 
 export interface BottomSheetProps {
   children: ReactNode;
@@ -201,9 +201,15 @@ export function BottomSheet({
           <View style={[styles.grabber, { backgroundColor: colors.border }]} />
         </View>
 
-        {header !== undefined && <View style={styles.header}>{header}</View>}
+        {/* The sheet surface spans the full width, because it is anchored to the
+            bottom edge of the display. Its contents do not: on a tablet an
+            800dp-wide row of controls is as unusable inside a sheet as anywhere
+            else. */}
+        <View style={styles.inner}>
+          {header !== undefined && <View style={styles.header}>{header}</View>}
 
-        <View style={styles.content}>{children}</View>
+          <View style={styles.content}>{children}</View>
+        </View>
       </Animated.View>
     </GestureDetector>
   );
@@ -229,6 +235,12 @@ const styles = StyleSheet.create({
   header: {
     paddingBottom: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  inner: {
+    alignSelf: 'center',
+    flex: 1,
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: '100%',
   },
   sheet: {
     bottom: 0,
