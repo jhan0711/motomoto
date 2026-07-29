@@ -127,6 +127,25 @@ el sistema.
 | D75 | useSession fuera del proveedor | Lanza excepcion. Devolver null se confundiria con una sesion cerrada y produciria redirecciones en bucle dificiles de diagnosticar |
 | D76 | Ancho maximo de contenido | 520 dp, centrado, en Screen y en el contenido del BottomSheet. Detectado al probar en una tablet de 800 dp de ancho logico. Las pantallas que deben ocupar todo el ancho, como el mapa, se excluyen con constrained={false} |
 
+### Decisiones de la Fase 5
+
+| # | Decision | Valor |
+|---|---|---|
+| D77 | Coordenadas | PostGIS, tipo geography SRID 4326, instalado en el esquema extensions. Los tipos se declaran cualificados |
+| D78 | Estados | Tipos enumerados de PostgreSQL, en minusculas. La documentacion los escribe en mayusculas por ser notacion de maquina de estados |
+| D79 | Calificacion del conductor | Precalculada en drivers, mantenida por disparador. Se recalcula entera, no de forma incremental |
+| D80 | Entorno de desarrollo | Sin Docker. Se trabaja contra el proyecto en la nube con migraciones versionadas |
+| D81 | CLI de Supabase | Dependencia del proyecto, version fijada en package.json |
+| D82 | Variable de la clave | EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY, nomenclatura actual de Supabase |
+| D83 | Escrituras | Los clientes solo leen. Solicitudes, viajes, ofertas y calificaciones se escriben por funciones controladas. Seis excepciones acotadas |
+| D84 | Politicas que consultan otras tablas | Siempre a traves de funciones security definer. Una subconsulta directa provoca recursion infinita |
+| D85 | Columnas privilegiadas | Protegidas por disparador, porque la seguridad de fila no restringe columnas |
+| D86 | Vehiculos | Lectura abierta a usuarios autenticados. Numero y placa son visibles en la calle |
+| D87 | Recalculo de calificacion | Marca local a la transaccion para que el disparador de proteccion lo distinga de un intento de fraude |
+| D88 | Errores de las funciones | Mensaje en espanol para el usuario y codigo estable en el campo hint para la aplicacion |
+| D89 | Tipos de TypeScript | Generados desde el esquema real con la CLI. Nunca escritos a mano. Se regeneran tras cada migracion |
+| D90 | Renovacion de sesion | Escucha del estado de la aplicacion para arrancar y detener el temporizador de renovacion |
+
 ### Decisiones revertidas
 
 - **company_id / multi-empresa en base de datos:** propuesto inicialmente y descartado tras
@@ -465,8 +484,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 2 | Creacion y organizacion del proyecto | COMPLETADA |
 | 3 | Sistema de diseno | COMPLETADA Y APROBADA |
 | 4 | Navegacion | COMPLETADA Y APROBADA |
-| 5 | Supabase y base de datos | NO INICIADA |
-| 6 | Autenticacion | Pendiente |
+| 5 | Supabase y base de datos | COMPLETADA |
+| 6 | Autenticacion | NO INICIADA |
 | 7 | Perfil del pasajero | Pendiente |
 | 8 | Mapa principal | Pendiente |
 | 9 | Seleccion de origen y destino | Pendiente |

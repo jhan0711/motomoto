@@ -1,5 +1,7 @@
 import { useRouter } from 'expo-router';
 import {
+  CircleAlert,
+  CircleCheck,
   History,
   Lock,
   MapPin,
@@ -11,8 +13,10 @@ import {
   TriangleAlert,
   Users,
 } from 'lucide-react-native';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
+
+import { supabase } from '@/lib/supabase';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -25,7 +29,15 @@ import { Screen } from '@/components/ui/screen';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
-import { radius, spacing, useTheme, type TextVariant, type ThemeColors } from '@/theme';
+import {
+  iconSize,
+  iconStrokeWidth,
+  radius,
+  spacing,
+  useTheme,
+  type TextVariant,
+  type ThemeColors,
+} from '@/theme';
 
 /**
  * TEMPORARY design system preview.
@@ -58,6 +70,67 @@ const SWATCHES: (keyof ThemeColors)[] = [
   'info',
 ];
 
+/**
+ * TEMPORAL. Comprueba que la aplicacion alcanza el backend de verdad.
+ *
+ * Sin sesion iniciada somos el rol anonimo, asi que las politicas dirigidas a
+ * usuarios autenticados no aplican y la consulta devuelve cero filas. Eso NO es
+ * un fallo: significa que el servidor respondio y que la seguridad esta
+ * filtrando. Un fallo de conexion daria un error de red, no una lista vacia.
+ */
+function EstadoConexion() {
+  const { colors } = useTheme();
+  const [estado, setEstado] = useState<'probando' | 'ok' | 'error'>('probando');
+  const [detalle, setDetalle] = useState('');
+
+  useEffect(() => {
+    let activo = true;
+
+    void supabase
+      .from('app_settings')
+      .select('key')
+      .then(({ data, error }) => {
+        if (!activo) return;
+        if (error) {
+          setEstado('error');
+          setDetalle(`${error.code ?? 'sin código'}: ${error.message}`);
+        } else {
+          setEstado('ok');
+          setDetalle(`El servidor respondió. ${data.length} filas visibles sin sesión.`);
+        }
+      });
+
+    return () => {
+      activo = false;
+    };
+  }, []);
+
+  if (estado === 'probando') {
+    return <Spinner label="Contactando con el servidor" />;
+  }
+
+  return (
+    <Card variant={estado === 'ok' ? 'filled' : 'outlined'} padding="md">
+      <View style={styles.skeletonRow}>
+        {estado === 'ok' ? (
+          <CircleCheck size={iconSize.lg} color={colors.success} strokeWidth={iconStrokeWidth} />
+        ) : (
+          <CircleAlert size={iconSize.lg} color={colors.danger} strokeWidth={iconStrokeWidth} />
+        )}
+        <View style={styles.skeletonLines}>
+          <Text variant="bodyStrong">{estado === 'ok' ? 'Conectado' : 'Sin conexión'}</Text>
+          <Text variant="caption" color="textSecondary">
+            {detalle}
+          </Text>
+          <Text variant="caption" color="textTertiary">
+            {process.env.EXPO_PUBLIC_SUPABASE_URL?.replace('https://', '') ?? 'sin URL'}
+          </Text>
+        </View>
+      </View>
+    </Card>
+  );
+}
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   const { colors } = useTheme();
 
@@ -83,6 +156,10 @@ export default function DesignSystemPreview() {
       header={<Header title="Sistema de diseño" subtitle={`Tema activo: ${scheme}`} />}
       contentContainerStyle={styles.content}
     >
+      <Section title="Conexión con Supabase">
+        <EstadoConexion />
+      </Section>
+
       <Section title="Tipografía">
         {TEXT_VARIANTS.map((variant) => (
           <View key={variant} style={styles.row}>
