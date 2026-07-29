@@ -4,11 +4,11 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-07-26
-- **Fases completadas:** FASE 0 — Definicion funcional (APROBADA), FASE 1 — Preparacion del
-  equipo (APROBADA), FASE 2 — Creacion y organizacion del proyecto (APROBADA),
-  FASE 3 — Sistema de diseno (APROBADA), FASE 4 — Navegacion (APROBADA)
-- **Fase siguiente:** FASE 5 — Supabase y base de datos (NO INICIADA)
+- **Ultima actualizacion:** 2026-07-29
+- **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
+  2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos
+- **Fase siguiente:** FASE 6 — Autenticacion (NO INICIADA)
+- **Ultimo commit:** 3c4f30e feat: add database schema, RLS policies and Supabase client
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -381,9 +381,10 @@ que deben solicitar dos servicios por separado.
 
 ---
 
-## 10. TABLAS A DISENAR EN LA FASE 5
+## 10. TABLAS DEL MODELO (IMPLEMENTADAS EN LA FASE 5)
 
-Ninguna tabla se crea hasta haber dibujado y aprobado el modelo entidad-relacion.
+Las 17 tablas existen en la base de datos. El detalle de migraciones, funciones y
+como trabajar con ellas esta en la seccion 15.4.
 
 ```
 profiles                    Datos comunes de todo usuario y su rol
@@ -484,7 +485,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 2 | Creacion y organizacion del proyecto | COMPLETADA |
 | 3 | Sistema de diseno | COMPLETADA Y APROBADA |
 | 4 | Navegacion | COMPLETADA Y APROBADA |
-| 5 | Supabase y base de datos | COMPLETADA |
+| 5 | Supabase y base de datos | COMPLETADA Y APROBADA |
 | 6 | Autenticacion | NO INICIADA |
 | 7 | Perfil del pasajero | Pendiente |
 | 8 | Mapa principal | Pendiente |
@@ -611,22 +612,150 @@ desde dentro del emulador no siempre es alcanzable.
 
 ---
 
+## 15.4 BASE DE DATOS (Fase 5)
+
+Proyecto Supabase: **bosodjcehvqmmegxdmlu**, nombre `motomoto`, region us-east-1,
+PostgreSQL 17.6, organizacion propia (no gestionada por Vercel). PostGIS 3.3.
+
+### Migraciones aplicadas, en orden
+
+```
+20260729002339_initial_types_and_profiles          extensiones, 9 enums, profiles
+20260729002949_fleet_drivers_vehicles_documents    drivers, vehicles, asignaciones, documentos
+20260729004136_geography_places_and_driver_locations  places, driver_locations, find_available_drivers
+20260729004853_operations_requests_rides_offers    ride_requests, rides, ride_offers, ride_locations
+20260729005909_ratings_reports_settings_audit      ratings, reports, notifications, app_settings, auditoria
+20260729011134_rls_policies                        46 politicas y disparadores de proteccion
+20260729012123_fix_rls_policy_recursion            corrige recursion en 4 politicas
+20260729013123_ride_state_transition_functions     10 funciones publicas, 3 internas
+20260729014732_fix_rating_refresh_blocked_by_guard corrige el choque entre dos disparadores
+```
+
+Totales: **17 tablas, 46 politicas, 29 funciones**. Las 17 con seguridad de fila activa.
+
+### Funciones accesibles desde la aplicacion
+
+```
+request_ride(origen_lng, origen_lat, origen_label,
+             destino_lng, destino_lat, destino_label,
+             passenger_count, origin_place_id?, destination_place_id?) -> uuid
+cancel_request(request_id, reason?)
+accept_ride_offer(offer_id) -> uuid del viaje
+reject_ride_offer(offer_id)
+start_driving_to_pickup(ride_id)
+confirm_driver_arrival(ride_id)
+start_ride(ride_id)
+complete_ride(ride_id)
+cancel_ride(ride_id, reason?)
+rate_ride(ride_id, stars, comment?) -> uuid
+```
+
+Internas, sin permiso para los roles publicos: `offer_request_to_drivers`,
+`assert_ride_driver`, `expire_stale_requests`, `find_available_drivers`.
+
+Auxiliares de politicas, todas security definer: `auth_role`, `is_admin`,
+`participates_in_ride`, `has_active_ride_with_driver`, `owns_request`,
+`driver_linked_to_request`, `shares_ride_with`, `is_active_driver_of_ride`,
+`get_setting`.
+
+### Errores de las funciones
+
+Mensaje en espanol para mostrar al usuario, codigo estable en el campo `hint`:
+
+```
+PROFILE_NOT_FOUND      ACCOUNT_BLOCKED        NOT_A_PASSENGER
+PHONE_REQUIRED         PASSENGER_COUNT_OUT_OF_RANGE
+ACTIVE_REQUEST_EXISTS  NO_DRIVERS_AVAILABLE   OFFER_NOT_FOUND
+OFFER_ALREADY_ANSWERED OFFER_EXPIRED          REQUEST_ALREADY_TAKEN
+NO_VEHICLE_ASSIGNED    OFFER_NOT_AVAILABLE    RIDE_NOT_FOUND
+INVALID_STATE_TRANSITION  TOO_FAR_FROM_PICKUP
+REQUEST_NOT_FOUND      NOT_A_PARTICIPANT      RIDE_NOT_COMPLETED
+ALREADY_RATED
+```
+
+### Reglas garantizadas por la base de datos, no por el codigo
+
+Un conductor no aprobado no puede estar disponible. Dos conductores no pueden aceptar
+la misma solicitud. Un pasajero no puede tener dos servicios activos. Nadie puede
+calificar dos veces el mismo viaje. Un viaje no puede empezar antes de que el conductor
+llegue. Un usuario no puede hacerse administrador. Un conductor no puede subirse la nota
+ni aprobarse. Un vehiculo no puede tener dos conductores activos.
+
+### Como trabajar con la base de datos
+
+```powershell
+npx.cmd supabase migration new <nombre>        # crea el archivo
+npx.cmd supabase db push                       # aplica las pendientes
+npx.cmd supabase migration list                # que hay aplicado
+npx.cmd supabase db query --linked "<sql>"     # consulta el servidor
+npx.cmd supabase db query --linked -f <ruta>   # ejecuta un archivo
+npx.cmd supabase gen types typescript --linked # regenera los tipos
+```
+
+**Sin `--linked` intenta conectarse a una base local que no existe.** El aviso sobre
+Docker que aparece en `db push` es inocuo: solo afecta a una cache local del catalogo.
+
+Los tipos se regeneran tras cada migracion y se escriben en `src/types/database.ts`
+sin BOM. Nunca se editan a mano.
+
+### Reglas aprendidas, no repetir estos errores
+
+1. Toda politica que consulte otra tabla protegida debe hacerlo mediante una funcion
+   security definer. Una subconsulta directa entre dos tablas que se referencian
+   provoca recursion infinita, error 42P17.
+2. `select a.*, b.col into var_fila, var_col` no funciona: PL/pgSQL asigna columna a
+   columna. Hay que usar dos consultas.
+3. Un disparador de proteccion de columnas puede anular a un disparador del sistema.
+   Se distinguen con una marca local a la transaccion.
+4. Probar suplantando roles reales, nunca con el rol privilegiado. Con el privilegiado
+   las politicas ni se evaluan y todo parece correcto.
+
+### Como probar suplantando un usuario
+
+```sql
+set local role authenticated;
+set local request.jwt.claims to '{"sub":"<uuid>","role":"authenticated"}';
+-- consultas como ese usuario
+reset role;
+reset request.jwt.claims;
+```
+
+Los scripts de prueba crean usuarios en `auth.users` con correos terminados en
+`@motomoto.test` y los borran al final; el borrado en cascada arrastra el resto.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fase 2 completada, pendiente de aprobacion. Fase 3 sin autorizar
+- **Fase actual:** Fase 5 completada y aprobada. **Fase 6 pendiente de autorizacion**
 - **Paso actual:** Ninguno en curso
-- **Ultimo paso completado:** Publicacion del repositorio y correccion de la licencia
-- **Funcionalidades terminadas:** Ninguna. No se ha escrito codigo de producto
-- **Pruebas realizadas:** Entorno validado (13 puntos). Proyecto validado (15 puntos)
+- **Ultimo paso completado:** Cliente de Supabase en la app y conexion verificada en la
+  tablet fisica
+- **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
+  con guardias, base de datos completa con sus politicas y funciones
+- **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
+  Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
+  servidor
 - **Errores pendientes:** Ninguno
-- **Errores resueltos en la Fase 1:** E1 core.autocrlf no aplicado. E2 cmdline-tools ausente.
-  E3 plataforma android-36 ausente. E4 imagen Wear OS instalada por error. E5 21 versiones
-  redundantes de cmdline-tools, 2,77 GB liberados. E6 politica de ejecucion de PowerShell
-- **Hallazgos resueltos en la Fase 2:** H1 el .gitignore de la plantilla no protegia los
-  archivos .env. H2 la plantilla incluia una licencia MIT a nombre de Expo
-- **Commits:** 21a12b7 Initial commit, 8ad6705 configuracion del proyecto,
-  442e7ce correccion de licencia
-- **Proximo paso autorizado:** Ninguno hasta aprobacion de la Fase 3
+- **Errores resueltos hasta ahora:** E1 a E10. Los tres ultimos, todos en la Fase 5:
+  E8 recursion infinita en 4 politicas, E9 SELECT INTO con destino compuesto,
+  E10 disparador de proteccion anulando el recalculo de calificaciones
+- **Hallazgos resueltos:** H1 .gitignore no protegia .env. H2 licencia MIT de Expo.
+  H3 cabecera de expo-router sin tema. H4 Expo Go desactualizado en la tablet
+- **Commits:** 21a12b7 inicial, 8ad6705 configuracion, 442e7ce licencia,
+  d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
+  3c4f30e base de datos
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 6
+
+### Lo que sigue siendo temporal y desaparece en la Fase 6
+
+- `src/features/auth/session.tsx`: sesion simulada en memoria. Expone `user`,
+  `isLoading`, `signInAs`, `signOut`. **La Fase 6 cambia su interior por Supabase Auth
+  sin cambiar esa forma**, para que ninguna pantalla ni guardia se toque
+- El bloque MODO DESARROLLO de `src/app/(auth)/welcome.tsx` con los dos botones de
+  acceso directo por rol
+- Las rutas `/catalog` y `/catalog/sheet`, que se retiran al terminar la Fase 7
+- El panel de estado de conexion dentro de `/catalog`
 
 ---
 
@@ -664,8 +793,60 @@ desde dentro del emulador no siempre es alcanzable.
 4. Toda creacion o modificacion de archivo se indica con su ruta exacta
 5. Este archivo se actualiza al cerrar cada fase
 
+### Como se ha trabajado hasta ahora, y como debe seguirse
+
+Esto no es teoria: es lo que se ha hecho en las seis fases anteriores y lo que el usuario
+espera que continue igual.
+
+**Verificar, no suponer.** Cada paso se comprueba contra la realidad: consultando el
+servidor, ejecutando la app en el emulador o en la tablet y tomando capturas de pantalla.
+Una migracion no esta bien porque el SQL parezca correcto, sino porque se probo contra la
+base de datos. Un componente no esta bien porque compile, sino porque se vio funcionando.
+
+**Probar intentando romper.** Despues de cada migracion se escribe un script que intenta
+violar cada restriccion a proposito y comprueba que la base de datos las rechaza. Ese
+metodo encontro tres errores que ninguna revision de codigo habria detectado.
+
+**Ante un error, parar.** Se diagnostica, se explica la causa real, se aplica una sola
+correccion controlada y se verifica. No se cambian varias cosas a la vez.
+
+**Reconocer los propios errores sin adornos.** Tres de los diez errores registrados fueron
+del asistente. Se dijeron claramente, con su causa y su leccion.
+
+**Antes de cada commit:** `npm.cmd run typecheck`, `npm.cmd run lint` y
+`npm.cmd run format:check`, los tres en 0.
+
+**Comandos de trabajo mas usados:**
+
+```powershell
+npm.cmd run typecheck
+npm.cmd run lint
+npm.cmd run format
+npx.cmd expo start
+npx.cmd supabase db push
+npx.cmd supabase db query --linked "<sql>"
+
+# Android. adb esta en %ANDROID_HOME%\platform-tools
+adb devices
+adb reverse tcp:8081 tcp:8081
+adb shell am force-stop host.exp.exponent
+adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081" host.exp.exponent
+adb shell screencap -p /sdcard/s.png
+adb pull /sdcard/s.png <destino>
+adb shell "cmd uimode night yes"   # probar modo oscuro
+```
+
+**Dispositivos de prueba:** emulador `motomoto_phone` a 411 dp y tablet Lenovo
+`HVA59QB5` a 800 dp. Probar en ambos anchos.
+
+**Aviso recurrente:** al reabrir el emulador o la tablet, Expo Go restaura la ultima
+sesion en cache y muestra `Cannot connect to Expo CLI`. Se resuelve con `adb reverse`,
+cerrar Expo Go y abrirlo con el enlace `exp://127.0.0.1:8081`.
+
 ### Continuidad en una conversacion nueva
 
 Al entregar este archivo en una conversacion nueva: leerlo completo, identificar la ultima
 fase terminada y el paso actual, no repetir trabajo completado, preguntar por informacion
 critica faltante y continuar desde el ultimo punto estable.
+
+**No avanzar de fase sin autorizacion expresa del usuario, ni siquiera si parece obvio.**
