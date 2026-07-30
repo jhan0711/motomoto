@@ -17,7 +17,11 @@ import { fontSize, fontWeight, iconSize, iconStrokeWidth, useTheme } from '@/the
  */
 export default function DriverLayout() {
   const { colors } = useTheme();
-  const { user, isLoading } = useSession();
+  const { user, isLoading, canOperate, isRecoveringPassword } = useSession();
+
+  if (isRecoveringPassword) {
+    return <Redirect href="/reset-password" />;
+  }
 
   if (isLoading) {
     return null;
@@ -25,6 +29,12 @@ export default function DriverLayout() {
 
   if (user === null) {
     return <Redirect href="/welcome" />;
+  }
+
+  // Antes que el rol. Un conductor pendiente de aprobacion o bloqueado tiene rol
+  // de conductor y no debe llegar a la pantalla de operacion (flujo 7.2, paso 2).
+  if (!canOperate) {
+    return <Redirect href="/account-status" />;
   }
 
   if (user.role !== 'driver') {

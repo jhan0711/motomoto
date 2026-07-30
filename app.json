@@ -26,6 +26,13 @@
     "plugins": [
       "expo-router",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "MotoMoto necesita acceso a tus fotos para que puedas elegir tu foto de perfil.",
+          "cameraPermission": "MotoMoto necesita acceso a la cámara para que puedas tomarte una foto de perfil."
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",

@@ -13,13 +13,16 @@ import { homeRouteFor, useSession } from '@/features/auth/session';
  * screen is protected the moment it is created, with nothing to remember.
  */
 export default function AuthLayout() {
-  const { user, isLoading } = useSession();
+  const { user, isLoading, isRecoveringPassword } = useSession();
 
   if (isLoading) {
     return null;
   }
 
-  if (user !== null) {
+  // Durante una recuperacion hay sesion abierta, pero el usuario debe quedarse
+  // aqui hasta cambiar la contrasena. Sin esta excepcion, el enlace del correo
+  // lo mandaria a la pantalla principal y nunca llegaria a cambiarla.
+  if (user !== null && !isRecoveringPassword) {
     return <Redirect href={homeRouteFor(user.role)} />;
   }
 

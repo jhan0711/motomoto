@@ -1,5 +1,14 @@
 import { useRouter } from 'expo-router';
-import { ChevronRight, LogOut, Mail, Phone, ShieldCheck, UserRound } from 'lucide-react-native';
+import {
+  ChevronRight,
+  LogOut,
+  Mail,
+  Pencil,
+  Phone,
+  ShieldCheck,
+  UserRound,
+  type LucideIcon,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -9,37 +18,81 @@ import { Header } from '@/components/ui/header';
 import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
+import { FormError } from '@/features/auth/form-error';
 import { useSession } from '@/features/auth/session';
-import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
+import { ProfileAvatar } from '@/features/profile/profile-avatar';
+import { iconSize, iconStrokeWidth, spacing, useTheme } from '@/theme';
 
 /**
- * Passenger profile.
+ * Perfil del pasajero.
  *
- * Read-only for now. Editing arrives in Phase 7. Signing out is real: it clears
- * the session, and the root guard sends the user back to the public zone.
+ * Los datos son reales: salen del perfil cargado en la sesion. Antes eran texto
+ * fijo que decia "Sin registrar" incluso cuando el dato existia, que es peor que
+ * no mostrarlo.
+ *
+ * El correo se muestra pero no se edita, y no es un olvido: con la confirmacion
+ * de correo desactivada (D91) el cambio seria inmediato y sin verificar. Quien
+ * tuviera el telefono desbloqueado un minuto podria apuntar la cuenta a su
+ * propio correo y luego usar "recuperar contrasena" para quedarse con ella. Se
+ * habilita en la Fase 25, cuando exista verificacion.
+ *
+ * La edicion de nombre y telefono llega en el paso 7.2, y el cambio de
+ * contrasena en el 7.3. Mientras no funcionen, sus filas no aparecen: una fila
+ * con flecha que no hace nada al pulsarla es una mentira de interfaz.
  */
 export default function PassengerProfile() {
-  const { colors } = useTheme();
   const router = useRouter();
-  const { user, signOut } = useSession();
+  const { user, signOut, refreshProfile } = useSession();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
 
   return (
     <Screen scroll header={<Header title="Mi perfil" onBack={() => router.back()} />}>
       <View style={styles.identity}>
-        <View style={[styles.avatar, { backgroundColor: colors.brandSubtle }]}>
-          <UserRound size={iconSize.xl} color={colors.brandStrong} strokeWidth={iconStrokeWidth} />
-        </View>
+        {user !== null && (
+          <ProfileAvatar
+            userId={user.id}
+            avatarPath={user.avatarPath}
+            fallbackIcon={UserRound}
+            editable
+            onChanged={refreshProfile}
+            onError={setAvatarError}
+          />
+        )}
         <Text variant="heading">{user?.fullName ?? 'Pasajero'}</Text>
         <Text variant="caption" color="textSecondary">
-          Pasajero
+          Toca la foto para cambiarla
         </Text>
       </View>
 
+      <FormError message={avatarError} />
+
       <View style={styles.list}>
-        <Row icon={Phone} label="Teléfono" value="Sin registrar" />
-        <Row icon={Mail} label="Correo" value="Sin registrar" />
-        <Row icon={ShieldCheck} label="Seguridad" value="Cambiar contraseña" />
+        {/* El telefono lleva flecha porque se puede editar; el correo no la lleva
+            porque no se puede. La flecha informa, no decora. */}
+        <Row
+          icon={Phone}
+          label="Teléfono"
+          value={user?.phone}
+          onPress={() => router.push('/passenger/edit-profile')}
+        />
+        <Row icon={Mail} label="Correo" value={user?.email} />
+        <Row
+          icon={ShieldCheck}
+          label="Seguridad"
+          value="Cambiar contraseña"
+          onPress={() => router.push('/change-password')}
+        />
+      </View>
+
+      <View style={styles.actions}>
+        <Button
+          label="Editar perfil"
+          variant="primary"
+          icon={Pencil}
+          fullWidth
+          onPress={() => router.push('/passenger/edit-profile')}
+        />
       </View>
 
       <Button
@@ -68,41 +121,50 @@ export default function PassengerProfile() {
 }
 
 interface RowProps {
-  icon: typeof Phone;
+  icon: LucideIcon;
   label: string;
-  value: string;
+  /** Null o vacio se muestra como "Sin registrar", atenuado. */
+  value: string | null | undefined;
+  /** Omitir para una fila de solo lectura. Sin accion no se dibuja la flecha. */
+  onPress?: () => void;
 }
 
-function Row({ icon: Icon, label, value }: RowProps) {
+function Row({ icon: Icon, label, value, onPress }: RowProps) {
   const { colors } = useTheme();
+  const hasValue = value !== null && value !== undefined && value !== '';
 
   return (
-    <Card variant="outlined" padding="md" onPress={() => {}} accessibilityLabel={label}>
+    <Card
+      variant="outlined"
+      padding="md"
+      onPress={onPress}
+      accessibilityLabel={onPress === undefined ? undefined : label}
+    >
       <View style={styles.row}>
         <Icon size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
         <View style={styles.rowCopy}>
           <Text variant="caption" color="textTertiary">
             {label}
           </Text>
-          <Text variant="body">{value}</Text>
+          <Text variant="body" color={hasValue ? 'textPrimary' : 'textTertiary'}>
+            {hasValue ? value : 'Sin registrar'}
+          </Text>
         </View>
-        <ChevronRight
-          size={iconSize.md}
-          color={colors.textTertiary}
-          strokeWidth={iconStrokeWidth}
-        />
+        {onPress !== undefined && (
+          <ChevronRight
+            size={iconSize.md}
+            color={colors.textTertiary}
+            strokeWidth={iconStrokeWidth}
+          />
+        )}
       </View>
     </Card>
   );
 }
 
 const styles = StyleSheet.create({
-  avatar: {
-    alignItems: 'center',
-    borderRadius: radius.full,
-    height: 80,
-    justifyContent: 'center',
-    width: 80,
+  actions: {
+    marginBottom: spacing.md,
   },
   identity: {
     alignItems: 'center',

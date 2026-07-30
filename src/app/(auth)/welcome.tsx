@@ -1,17 +1,15 @@
 import { useRouter } from 'expo-router';
-import { Bike, CarTaxiFront, UserRound } from 'lucide-react-native';
+import { CarTaxiFront } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
-import { useSession } from '@/features/auth/session';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
 export default function Welcome() {
   const { colors } = useTheme();
   const router = useRouter();
-  const { signInAs } = useSession();
 
   return (
     <Screen>
@@ -44,33 +42,6 @@ export default function Welcome() {
           onPress={() => router.push('/login')}
         />
       </View>
-
-      {/* TEMPORARY: role switcher. There is no backend yet, so this is the only
-          way to reach the passenger and driver zones. Removed in Phase 6. */}
-      <View style={[styles.devBlock, { borderColor: colors.border }]}>
-        <Text variant="label" color="textTertiary" align="center">
-          MODO DESARROLLO
-        </Text>
-        <Text variant="caption" color="textTertiary" align="center">
-          Acceso directo sin autenticación. Desaparece en la Fase 6.
-        </Text>
-        <View style={styles.devButtons}>
-          <Button
-            label="Entrar como pasajero"
-            variant="ghost"
-            size="sm"
-            icon={UserRound}
-            onPress={() => signInAs('passenger')}
-          />
-          <Button
-            label="Entrar como conductor"
-            variant="ghost"
-            size="sm"
-            icon={Bike}
-            onPress={() => signInAs('driver')}
-          />
-        </View>
-      </View>
     </Screen>
   );
 }
@@ -81,19 +52,6 @@ const styles = StyleSheet.create({
   },
   copy: {
     gap: spacing.sm,
-  },
-  devBlock: {
-    borderRadius: radius.lg,
-    borderStyle: 'dashed',
-    borderWidth: 1,
-    gap: spacing.xs,
-    marginTop: spacing.xl,
-    padding: spacing.lg,
-  },
-  devButtons: {
-    alignItems: 'center',
-    gap: spacing.xs,
-    marginTop: spacing.sm,
   },
   hero: {
     alignItems: 'center',

@@ -1,5 +1,8 @@
+import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
 import { Lock, Mail, Phone, UserRound } from 'lucide-react-native';
+import { useState } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -7,41 +10,120 @@ import { Header } from '@/components/ui/header';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
-import { useSession } from '@/features/auth/session';
+import { signUp } from '@/features/auth/auth-service';
+import { FormError } from '@/features/auth/form-error';
+import { registerSchema, type RegisterValues } from '@/features/auth/schemas';
 import { spacing } from '@/theme';
 
 /**
- * Passenger sign-up.
+ * Registro de pasajero.
  *
- * Only passengers register here. Drivers never self-register: an administrator
- * creates their account from the web panel, per the Phase 0 rules. That is why
- * there is no role selector on this screen.
+ * Aqui solo se registran pasajeros. Los conductores nunca se auto-registran: su
+ * cuenta la crea un administrador desde el panel web. Por eso no hay selector de
+ * rol, y por eso el rol tampoco viaja en la peticion: lo pone la base de datos.
  *
- * Not wired to a backend until Phase 6.
+ * El telefono es obligatorio desde el registro (D92). El backend lo exige para
+ * poder solicitar un servicio, y pedirlo mas tarde dejaria cuentas que existen
+ * pero no pueden usar la aplicacion.
  */
 export default function Register() {
   const router = useRouter();
-  const { signInAs } = useSession();
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { control, handleSubmit, formState } = useForm({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { fullName: '', phone: '', email: '', password: '' },
+  });
+
+  async function onSubmit(values: RegisterValues) {
+    setFormError(null);
+
+    const result = await signUp(values);
+
+    if (!result.ok) {
+      setFormError(result.failure.message);
+    }
+
+    // Al registrarse correctamente Supabase deja la sesion abierta, porque la
+    // confirmacion por correo esta desactivada (D91). La guardia de
+    // (auth)/_layout se encarga de llevar al usuario a su zona.
+  }
 
   return (
     <Screen scroll header={<Header title="Crear cuenta" onBack={() => router.back()} />}>
       <View style={styles.form}>
-        <Input label="Nombre completo" placeholder="Como te llamas" icon={UserRound} />
-        <Input
-          label="Teléfono"
-          placeholder="300 000 0000"
-          icon={Phone}
-          keyboardType="phone-pad"
-          helperText="Lo usará el conductor para coordinar la recogida"
+        <FormError message={formError} />
+
+        <Controller
+          control={control}
+          name="fullName"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Nombre completo"
+              placeholder="Como te llamas"
+              icon={UserRound}
+              autoCapitalize="words"
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorText={fieldState.error?.message}
+            />
+          )}
         />
-        <Input
-          label="Correo"
-          placeholder="correo@ejemplo.com"
-          icon={Mail}
-          keyboardType="email-address"
-          autoCapitalize="none"
+
+        <Controller
+          control={control}
+          name="phone"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Teléfono"
+              placeholder="300 000 0000"
+              icon={Phone}
+              keyboardType="phone-pad"
+              helperText="Lo usará el conductor para coordinar la recogida"
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorText={fieldState.error?.message}
+            />
+          )}
         />
-        <Input label="Contraseña" placeholder="Mínimo 8 caracteres" icon={Lock} secureTextEntry />
+
+        <Controller
+          control={control}
+          name="email"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Correo"
+              placeholder="correo@ejemplo.com"
+              icon={Mail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoComplete="email"
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorText={fieldState.error?.message}
+            />
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="password"
+          render={({ field, fieldState }) => (
+            <Input
+              label="Contraseña"
+              placeholder="Mínimo 8 caracteres"
+              icon={Lock}
+              secureTextEntry
+              value={field.value}
+              onChangeText={field.onChange}
+              onBlur={field.onBlur}
+              errorText={fieldState.error?.message}
+            />
+          )}
+        />
       </View>
 
       <View style={styles.actions}>
@@ -49,7 +131,8 @@ export default function Register() {
           label="Crear cuenta"
           variant="primary"
           fullWidth
-          onPress={() => signInAs('passenger')}
+          loading={formState.isSubmitting}
+          onPress={() => void handleSubmit(onSubmit)()}
         />
         <View style={styles.footer}>
           <Text variant="caption" color="textSecondary">

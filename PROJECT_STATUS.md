@@ -6,9 +6,13 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **Proyecto:** MotoMoto (nombre provisional)
 - **Ultima actualizacion:** 2026-07-29
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
-  2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos
-- **Fase siguiente:** FASE 6 — Autenticacion (NO INICIADA)
-- **Ultimo commit:** 3c4f30e feat: add database schema, RLS policies and Supabase client
+  2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
+  6 autenticacion
+- **Fase completada pendiente de aprobacion:** 7 perfil del pasajero
+- **Fase siguiente:** FASE 8 — Mapa principal (NO INICIADA)
+- **Ultimo commit:** pendiente. El commit de la Fase 6 se hace desde GitHub Desktop;
+  sustituir esta linea por su hash. El anterior fue 3c4f30e feat: add database schema,
+  RLS policies and Supabase client
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -145,6 +149,35 @@ el sistema.
 | D88 | Errores de las funciones | Mensaje en espanol para el usuario y codigo estable en el campo hint para la aplicacion |
 | D89 | Tipos de TypeScript | Generados desde el esquema real con la CLI. Nunca escritos a mano. Se regeneran tras cada migracion |
 | D90 | Renovacion de sesion | Escucha del estado de la aplicacion para arrancar y detener el temporizador de renovacion |
+
+### Decisiones de la Fase 6
+
+| # | Decision | Valor |
+|---|---|---|
+| D91 | Confirmacion de correo | Desactivada en el MVP. El correo integrado de Supabase tiene limites demasiado bajos para que cada registro dependa de el. Se reactiva en la Fase 25 con servidor de correo propio, que es un interruptor del panel, no una reescritura |
+| D92 | Telefono | Obligatorio desde el registro. El backend lo exige para solicitar servicio, y pedirlo despues dejaria cuentas que existen pero no pueden usar la aplicacion. Movil colombiano de 10 digitos que empieza por 3, normalizado antes de guardar |
+| D93 | Almacenamiento de la sesion | AsyncStorage, confirmando lo que ya implementaba el cliente. expo-secure-store tiene limite por entrada y la sesion de Supabase puede rozarlo: cambiaria un cifrado por un fallo silencioso de persistencia. Se revisa en la Fase 22 |
+| D94 | Recuperacion de contrasena | Enlace profundo a la aplicacion. La direccion se genera con `createURL`, que produce `exp://` en Expo Go y `motomoto://` en la app instalada |
+| D95 | Entrega del enlace de recuperacion | Se acepta el enlace profundo tal cual para el MVP. El navegador de Android no completa la redireccion de `https` a esquema propio (H7), y la solucion solida son los enlaces de aplicacion de Android, que exigen dominio propio. Se resuelve en la Fase 25 junto con el dominio y el correo propio |
+| D96 | Mensajes de error de autenticacion | Codigo estable para comparar en el codigo y en las pruebas, mensaje en espanol solo para mostrar. Mismo criterio que D88. El codigo es lo que se compara, nunca el texto |
+| D97 | Permiso de operar | Se calcula en un solo sitio, `canOperate` en la sesion, y no en cada pantalla. Repartir esa condicion garantiza que alguna pantalla se olvide de comprobarla |
+| D98 | Cuenta bloqueada o pendiente | Mantiene la sesion abierta y ve una pantalla informativa. Cerrarle la sesion sin explicacion lo llevaria a intentar entrar otra vez y chocar con la misma pared sin entender por que |
+| D99 | Administrador en la aplicacion movil | Se reconoce y se le explica que su cuenta se usa en el panel web. Fingir que su cuenta no existe seria peor |
+
+### Decisiones de la Fase 7
+
+| # | Decision | Valor |
+|---|---|---|
+| D100 | Bucket de fotos | Privado, con direcciones firmadas. Las politicas de la Fase 5 restringen quien ve el nombre de un pasajero; un bucket publico dejaria su cara accesible a cualquiera con la direccion mientras su nombre sigue protegido, y esa incoherencia no tiene sentido |
+| D101 | Cambio de correo | No se permite en el MVP. Con la confirmacion desactivada (D91) seria inmediato y sin verificar, y quien tuviera el telefono desbloqueado un minuto podria apuntar la cuenta a su propio correo y quedarse con ella. Se habilita en la Fase 25 |
+| D102 | Cambio de contrasena desde dentro | Exige la contrasena actual. Supabase no la pide, y aceptarlo significaria que un telefono desbloqueado es una cuenta perdida. Se comprueba intentando iniciar sesion con ella, que es la unica forma disponible |
+| D103 | Procesado de la foto | Recorte cuadrado, 512 px de lado y calidad 0,7, hecho en el dispositivo antes de subir. Una foto de camara real queda en unos 40 KB. En Amalfi la conectividad es irregular y subir varios megabytes es friccion real |
+| D104 | Columna de la foto | `avatar_url` renombrada a `avatar_path`. Guarda la ruta dentro del bucket, no una direccion: en un bucket privado las direcciones se firman y caducan. Se renombro con la columna vacia y sin una linea de codigo que la leyera |
+| D105 | Nombre del archivo de la foto | Lleva marca de tiempo, asi que la ruta es la version. Un nombre fijo con reemplazo parecia mas limpio y estaba mal: al no cambiar la ruta la pantalla no pedia firma nueva y seguia mostrando la foto anterior desde la cache |
+| D106 | Origen de la foto | Camara y galeria, con dialogo de eleccion. Los dos comparten el mismo procesado, para que un ajuste futuro de tamano o calidad no se aplique solo a uno |
+| D107 | Integridad de la ruta | Restriccion `profiles_avatar_path_owned`: la foto debe estar en la carpeta del propio usuario, lo mismo que exigen las politicas del bucket |
+| D108 | Cambio de contrasena, ubicacion | En la raiz y no dentro de `passenger/`. Un conductor tambien tiene que poder cambiar la suya: su cuenta la crea el administrador con una contrasena inicial |
+| D109 | Edicion del perfil del conductor | No existe en la aplicacion. Sus datos los gestiona la empresa desde el panel. Lo unico suyo que puede cambiar es la contrasena |
 
 ### Decisiones revertidas
 
@@ -432,7 +465,15 @@ Verificables en emulador y en al menos un dispositivo Android fisico:
 4. El pasajero ve moverse al conductor en el mapa con un retraso menor a 15 segundos
 5. Cerrar y reabrir la app durante un viaje activo restaura el estado correcto
 6. Denegar el permiso de ubicacion no rompe la app. Ofrece seleccion manual
-7. Un conductor bloqueado por el admin no puede iniciar sesion ni operar
+7. Un conductor bloqueado por el admin no puede operar. Inicia sesion y ve una pantalla
+   informativa con el motivo. **Corregido en la Fase 6:** la redaccion anterior decia "no
+   puede iniciar sesion ni operar", que contradecia al flujo 7.2 paso 2, donde la cuenta
+   bloqueada ve una pantalla informativa, lo cual exige poder entrar. Las dos cosas no
+   podian cumplirse a la vez. Se conserva el flujo 7.2, que es mas especifico y trata mejor
+   al usuario: se le explica que pasa en lugar de darle un "credenciales incorrectas" falso.
+   Ademas Supabase Auth no conoce `profiles.status`, asi que impedir el login exigiria un
+   disparador sobre el inicio de sesion. Verificado por API: un bloqueado obtiene token y
+   la base de datos le rechaza cualquier operacion con `ACCOUNT_BLOCKED`
 8. Un pasajero no puede leer datos de otros pasajeros ni modificar el estado de un viaje
    mediante llamadas directas a la API
 9. El admin puede dar de alta un conductor y un vehiculo, y ese conductor puede operar sin
@@ -486,8 +527,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 3 | Sistema de diseno | COMPLETADA Y APROBADA |
 | 4 | Navegacion | COMPLETADA Y APROBADA |
 | 5 | Supabase y base de datos | COMPLETADA Y APROBADA |
-| 6 | Autenticacion | NO INICIADA |
-| 7 | Perfil del pasajero | Pendiente |
+| 6 | Autenticacion | COMPLETADA Y APROBADA |
+| 7 | Perfil del pasajero | COMPLETADA, pendiente de aprobacion |
 | 8 | Mapa principal | Pendiente |
 | 9 | Seleccion de origen y destino | Pendiente |
 | 10 | Seleccion de pasajeros | Pendiente |
@@ -725,37 +766,213 @@ Los scripts de prueba crean usuarios en `auth.users` con correos terminados en
 
 ---
 
+## 15.5 AUTENTICACION (Fase 6)
+
+### Archivos
+
+```
+src/features/auth/schemas.ts        Validaciones con Zod. Replican las restricciones de la BD
+src/features/auth/errors.ts         Traduccion de los errores de Supabase al espanol
+src/features/auth/auth-service.ts   Unico punto que llama a supabase.auth
+src/features/auth/session.tsx       Sesion real. Rol, estado y permiso de operar
+src/features/auth/form-error.tsx    Error de formulario completo, anunciado como alerta
+src/app/(auth)/login.tsx            Sirve a pasajero y conductor. El rol se lee despues
+src/app/(auth)/register.tsx         Solo pasajeros. El rol lo pone la base de datos
+src/app/(auth)/forgot-password.tsx  Confirmacion identica exista o no la cuenta (D74)
+src/app/(auth)/reset-password.tsx   Contrasena nueva, al final del enlace del correo
+src/app/account-status.tsx          Bloqueado, pendiente, admin o cuenta incompleta
+```
+
+Ninguna funcion del servicio lanza excepciones: todas devuelven un resultado que obliga a
+comprobar si salio bien. Un `await` sin `try` es la forma mas comun de que un error de
+autenticacion desaparezca sin dejar rastro.
+
+### Lo que ya existia y no hubo que construir
+
+`handle_new_user`, el disparador `on_auth_user_created` y `profiles_protect_columns` se
+construyeron en la Fase 5. La Fase 6 solo los verifico. El perfil lo crea la base de datos y
+no la aplicacion: si lo creara la app con un segundo INSERT, un corte de red entre las dos
+llamadas dejaria un usuario sin perfil, en un limbo del que no se puede salir.
+
+### Configuracion del proyecto Supabase, hecha desde el panel
+
+- Authentication → Providers → Email: **habilitado**
+- Confirm email: **desactivado** (D91)
+- Authentication → URL Configuration → Redirect URLs: `motomoto://*` y
+  `exp://127.0.0.1:8081/--/*`
+
+Se comprueba sin entrar al panel, con una lectura sin efectos:
+
+```powershell
+# Debe devolver external.email = True y mailer_autoconfirm = True
+Invoke-RestMethod -Uri "$url/auth/v1/settings" -Headers @{ apikey = $key }
+```
+
+### Como probar la recuperacion de contrasena en desarrollo
+
+El navegador de Android no entrega el enlace a la app (H7), asi que en desarrollo se dispara
+el enlace directamente. Con un par de tokens reales obtenidos por la API:
+
+```powershell
+adb shell "am start -a android.intent.action.VIEW -d 'exp://127.0.0.1:8081/--/reset-password#access_token=<t>&refresh_token=<r>&type=recovery' host.exp.exponent"
+```
+
+Y para el caso de enlace caducado, que es el mas frecuente en la vida real:
+
+```powershell
+adb shell "am start -a android.intent.action.VIEW -d 'exp://127.0.0.1:8081/--/reset-password#error=access_denied&error_code=otp_expired' host.exp.exponent"
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. `profiles_protect_columns` **no exime al rol privilegiado**, solo a un administrador con
+   sesion, porque `is_admin()` depende de `auth.uid()`. Preparar un estado con el rol
+   privilegiado no funciona: el disparador lo revierte igual. Consecuencia para la Fase 21:
+   no existe forma de crear el primer administrador con un UPDATE. Hay que sustituir la fila,
+   porque el disparador es BEFORE UPDATE y no cubre INSERT.
+2. El rol `authenticated` no puede leer `auth.users`. Los identificadores se resuelven antes
+   de suplantar, o con una tabla temporal con permiso concedido.
+3. `set local` solo acepta literales. Para suplantar cuentas creadas por la API, con
+   identificadores aleatorios, hay que usar `set_config(..., true)`.
+4. La API de Auth **rechaza los correos `@motomoto.test`** con `email_address_invalid`. Esa
+   convencion sirve insertando en SQL, no para registrarse por la API. Para pruebas por API
+   se usa `@motomoto-qa.co`.
+5. Supabase solo valida la direccion de correo **cuando va a enviar de verdad**. Una cuenta
+   que existe con dominio no entregable da 400 y una que no existe da 200, y eso parece
+   enumeracion de cuentas sin serlo. Para comprobar D74 hace falta un dominio entregable.
+6. El compilador de React prohibe `setState` sincrono en el cuerpo de un efecto. La solucion
+   no es silenciar la regla: es derivar el estado en el render. Salio mejor que el original,
+   porque elimino la ventana en la que se veia el perfil del usuario anterior.
+7. Al llamar funciones de la base de datos hay que respetar los tipos exactos.
+   `p_passenger_count` es `smallint`: pasarle un entero da `42883`, funcion no encontrada, y
+   una prueba puede salir en verde por el motivo equivocado.
+8. Supabase desaconseja llamar a `supabase.auth` desde dentro de su propio manejador de
+   cambio de estado: la llamada espera un candado que el manejador no ha soltado y la
+   aplicacion se cuelga sin ningun error. La carga del perfil va en un efecto separado.
+
+### Pruebas de la fase
+
+11 verificaciones de alta de perfil y proteccion de rol y estado. 6 del ciclo de
+autenticacion contra la API real. 9 de recuperacion de contrasena, incluido enlace caducado.
+5 estados de cuenta verificados en el emulador con capturas. 12 ataques por la API,
+saltandose la interfaz, todos rechazados. Verificado en emulador a 411 dp y en la tablet a
+800 dp.
+
+---
+
+## 15.6 PERFIL Y FOTO (Fase 7)
+
+### Archivos
+
+```
+src/app/passenger/profile.tsx        Datos reales. Foto editable
+src/app/passenger/edit-profile.tsx   Nombre y telefono, con las validaciones del registro
+src/app/change-password.tsx          En la raiz: tambien la usa el conductor
+src/features/profile/avatar-service.ts   Elegir, comprimir, subir, firmar y borrar
+src/features/profile/profile-avatar.tsx  Muestra la foto y permite cambiarla
+```
+
+### Almacenamiento
+
+Bucket `avatars`, privado, limite de 1 MB por archivo, solo `image/jpeg`, `image/png` y
+`image/webp`. Cuatro politicas sobre `storage.objects`:
+
+- **ver:** el dueno, un administrador, o la contraparte de un viaje, mediante
+  `shares_ride_with`. Los mismos que pueden ver el nombre de esa persona
+- **subir, reemplazar y borrar:** solo en la propia carpeta
+
+La ruta es `<uuid del usuario>/<marca de tiempo>.jpg`. La primera carpeta es lo que comparan
+las politicas, y la marca de tiempo es lo que hace que la ruta sea la version.
+
+`storage.objects` **no admite borrado directo por SQL**: hay que usar la API de Storage. Es
+una proteccion de Supabase contra archivos huerfanos.
+
+### Reglas aprendidas, no repetir estos errores
+
+1. `fetch(uri).arrayBuffer()` **no sabe leer una direccion `file://`** en React Native. No
+   falla: devuelve un cuerpo vacio, el servidor lo acepta, y queda un archivo de catorce
+   bytes. Se lee con `expo-file-system`. Hay una comprobacion que rechaza cualquier imagen de
+   menos de 1 KB para que no vuelva a pasar en silencio.
+2. Reemplazar el archivo con un nombre fijo no basta. Si la ruta no cambia, la pantalla no
+   pide una direccion firmada nueva y sigue mostrando la foto anterior desde la cache. El
+   servidor tenia la foto nueva y la aplicacion la vieja.
+3. Para recortar una imagen en un circulo hace falta `overflow: 'hidden'` en el contenedor,
+   no solo `borderRadius`.
+4. Un dato de una captura no se juzga a ojo. Una imagen de fondo blanco dentro de un circulo,
+   sobre pantalla blanca, parece sin recortar y no lo esta. Se perdio un paso persiguiendo un
+   fallo inexistente. Para comprobar recortes hace falta una imagen de contenido oscuro.
+5. `pgcrypto` esta en el esquema `extensions`, igual que PostGIS.
+
+### Pruebas de la fase
+
+Nombre, telefono y correo reales en pantalla en los dos perfiles. Edicion con las
+validaciones del registro y normalizacion del telefono verificada contra la base de datos.
+Cambio de contrasena con la actual equivocada, comprobando que **la contrasena no cambia**, y
+con la actual correcta, comprobando que la antigua deja de servir. Foto por galeria y por
+camara real en la tablet, con recorte, compresion, reemplazo y borrado del archivo anterior.
+Diez ataques por la API, todos rechazados. Verificado en emulador a 411 dp y tablet a 800 dp.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fase 5 completada y aprobada. **Fase 6 pendiente de autorizacion**
+- **Fase actual:** Fase 6 completada y aprobada. **Fase 7 completada, pendiente de
+  aprobacion**
 - **Paso actual:** Ninguno en curso
-- **Ultimo paso completado:** Cliente de Supabase en la app y conexion verificada en la
-  tablet fisica
+- **Ultimo paso completado:** Cierre de la Fase 7. Perfil con datos reales, edicion, cambio de
+  contrasena, foto por camara y galeria, y retirada del catalogo
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
-  con guardias, base de datos completa con sus politicas y funciones
+  con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
+  con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
+  cuenta, y perfil del pasajero con edicion, contrasena y foto
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
-  servidor
+  servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
+  en 15.6, incluidos 10 ataques por la API
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E10. Los tres ultimos, todos en la Fase 5:
-  E8 recursion infinita en 4 politicas, E9 SELECT INTO con destino compuesto,
-  E10 disparador de proteccion anulando el recalculo de calificaciones
+- **Errores resueltos hasta ahora:** E1 a E14. Los cuatro ultimos, todos del asistente.
+  En la Fase 6, ambos en pruebas y no en codigo: E11 preparar un bloqueo con el rol
+  privilegiado, que el disparador revierte, produciendo un fallo falso; E12 llamar a
+  `request_ride` con un entero donde va un `smallint`, que hizo que una prueba saliera **en
+  verde por el motivo equivocado**. En la Fase 7, ambos en codigo: E13 leer la imagen con
+  `fetch`, que en React Native no lee direcciones `file://` y subio un archivo de catorce
+  bytes sin que nada protestara; E14 reemplazar la foto con un nombre de archivo fijo, con lo
+  que la aplicacion seguia mostrando la anterior desde la cache mientras el servidor ya tenia
+  la nueva. Un verde falso es peor que un rojo, y una pantalla que miente es peor que un error
+  visible
 - **Hallazgos resueltos:** H1 .gitignore no protegia .env. H2 licencia MIT de Expo.
-  H3 cabecera de expo-router sin tema. H4 Expo Go desactualizado en la tablet
+  H3 cabecera de expo-router sin tema. H4 Expo Go desactualizado en la tablet.
+  H5 `profiles_protect_columns` no exime al rol privilegiado. H6 la API de Auth rechaza los
+  correos `@motomoto.test`
+- **Hallazgos abiertos:** H7 el navegador de Android no entrega el enlace de recuperacion a
+  la app, aceptado por D95 y a resolver en la Fase 25. H8 los 21 mensajes de las funciones de
+  la base de datos estan escritos sin tildes, contra D56
 - **Commits:** 21a12b7 inicial, 8ad6705 configuracion, 442e7ce licencia,
   d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
-  3c4f30e base de datos
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 6
+  3c4f30e base de datos. **Los de las fases 6 y 7 estan pendientes de hacerse desde
+  GitHub Desktop**
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 8
 
-### Lo que sigue siendo temporal y desaparece en la Fase 6
+### Lo que desaparecio en la Fase 6
 
-- `src/features/auth/session.tsx`: sesion simulada en memoria. Expone `user`,
-  `isLoading`, `signInAs`, `signOut`. **La Fase 6 cambia su interior por Supabase Auth
-  sin cambiar esa forma**, para que ninguna pantalla ni guardia se toque
-- El bloque MODO DESARROLLO de `src/app/(auth)/welcome.tsx` con los dos botones de
-  acceso directo por rol
-- Las rutas `/catalog` y `/catalog/sheet`, que se retiran al terminar la Fase 7
-- El panel de estado de conexion dentro de `/catalog`
+- La sesion simulada en memoria de `src/features/auth/session.tsx`. Su interior es ahora
+  Supabase Auth y **la forma exportada no cambio**: ninguna guardia ni pantalla hubo que
+  tocar, que era el objetivo de D69. Lo unico que se retiro fue `signInAs`
+- El bloque MODO DESARROLLO de `src/app/(auth)/welcome.tsx`, con los dos botones de acceso
+  directo por rol. Se adelanto desde el paso 6.8 porque no podia convivir con la sesion real
+
+### Lo que desaparecio en la Fase 7
+
+- Las rutas `/catalog` y `/catalog/sheet`, el catalogo del sistema de diseno, retiradas
+  segun D73. Con ellas se fue el panel de estado de conexion que vivia dentro
+- Nada mas apuntaba a esas rutas, asi que no quedaron enlaces roted. El unico componente que
+  se quedo sin usar es `Skeleton`, que es parte del sistema de diseno y hara falta en cuanto
+  haya listas que carguen
+
+### Lo que sigue siendo temporal
+
+- El vehiculo del panel del conductor, "Motorraton 12 / Placa ABC12", que es dato de ejemplo.
+  Sale de la base de datos en la Fase 12
 
 ---
 
@@ -770,11 +987,30 @@ Los scripts de prueba crean usuarios en `auth.users` con correos terminados en
   reservados" pero no nombra a nadie. Falta decidir si el codigo pertenece al desarrollador
   o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)
 - Nombre comercial definitivo e identidad de marca (antes de la Fase 25)
-- Color de marca (antes de la Fase 3)
 - Eleccion del proveedor de mapas, tras probar el autocompletado real en Amalfi (Fase 8)
 - Configuracion de un servidor de correo propio para la recuperacion de contrasena en
   produccion. El correo integrado de Supabase tiene limites bajos y no sirve para usuarios
   reales (antes de la Fase 25)
+- **Enlaces de aplicacion de Android** para el correo de recuperacion, con dominio propio y
+  archivo de verificacion publicado en el. Es la unica forma fiable de que el enlace abra la
+  app sin pasar por el navegador (H7). Va junto al dominio, al nombre comercial y al servidor
+  de correo: son la misma conversacion (Fase 25)
+- Verificar la recuperacion de contrasena con esquema `motomoto://` en la primera compilacion
+  real. Hoy solo se pudo probar `exp://` dentro de Expo Go, donde el navegador no entrega el
+  enlace (Fase 26)
+- Decidir si la aplicacion muestra los mensajes que devuelven las funciones de la base de
+  datos o los traduce desde el codigo del `hint`. Los 21 mensajes actuales estan sin tildes
+  (H8), contra D56. La recomendacion es traducir desde el codigo, como ya hace `errors.ts`
+  para autenticacion, para desacoplar los textos del esquema (Fase 11)
+- Quitar al rol `anon` el permiso de ejecutar `request_ride`. Hoy puede llamarla y la funcion
+  la rechaza desde dentro; revocarlo seria una capa mas (Fase 22)
+- Revisar el almacenamiento de la sesion, AsyncStorage frente a expo-secure-store (D93,
+  Fase 22)
+- Cerrar la sesion en los demas dispositivos al cambiar la contrasena. Supabase no lo hace por
+  defecto, asi que hoy un cambio de contrasena no expulsa a quien ya estuviera dentro en otro
+  telefono (Fase 22)
+- Habilitar el cambio de correo cuando exista verificacion (D101, Fase 25)
+- Reactivar la confirmacion de correo cuando exista servidor propio (D91, Fase 25)
 - Textos legales: terminos de uso y politica de privacidad (antes de la Fase 25)
 - Cuenta de Google Play Console (antes de la Fase 26)
 - Definicion final de los documentos exigidos a conductores y vehiculos. En el MVP se

@@ -17,7 +17,11 @@ import { homeRouteFor, useSession } from '@/features/auth/session';
  * exactly where the tabs would sit, and both would fight for the same gesture.
  */
 export default function PassengerLayout() {
-  const { user, isLoading } = useSession();
+  const { user, isLoading, canOperate, isRecoveringPassword } = useSession();
+
+  if (isRecoveringPassword) {
+    return <Redirect href="/reset-password" />;
+  }
 
   if (isLoading) {
     return null;
@@ -25,6 +29,12 @@ export default function PassengerLayout() {
 
   if (user === null) {
     return <Redirect href="/welcome" />;
+  }
+
+  // Antes que el rol: una cuenta bloqueada tiene rol de pasajero y aun asi no
+  // debe entrar. Comprobar el rol primero la dejaria pasar.
+  if (!canOperate) {
+    return <Redirect href="/account-status" />;
   }
 
   if (user.role !== 'passenger') {

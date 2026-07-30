@@ -1,4 +1,5 @@
-import { Bike, LogOut, Phone, Star } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Bike, ChevronRight, LogOut, Mail, Phone, ShieldCheck, Star } from 'lucide-react-native';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -9,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
+import { ProfileAvatar } from '@/features/profile/profile-avatar';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
 /**
@@ -20,15 +22,18 @@ import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
  */
 export default function DriverProfile() {
   const { colors } = useTheme();
+  const router = useRouter();
   const { user, signOut } = useSession();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
 
   return (
     <Screen scroll header={<Header title="Mi perfil" />}>
       <View style={styles.identity}>
-        <View style={[styles.avatar, { backgroundColor: colors.brandSubtle }]}>
-          <Bike size={iconSize.xl} color={colors.brandStrong} strokeWidth={iconStrokeWidth} />
-        </View>
+        {/* Solo visualizacion: la foto del conductor la sube el administrador
+            desde el panel, igual que su vehiculo y su numero de unidad. */}
+        {user !== null && (
+          <ProfileAvatar userId={user.id} avatarPath={user.avatarPath} fallbackIcon={Bike} />
+        )}
         <Text variant="heading">{user?.fullName ?? 'Conductor'}</Text>
         <View style={styles.rating}>
           <Star size={iconSize.sm} color={colors.warning} strokeWidth={iconStrokeWidth} />
@@ -55,8 +60,55 @@ export default function DriverProfile() {
             <Text variant="caption" color="textTertiary">
               Teléfono
             </Text>
-            <Text variant="body">Sin registrar</Text>
+            {/* Dato real de la sesion. Antes decia "Sin registrar" incluso cuando
+                el telefono existia, que es peor que no mostrarlo. */}
+            <Text variant="body" color={user?.phone == null ? 'textTertiary' : 'textPrimary'}>
+              {user?.phone ?? 'Sin registrar'}
+            </Text>
           </View>
+        </View>
+      </Card>
+
+      <Card variant="outlined" padding="md">
+        <View style={styles.row}>
+          <Mail size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <View style={styles.rowCopy}>
+            <Text variant="caption" color="textTertiary">
+              Correo
+            </Text>
+            <Text variant="body" color={user?.email == null ? 'textTertiary' : 'textPrimary'}>
+              {user?.email ?? 'Sin registrar'}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      {/* El conductor no edita sus datos, que los gestiona la empresa, pero su
+          contrasena si es suya. La cuenta la crea el administrador con una
+          contrasena inicial, asi que querra cambiarla el primer dia. */}
+      <Card
+        variant="outlined"
+        padding="md"
+        onPress={() => router.push('/change-password')}
+        accessibilityLabel="Cambiar contraseña"
+      >
+        <View style={styles.row}>
+          <ShieldCheck
+            size={iconSize.md}
+            color={colors.textSecondary}
+            strokeWidth={iconStrokeWidth}
+          />
+          <View style={styles.rowCopy}>
+            <Text variant="caption" color="textTertiary">
+              Seguridad
+            </Text>
+            <Text variant="body">Cambiar contraseña</Text>
+          </View>
+          <ChevronRight
+            size={iconSize.md}
+            color={colors.textTertiary}
+            strokeWidth={iconStrokeWidth}
+          />
         </View>
       </Card>
 
