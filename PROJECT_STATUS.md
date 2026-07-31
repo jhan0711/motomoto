@@ -4,15 +4,13 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-07-29
+- **Ultima actualizacion:** 2026-07-30
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
-  6 autenticacion
-- **Fase completada pendiente de aprobacion:** 7 perfil del pasajero
-- **Fase siguiente:** FASE 8 — Mapa principal (NO INICIADA)
-- **Ultimo commit:** pendiente. El commit de la Fase 6 se hace desde GitHub Desktop;
-  sustituir esta linea por su hash. El anterior fue 3c4f30e feat: add database schema,
-  RLS policies and Supabase client
+  6 autenticacion, 7 perfil del pasajero, 8 mapa principal
+- **Fase siguiente:** FASE 9 — Seleccion de origen y destino (NO INICIADA)
+- **Ultimo commit:** b6f92e6 add authentication and passenger profile
+  (la Fase 8 esta pendiente de commit)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -179,6 +177,27 @@ el sistema.
 | D108 | Cambio de contrasena, ubicacion | En la raiz y no dentro de `passenger/`. Un conductor tambien tiene que poder cambiar la suya: su cuenta la crea el administrador con una contrasena inicial |
 | D109 | Edicion del perfil del conductor | No existe en la aplicacion. Sus datos los gestiona la empresa desde el panel. Lo unico suyo que puede cambiar es la contrasena |
 
+### Decisiones de la Fase 8
+
+| # | Decision | Valor |
+|---|---|---|
+| D110 | Quien dibuja el mapa | Google, con `react-native-maps` 1.27.2. Dentro de una app Android el mapa es gratis e ilimitado para siempre (SKU 6DE1-4D9C-5B67), y es la libreria mas rodada del ecosistema. Se descarto `expo-maps` por estar en alpha con rupturas frecuentes declaradas: es el componente central de la aplicacion y el proyecto dura meses |
+| D111 | Quien resuelve las direcciones | Mapbox. Decidido probando 39 sitios reales de Amalfi y **verificando la coordenada de cada resultado**, no solo el nombre: Mapbox 22 aciertos, Google 13. Se implementa en la Fase 9 |
+| D112 | Las dos decisiones son separadas | Dibujar el mapa y buscar direcciones son servicios distintos y se eligieron con criterios distintos. Mezclar proveedores cuesta una llamada HTTP en un archivo |
+| D113 | Build de desarrollo | Local, con la cadena de la Fase 1. Sin cuenta de Expo, sin cola y sin conexion. EAS Build queda como plan B |
+| D114 | Configuracion de la app | `app.json` sustituido por `app.config.ts`. La clave de Google Maps debe venir del `.env`, y un JSON estatico no puede leer variables de entorno: la clave habria acabado en un archivo que sube al repositorio |
+| D115 | Nombre del paquete | `com.motomoto.app`. Necesario desde esta fase: es lo que identifica la app ante Google Maps y contra lo que se restringe la clave |
+| D116 | Ubicacion | Solo primer plano. El segundo plano es de la Fase 14 y es del conductor; declararlo antes anade un permiso que Google Play exige justificar para algo que nada usa |
+| D117 | El mapa va envuelto | Ninguna pantalla importa `react-native-maps`. Todo pasa por `src/features/map/map.tsx`, asi que D110 vive en un archivo y no en doce |
+| D118 | Estados de la ubicacion | Union discriminada de siete casos, no un puñado de booleanos. Con booleanos, `isLoading && hasError && !hasPermission` es representable y no significa nada |
+| D119 | Salida sin ubicacion | Todas las pantallas de fallo ofrecen "Continuar sin ubicacion", que muestra el mapa centrado en Amalfi. Es lo que cumple el criterio de aceptacion 6 |
+| D120 | Precision del GPS | `Balanced`, no `BestForNavigation`. Unos metros de error son invisibles en el mapa del pasajero, y el modo de alta precision mantiene el chip ocupado sin parar |
+| D121 | Espera del primer arreglo | 20 segundos. Bajo techo un arranque en frio tarda mas de un minuto, y un giro infinito se lee como una app colgada. El vigilante sigue activo: si el arreglo llega en el segundo 40, la pantalla se actualiza sola |
+| D122 | Vista inicial del mapa | Parque de Amalfi (6,9047 / -75,0767) con zoom de municipio, y desliza a la posicion real cuando llega. Una pantalla en blanco no dice nada; el parque dice donde opera el servicio |
+| D123 | Teclado | Lo gestiona `BottomSheet`, no las pantallas. Se corrige en el componente para que cualquier hoja futura lo herede |
+| D124 | Altura de la hoja con el teclado | Conserva la altura del punto de anclaje activo y solo se eleva. Estirarla al maximo era lo obvio y quedaba mal: en tablet se comia la pantalla y dejaba una plancha de blanco bajo tres controles |
+| D125 | Estilo del mapa | Propio en los dos esquemas, con los puntos de interes apagados. Compiten con nuestros marcadores y en Amalfi son en buena parte incorrectos, como demostro la evaluacion de proveedores |
+
 ### Decisiones revertidas
 
 - **company_id / multi-empresa en base de datos:** propuesto inicialmente y descartado tras
@@ -213,8 +232,9 @@ La plantilla oficial de Expo SDK 57 ya incluye TypeScript y expo-router.
 - **Movil:** React Native + Expo + TypeScript
 - **Panel administrativo:** Next.js + TypeScript
 - **Backend y base de datos:** Supabase (PostgreSQL, Auth, Realtime, Storage)
-- **Mapas:** por decidir entre Google Maps y Mapbox. Se decide en la Fase 8 tras probar
-  empiricamente la calidad del autocompletado de direcciones en Amalfi
+- **Mapas:** Google, con `react-native-maps` (D110). **Buscador de direcciones:** Mapbox
+  (D111). Decidido en la Fase 8 probando 39 sitios reales de Amalfi
+- **Build:** cliente de desarrollo propio compilado en local. Ya no se usa Expo Go
 - **Notificaciones:** Expo Notifications
 - **Formularios:** React Hook Form
 - **Validaciones:** Zod
@@ -528,8 +548,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 4 | Navegacion | COMPLETADA Y APROBADA |
 | 5 | Supabase y base de datos | COMPLETADA Y APROBADA |
 | 6 | Autenticacion | COMPLETADA Y APROBADA |
-| 7 | Perfil del pasajero | COMPLETADA, pendiente de aprobacion |
-| 8 | Mapa principal | Pendiente |
+| 7 | Perfil del pasajero | COMPLETADA Y APROBADA |
+| 8 | Mapa principal | COMPLETADA Y APROBADA |
 | 9 | Seleccion de origen y destino | Pendiente |
 | 10 | Seleccion de pasajeros | Pendiente |
 | 11 | Creacion de solicitud | Pendiente |
@@ -637,19 +657,13 @@ eslint.config.js    eslint-config-expo en formato plano. Ignora dist, example, n
 LICENSE             Aviso de propiedad privada, sin nombre de titular todavia
 ```
 
-### Nota operativa: emulador con sesion en cache
+### Nota operativa: conectar la app al servidor
 
-Al reabrir el emulador, Expo Go restaura la ultima sesion en cache. Si vienes de otro
-proyecto veras la aplicacion anterior con el aviso `Cannot connect to Expo CLI`. Solucion:
+**Desde la Fase 8 ya no se usa Expo Go.** El procedimiento vigente esta en la seccion 15.7 y
+en los comandos de la seccion 17.
 
-```
-adb reverse tcp:8081 tcp:8081
-adb shell am force-stop host.exp.exponent
-adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081"
-```
-
-La redireccion de puerto por adb es mas fiable que depender de la IP de la red local, que
-desde dentro del emulador no siempre es alcanzable.
+La redireccion de puerto por adb sigue siendo mas fiable que depender de la IP de la red
+local, que desde dentro del emulador no siempre es alcanzable.
 
 ---
 
@@ -914,23 +928,159 @@ Diez ataques por la API, todos rechazados. Verificado en emulador a 411 dp y tab
 
 ---
 
+## 15.7 MAPA Y UBICACION (Fase 8)
+
+### La evaluacion de proveedores
+
+Se probaron Google Places Autocomplete (New) y Mapbox Search Box contra **39 sitios reales
+de Amalfi**, escritos como los dice la gente ("la bomba", "el parque"), con la busqueda
+restringida al municipio y **pidiendo la coordenada de cada primer resultado** para medir a
+que distancia del parque cae.
+
+Resultado: **Mapbox 22 utiles, Google 13**, contando solo lo que cae dentro del casco.
+
+Lo que decidio la arquitectura, mas que el ganador:
+
+- **"El parque" no lo encuentra ninguno de los dos.** Tampoco la alcaldia, el cementerio,
+  el coliseo, la estacion de bomberos ni dos de los tres colegios
+- **16 de 39 sitios no tienen respuesta util en ningun proveedor**
+- Los dos devuelven nombres convincentes que caen en **otro municipio**: Google ofrecio un
+  "Coliseo Municipal" a 30 km y un "Cementerio Municipal" a 30 km. Sin pedir la coordenada,
+  todo eso parecia acierto
+- Fallan justo en los nombres coloquiales, que son los que usa la gente a diario
+
+Conclusion: **la tabla `places` no es un atajo, es la columna vertebral.** D10 queda
+confirmado con datos. El punto en el mapa pasa de extra a imprescindible, porque es lo que
+salva las busquedas que fallan. El buscador es un complemento que fallara cuatro de cada
+diez veces.
+
+Aviso de tarifas para la Fase 9: Mapbox Search Box trae **solo 500 busquedas gratis al mes**.
+Mapbox tiene otra API de geocodificacion con 100.000 gratis, sin comparar todavia.
+
+### El cambio de fondo: se acabo Expo Go
+
+Un mapa es codigo nativo, y Expo Go es una app ya compilada que no puede incorporarlo. Desde
+esta fase se trabaja con un **cliente de desarrollo propio**, compilado en local.
+
+La recarga en caliente funciona igual. Lo unico que cambia es que la app que se abre en el
+emulador y en la tablet es la nuestra.
+
+```powershell
+npx.cmd expo prebuild --platform android    # regenera android/ desde app.config.ts
+cd android; .\gradlew.bat assembleDebug     # compila el APK
+adb install -r android\app\build\outputs\apk\debug\app-debug.apk
+npx.cmd expo start --dev-client             # servidor de desarrollo
+
+# Conectar la app al servidor. Sin esto el cliente se queda en su pantalla de inicio.
+adb reverse tcp:8081 tcp:8081
+adb shell am start -a android.intent.action.VIEW -d "motomoto://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081" com.motomoto.app
+```
+
+Solo hay que recompilar si se toca codigo nativo o se anade una libreria. Un cambio de
+TypeScript sigue siendo instantaneo.
+
+### Claves de Google Cloud
+
+Dos claves distintas, y conviene no confundirlas:
+
+| Clave | Para que | Restriccion |
+|---|---|---|
+| `GOOGLE_MAPS_ANDROID_KEY` | El mapa dentro de la app | Apps de Android: `com.motomoto.app` + huella SHA-1. API: Maps SDK for Android |
+| `GOOGLE_TEST_API_KEY` | Solo la evaluacion de proveedores, desde el PC | Sin restriccion de aplicacion. APIs: Places (New) y Geocoding |
+
+**Huella SHA-1 de depuracion:** `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+
+Sale de `android/app/debug.keystore`, que trae la plantilla de Expo. Se consulta asi:
+
+```powershell
+& "$env:JAVA_HOME\bin\keytool.exe" -list -v -keystore android\app\debug.keystore -storepass android -alias androiddebugkey
+```
+
+Al publicar (Fase 26) habra otra huella distinta y habra que anadirla a la misma clave.
+
+### Archivos
+
+```
+app.config.ts                        Sustituye a app.json. Lee la clave del .env
+src/features/map/region.ts           Coordenadas de Amalfi y niveles de zoom
+src/features/map/use-location.ts     Permisos, GPS y los siete estados
+src/features/map/map-style.ts        Estilo del mapa, claro y oscuro
+src/features/map/map.tsx             Envoltorio de react-native-maps (D117)
+src/features/map/location-gate.tsx   Pantallas de permiso, GPS apagado y sin senal
+src/app/passenger/index.tsx          El mapa real sustituye al marcador de posicion
+src/components/ui/bottom-sheet.tsx   Gestion del teclado (D123)
+src/components/ui/screen.tsx         Comentario corregido sobre adjustResize
+```
+
+### Los siete estados de la ubicacion
+
+`checking`, `permission-required` con `canAsk` verdadero o falso, `services-disabled`,
+`locating`, `unavailable`, `ready`. Los siete verificados con captura.
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Expo trae su propio `debug.keystore` dentro de `android/app/`**, y `build.gradle`
+   apunta ahi, no a `~/.android/debug.keystore`. Crear el keystore estandar del sistema y
+   suponer que Gradle lo usara produce una huella que no vale para nada, y el sintoma es un
+   mapa en blanco color crema **sin ningun error en el log**.
+2. `animateToRegion` **llamado antes de que el mapa nativo este listo se descarta en
+   silencio**: no falla, no devuelve nada que comprobar. Hay que esperar a `onMapReady`. Y
+   no se debe marcar el centrado como hecho antes de saber que la orden se ejecuto, porque
+   entonces no se reintenta nunca.
+3. Un `featureType` invalido en el estilo del mapa **anula el estilo entero**. Google lanza
+   `InvalidStyleException` en logcat y dibuja un mapa sin estilo, que es facil confundir con
+   "el estilo se aplico y no se nota". No existe `park`: es `poi.park`.
+4. **`adjustResize` ya no encoge la ventana** cuando la app dibuja de borde a borde, que es
+   lo que hace Expo por defecto desde SDK 54. El teclado se pinta encima. Las pantallas con
+   el contenido arriba no lo notan; lo que va anclado abajo, como un bottom sheet, queda
+   detras del teclado. El comentario de `Screen` que decia lo contrario venia de la Fase 3 y
+   estuvo mal desde entonces.
+5. El compilador de React rechaza un `setState` alcanzable desde el cuerpo de un efecto,
+   aunque ocurra despues de un `await`: no sabe seguir la frontera asincrona. La solucion no
+   es silenciar la regla, es sacar la llamada del cuerpo del efecto.
+6. En Git Bash, `adb shell screencap -p /sdcard/x.png` falla: convierte la ruta de Android en
+   una ruta de Windows. Los comandos de adb con rutas del dispositivo van por PowerShell.
+7. `pm set-permission-flags` no existe antes de API 31. Para probar el permiso denegado para
+   siempre en un dispositivo Android 11 hay que denegarlo dos veces a mano.
+
+### Pruebas de la fase
+
+Quince puntos de validacion, superados en emulador a 411 dp y en la tablet a 800 dp, en modo
+claro y oscuro. Los siete estados de ubicacion con captura. Cuatro errores del asistente
+diagnosticados y corregidos (E15 a E18). El mapa se verifico con la ubicacion simulada en el
+parque de Amalfi y con GPS real en la tablet.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fase 6 completada y aprobada. **Fase 7 completada, pendiente de
-  aprobacion**
-- **Paso actual:** Ninguno en curso
-- **Ultimo paso completado:** Cierre de la Fase 7. Perfil con datos reales, edicion, cambio de
-  contrasena, foto por camara y galeria, y retirada del catalogo
+- **Fase actual:** Fases 0 a 8 completadas y aprobadas. **Fase 9 pendiente de autorizacion**
+- **Paso actual:** Ninguno en curso. La Fase 8 esta pendiente de commit
+- **Ultimo paso completado:** Cierre de la Fase 8. Mapa de Google a pantalla completa,
+  ubicacion en primer plano con sus siete estados, y salida a build de desarrollo propio
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
-  cuenta, y perfil del pasajero con edicion, contrasena y foto
+  cuenta, perfil del pasajero con edicion, contrasena y foto, y mapa principal con permisos,
+  ubicacion, marcador, camara y estados degradados
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
-  en 15.6, incluidos 10 ataques por la API
+  en 15.6, incluidos 10 ataques por la API. Mapa y ubicacion 15 puntos, detallados en 15.7,
+  con los siete estados verificados por captura
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E14. Los cuatro ultimos, todos del asistente.
+- **Errores resueltos hasta ahora:** E1 a E18. Los ocho ultimos, todos del asistente.
+  **Fase 8, los cuatro del asistente:** E15 dar una huella SHA-1 equivocada por suponer que
+  Gradle usa el keystore del sistema, cuando Expo trae el suyo dentro del proyecto, con el
+  sintoma de un mapa en blanco sin ningun error en el log; E16 mover la camara antes de que
+  el mapa nativo estuviera listo, orden que se descarta en silencio, agravado por marcar el
+  centrado como hecho sin comprobar que se ejecuto; E17 el teclado tapando el bottom sheet,
+  con la causa en una suposicion de la Fase 3 sobre `adjustResize` que dejo de ser cierta,
+  **encontrado por el usuario y no por las pruebas**; E18 un `featureType` inexistente que
+  anulaba el estilo completo del mapa. Ademas, en E18 se habia aplicado antes un cambio sobre
+  una hipotesis equivocada, que se retiro al encontrar la causa real en lugar de dejarlo
+  puesto por si acaso.
+  Los cuatro anteriores, tambien del asistente.
   En la Fase 6, ambos en pruebas y no en codigo: E11 preparar un bloqueo con el rol
   privilegiado, que el disparador revierte, produciendo un fallo falso; E12 llamar a
   `request_ride` con un entero donde va un `smallint`, que hizo que una prueba saliera **en
@@ -943,15 +1093,31 @@ Diez ataques por la API, todos rechazados. Verificado en emulador a 411 dp y tab
 - **Hallazgos resueltos:** H1 .gitignore no protegia .env. H2 licencia MIT de Expo.
   H3 cabecera de expo-router sin tema. H4 Expo Go desactualizado en la tablet.
   H5 `profiles_protect_columns` no exime al rol privilegiado. H6 la API de Auth rechaza los
-  correos `@motomoto.test`
+  correos `@motomoto.test`. H9 `adjustResize` dejo de encoger la ventana con el modo de
+  borde a borde, corregido en `BottomSheet` y documentado en `Screen`
 - **Hallazgos abiertos:** H7 el navegador de Android no entrega el enlace de recuperacion a
   la app, aceptado por D95 y a resolver en la Fase 25. H8 los 21 mensajes de las funciones de
   la base de datos estan escritos sin tildes, contra D56
 - **Commits:** 21a12b7 inicial, 8ad6705 configuracion, 442e7ce licencia,
   d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
-  3c4f30e base de datos. **Los de las fases 6 y 7 estan pendientes de hacerse desde
-  GitHub Desktop**
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 8
+  3c4f30e base de datos, e4a8648 estado de la Fase 6, b6f92e6 autenticacion y perfil
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 9
+
+### Lo que desaparecio en la Fase 8
+
+- **Expo Go.** Ya no se usa. El mapa es codigo nativo y Expo Go no puede incorporarlo. En su
+  lugar hay un cliente de desarrollo propio, compilado en local
+- `app.json`, sustituido por `app.config.ts`
+- El marcador de posicion del mapa en `src/app/passenger/index.tsx`, aquel texto que decia
+  "El mapa de Amalfi se integra en la Fase 8"
+
+### Lo que sigue siendo temporal
+
+- El vehiculo del panel del conductor, "Motorraton 12 / Placa ABC12". Sale de la base de
+  datos en la Fase 12
+- El unico lugar frecuente de la hoja del pasajero, "Parque principal", que es dato de
+  ejemplo. Sale de la tabla `places` en la Fase 9
+- El campo "¿A donde vas?" no busca nada todavia. Se conecta en la Fase 9
 
 ### Lo que desaparecio en la Fase 6
 
@@ -987,7 +1153,15 @@ Diez ataques por la API, todos rechazados. Verificado en emulador a 411 dp y tab
   reservados" pero no nombra a nadie. Falta decidir si el codigo pertenece al desarrollador
   o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)
 - Nombre comercial definitivo e identidad de marca (antes de la Fase 25)
-- Eleccion del proveedor de mapas, tras probar el autocompletado real en Amalfi (Fase 8)
+- **Nombre visible de la aplicacion.** Android muestra "motomoto" en minusculas en el dialogo
+  de permisos y bajo el icono, porque es el nombre tecnico del proyecto. Se corrige junto al
+  nombre comercial (D1, Fase 25)
+- **Permisos heredados de las herramientas:** `RECORD_AUDIO` y `SYSTEM_ALERT_WINDOW` entran
+  en el manifest por el cliente de desarrollo y el selector de fotos. Hay que revisarlos
+  antes de publicar, porque Google Play pregunta por ellos (Fase 25)
+- Comparar el Search Box de Mapbox (500 busquedas gratis al mes) con su API de
+  geocodificacion (100.000 gratis) antes de construir el buscador (Fase 9)
+- Anadir la huella SHA-1 de la clave de publicacion a la clave de Google Maps (Fase 26)
 - Configuracion de un servidor de correo propio para la recuperacion de contrasena en
   produccion. El correo integrado de Supabase tiene limites bajos y no sirve para usuarios
   reales (antes de la Fase 25)
@@ -1058,26 +1232,35 @@ del asistente. Se dijeron claramente, con su causa y su leccion.
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd run format
-npx.cmd expo start
+npx.cmd expo start --dev-client
 npx.cmd supabase db push
 npx.cmd supabase db query --linked "<sql>"
 
 # Android. adb esta en %ANDROID_HOME%\platform-tools
 adb devices
 adb reverse tcp:8081 tcp:8081
-adb shell am force-stop host.exp.exponent
-adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081" host.exp.exponent
+
+# Abrir la app y conectarla al servidor. Con dos dispositivos, anadir -s <serie>
+adb shell am start -a android.intent.action.VIEW -d "motomoto://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081" com.motomoto.app
+
 adb shell screencap -p /sdcard/s.png
 adb pull /sdcard/s.png <destino>
 adb shell "cmd uimode night yes"   # probar modo oscuro
+
+# Emulador
+& "$env:ANDROID_HOME\emulator\emulator.exe" -avd motomoto_phone -gpu host
+adb -s emulator-5554 emu geo fix -75.0767 6.9047   # simular el parque de Amalfi
 ```
 
 **Dispositivos de prueba:** emulador `motomoto_phone` a 411 dp y tablet Lenovo
 `HVA59QB5` a 800 dp. Probar en ambos anchos.
 
-**Aviso recurrente:** al reabrir el emulador o la tablet, Expo Go restaura la ultima
-sesion en cache y muestra `Cannot connect to Expo CLI`. Se resuelve con `adb reverse`,
-cerrar Expo Go y abrirlo con el enlace `exp://127.0.0.1:8081`.
+**Los comandos de adb con rutas del dispositivo van por PowerShell.** En Git Bash,
+`/sdcard/...` se convierte en una ruta de Windows y `screencap` falla con su mensaje de uso.
+
+**Aviso recurrente:** al abrir la app, el cliente de desarrollo puede quedarse en su propia
+pantalla de inicio en vez de cargar el proyecto. Se resuelve con `adb reverse` y abriendo la
+app con el enlace `motomoto://expo-development-client/?url=...` de arriba.
 
 ### Continuidad en una conversacion nueva
 

@@ -51,9 +51,17 @@ const DEFAULT_EDGES: readonly Edge[] = ['top', 'bottom'];
  * hidden behind the keyboard. Those three bugs are individually trivial and
  * collectively guarantee an app that feels unfinished.
  *
- * On Android, `KeyboardAvoidingView` gets no behavior on purpose: the system
- * already resizes the window (`adjustResize`), and adding a behavior on top of
- * that shifts the layout twice.
+ * On Android, `KeyboardAvoidingView` gets no behavior. That was originally
+ * justified by `adjustResize` shrinking the window for us, which turned out to
+ * be wrong: Expo draws the app edge to edge by default, and Android then ignores
+ * `adjustResize` and paints the keyboard over a window that keeps its full
+ * height. Corrected in Phase 8 after the keyboard was found covering the bottom
+ * sheet.
+ *
+ * The behavior stays absent anyway, because these screens do not need it: their
+ * content is anchored at the top, and the ones with enough fields to reach the
+ * keyboard are scrollable. What genuinely sits at the bottom of the display is
+ * `BottomSheet`, and that component handles the keyboard itself.
  */
 export function Screen({
   children,

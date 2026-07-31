@@ -11,8 +11,9 @@
  * in the project the rule stays on.
  */
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  Keyboard,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -84,6 +85,37 @@ export function BottomSheet({
   const { height: screenHeight } = useWindowDimensions();
   const insets = useSafeAreaInsets();
 
+  /**
+   * Height of the on-screen keyboard, or 0 when it is closed.
+   *
+   * This has to be tracked by hand. The manifest asks for `adjustResize`, which
+   * used to shrink the window and would have solved this for free, but Android
+   * ignores it once the app draws edge to edge, which Expo does by default from
+   * SDK 54 on. The window keeps its full height and the keyboard is painted over
+   * it, so a sheet anchored to the bottom edge ends up behind the keys.
+   *
+   * Screens whose content starts at the top never noticed. This one is anchored
+   * to the bottom, which is exactly where the keyboard appears.
+   */
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    // 'Did' and not 'Will': Android does not fire the 'Will' variants.
+    const shown = Keyboard.addListener('keyboardDidShow', (event) => {
+      setKeyboardHeight(event.endCoordinates.height);
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardHeight(0);
+    });
+
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  const isKeyboardVisible = keyboardHeight > 0;
+
   /** Ascending fractions, defensive against an unsorted prop. */
   const points = useMemo(() => [...snapPoints].sort((a, b) => a - b), [snapPoints]);
 
@@ -92,6 +124,26 @@ export function BottomSheet({
     () => screenHeight * (points[points.length - 1] ?? 0.7),
     [points, screenHeight],
   );
+
+  /**
+   * How tall the sheet actually is right now.
+   *
+   * Closed keyboard: always its full height, with `translateY` deciding how much
+   * of it shows. Open keyboard: exactly as much as the active snap point was
+   * already showing, lifted to rest on the keys.
+   *
+   * Sizing it to the largest snap point instead was the obvious move and looked
+   * wrong: on a tablet the sheet swallowed the screen and left a slab of empty
+   * white under three controls. Keeping the height the passenger already sees
+   * means the sheet rises without changing size, and the map stays visible.
+   *
+   * The cap is still needed for a small screen with a large keyboard, where even
+   * that height would push the header off the top.
+   */
+  const activeSnapHeight = screenHeight * (points[index] ?? points[0] ?? 0.3);
+  const visibleHeight = isKeyboardVisible
+    ? Math.min(activeSnapHeight, screenHeight - keyboardHeight - insets.top)
+    : sheetHeight;
 
   /**
    * Vertical offsets, in pixels, for each snap point. Offset 0 means fully
@@ -118,8 +170,10 @@ export function BottomSheet({
   // what the react-hooks/immutability rule forbids, and it is right to: a value
   // driven from two places is a race waiting to happen.
   useEffect(() => {
-    targetOffset.value = offsets[index] ?? collapsedOffset;
-  }, [index, offsets, collapsedOffset, targetOffset]);
+    // With the keyboard open the sheet goes fully up. Anything else would leave
+    // the passenger typing into a field they cannot see.
+    targetOffset.value = isKeyboardVisible ? 0 : (offsets[index] ?? collapsedOffset);
+  }, [index, offsets, collapsedOffset, targetOffset, isKeyboardVisible]);
 
   useAnimatedReaction(
     () => targetOffset.value,
@@ -146,6 +200,10 @@ export function BottomSheet({
   // react-hooks/immutability rule: a useMemo body must be pure, and these
   // callbacks write to shared values.
   const panGesture = Gesture.Pan()
+    // Dragging is disabled while typing. The snap offsets are computed from the
+    // sheet's normal height, which is not the height it has right now, so a drag
+    // would land somewhere that does not correspond to any snap point.
+    .enabled(!isKeyboardVisible)
     .onStart(() => {
       dragStart.value = translateY.value;
     })
@@ -188,10 +246,13 @@ export function BottomSheet({
           shadows.lg,
           {
             backgroundColor: colors.surface,
+            // Sits on top of the keyboard instead of behind it.
+            bottom: keyboardHeight,
             borderTopLeftRadius: radius.xxl,
             borderTopRightRadius: radius.xxl,
-            height: sheetHeight,
-            paddingBottom: insets.bottom,
+            height: visibleHeight,
+            // The gesture bar inset only applies when nothing else is down there.
+            paddingBottom: isKeyboardVisible ? spacing.sm : insets.bottom,
           },
           animatedStyle,
           style,

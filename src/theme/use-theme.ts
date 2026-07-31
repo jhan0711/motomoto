@@ -18,8 +18,8 @@ export interface Theme {
  * Reads the active color scheme and returns the matching color set.
  *
  * Right now this follows the operating system, which is what
- * `userInterfaceStyle: "automatic"` in app.json enables. There is no in-app
- * theme switch yet.
+ * `userInterfaceStyle: 'automatic'` in app.config.ts enables. There is no
+ * in-app theme switch yet.
  *
  * When one is needed, only the body of this hook changes: it will read from a
  * context provider instead of from the OS. Every component that calls
