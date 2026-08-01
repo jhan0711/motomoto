@@ -19,6 +19,20 @@ export const AMALFI_CENTER: Coordinates = {
 };
 
 /**
+ * Bounding box of the municipality, as Mapbox wants it:
+ * minimum longitude, minimum latitude, maximum longitude, maximum latitude.
+ *
+ * Roughly 25 km around the town square, which covers Amalfi's 1210 km² well
+ * enough to include the veredas. Every address search is restricted to this box.
+ *
+ * Restricting rather than merely biasing is the whole point. With a soft bias
+ * the Phase 8 evaluation got a "Coliseo Municipal" thirty kilometres away and an
+ * "Alcaldía" that belonged to Anorí, both looking perfectly plausible in a list.
+ * The service does not leave the municipality, so neither should its results.
+ */
+export const AMALFI_BBOX = [-75.304, 6.68, -74.85, 7.13] as const;
+
+/**
  * Deltas control the zoom level: they are the height and width of the visible
  * area, in degrees. Smaller means closer.
  *

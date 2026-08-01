@@ -4,13 +4,14 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-07-30
+- **Ultima actualizacion:** 2026-07-31
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
-  6 autenticacion, 7 perfil del pasajero, 8 mapa principal
-- **Fase siguiente:** FASE 9 — Seleccion de origen y destino (NO INICIADA)
-- **Ultimo commit:** b6f92e6 add authentication and passenger profile
-  (la Fase 8 esta pendiente de commit)
+  6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
+  9 seleccion de origen y destino
+- **Fase siguiente:** FASE 10 — Seleccion de pasajeros (NO INICIADA)
+- **Ultimo commit:** 1850acf feat: implement main map with location permissions and states
+  (la Fase 9 esta pendiente de commit)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -197,6 +198,25 @@ el sistema.
 | D123 | Teclado | Lo gestiona `BottomSheet`, no las pantallas. Se corrige en el componente para que cualquier hoja futura lo herede |
 | D124 | Altura de la hoja con el teclado | Conserva la altura del punto de anclaje activo y solo se eleva. Estirarla al maximo era lo obvio y quedaba mal: en tablet se comia la pantalla y dejaba una plancha de blanco bajo tres controles |
 | D125 | Estilo del mapa | Propio en los dos esquemas, con los puntos de interes apagados. Compiten con nuestros marcadores y en Amalfi son en buena parte incorrectos, como demostro la evaluacion de proveedores |
+
+### Decisiones de la Fase 9
+
+| # | Decision | Valor |
+|---|---|---|
+| D126 | Que API de Mapbox usa el buscador | Search Box, pese a traer solo 500 busquedas gratis al mes frente a las 100.000 de la geocodificacion. Medido sobre los 39 sitios: Search Box acerto 22 y la geocodificacion 3. Las APIs de geocodificacion indexan direcciones y divisiones administrativas, no negocios ni puntos de referencia, y en Amalfi casi todo lo que la gente nombra es un punto de interes. Una API gratis que no encuentra nada no ahorra nada |
+| D127 | Como se nombra un punto del mapa | Primero nuestra tabla, despues la direccion de Mapbox. A menos de 80 m el nombre del lugar; entre 80 y 250 m "Cerca de X" mas la direccion; mas lejos la direccion sola; y si no hay nada, se le pide una referencia al pasajero y no se deja confirmar sin ella |
+| D128 | Que API hace el camino inverso | Geocoding v6, no Search Box. En los 12 puntos probados devolvieron **exactamente lo mismo**, asi que se usa la que trae 200 veces mas cupo |
+| D129 | Umbral de 80 m para decir el nombre | Ensancharlo hacia que mas puntos tuvieran nombre bonito y era mentir: a 150 m del parque no estas en el parque, y el conductor va a donde le digan |
+| D130 | Nombres de los lugares | Los que dice la gente, no los formales. En la lista pone "El comando", y "Estación de policía" va debajo como aclaracion |
+| D131 | Lectura de los lugares | Por la funcion `list_places` y no por un select. La columna es geography y la API REST la devuelve como binario en hexadecimal, que habria que descifrar en el telefono |
+| D132 | Lugar mas cercano | Se calcula en el telefono, no en el servidor. Son 36 filas que caben en memoria, y asi elegir destino sigue funcionando sin conexion. En Amalfi eso importa |
+| D133 | Cache de los lugares | En el modulo, una vez por sesion de aplicacion. Tres pantallas necesitan la lista y sin cache cada navegacion la volveria a pedir |
+| D134 | Resultados de otros municipios | Se filtran por municipio. El recuadro de busqueda cubre 25 km y a esa distancia caben pueblos vecinos enteros. Estrecharlo dejaria fuera las veredas, que si son destinos validos |
+| D135 | Testigo de sesion de busqueda | Uno por busqueda, no por pulsacion. Es lo que hace viable el cupo de 500: teclear "hospital" y elegir es **una** sesion, no ocho |
+| D136 | Pausa antes de buscar | 400 ms tras la ultima tecla. No es un adorno de rendimiento, es lo que mantiene el gasto bajo control |
+| D137 | Donde vive el formulario a medio hacer | En memoria, no en disco. Es un formulario, no un viaje en curso. Si la aplicacion se cierra del todo, empezar otra vez es razonable y honesto: la ubicacion habra cambiado. Restaurar un viaje activo es de la Fase 15 |
+| D138 | Origen y destino comparten pantalla | Elegir un sitio es el mismo gesto en los dos casos. Duplicar la pantalla significaria arreglar cada fallo dos veces |
+| D139 | El campo de la hoja no es un campo | Es un boton con aspecto de campo que abre la pantalla de busqueda. Escribir dentro de la hoja obligaria a subirla por encima del teclado y meter los resultados en trescientos pixeles |
 
 ### Decisiones revertidas
 
@@ -550,7 +570,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 6 | Autenticacion | COMPLETADA Y APROBADA |
 | 7 | Perfil del pasajero | COMPLETADA Y APROBADA |
 | 8 | Mapa principal | COMPLETADA Y APROBADA |
-| 9 | Seleccion de origen y destino | Pendiente |
+| 9 | Seleccion de origen y destino | COMPLETADA Y APROBADA |
 | 10 | Seleccion de pasajeros | Pendiente |
 | 11 | Creacion de solicitud | Pendiente |
 | 12 | Modulo del conductor | Pendiente |
@@ -684,9 +704,11 @@ PostgreSQL 17.6, organizacion propia (no gestionada por Vercel). PostGIS 3.3.
 20260729012123_fix_rls_policy_recursion            corrige recursion en 4 politicas
 20260729013123_ride_state_transition_functions     10 funciones publicas, 3 internas
 20260729014732_fix_rating_refresh_blocked_by_guard corrige el choque entre dos disparadores
+20260801012726_seed_amalfi_places                  los 36 lugares frecuentes (Fase 9)
+20260801015032_list_places_function                lectura con latitud y longitud (Fase 9)
 ```
 
-Totales: **17 tablas, 46 politicas, 29 funciones**. Las 17 con seguridad de fila activa.
+Totales: **17 tablas, 46 politicas, 30 funciones**. Las 17 con seguridad de fila activa.
 
 ### Funciones accesibles desde la aplicacion
 
@@ -703,7 +725,12 @@ start_ride(ride_id)
 complete_ride(ride_id)
 cancel_ride(ride_id, reason?)
 rate_ride(ride_id, stars, comment?) -> uuid
+list_places() -> id, name, description, lat, lng
 ```
+
+`list_places` es la unica **security invoker** de la lista, a proposito: se ejecuta con los
+permisos de quien llama, asi que las politicas de `places` se siguen aplicando. Las demas son
+security definer porque necesitan saltarselas para romper recursiones.
 
 Internas, sin permiso para los roles publicos: `offer_request_to_drivers`,
 `assert_ride_driver`, `expire_stale_requests`, `find_available_drivers`.
@@ -745,6 +772,15 @@ npx.cmd supabase migration list                # que hay aplicado
 npx.cmd supabase db query --linked "<sql>"     # consulta el servidor
 npx.cmd supabase db query --linked -f <ruta>   # ejecuta un archivo
 npx.cmd supabase gen types typescript --linked # regenera los tipos
+```
+
+**Para regenerar los tipos sin BOM en Windows PowerShell 5.1**, donde `-Encoding utf8NoBOM`
+no existe y `utf8` a secas escribe BOM:
+
+```powershell
+$tipos = npx.cmd supabase gen types typescript --linked | Out-String
+[System.IO.File]::WriteAllText("C:\dev\motomoto\src\types\database.ts", $tipos,
+  (New-Object System.Text.UTF8Encoding($false)))
 ```
 
 **Sin `--linked` intenta conectarse a una base local que no existe.** El aviso sobre
@@ -1052,24 +1088,129 @@ parque de Amalfi y con GPS real en la tablet.
 
 ---
 
+## 15.8 ORIGEN Y DESTINO (Fase 9)
+
+### La tabla de lugares dejo de estar vacia
+
+36 lugares de Amalfi cargados por migracion. Los nombres los escribio el dueno tal y como los
+dice la gente. Las coordenadas vienen de dos sitios:
+
+- **20 del buscador de Mapbox**, verificando de cada una a que distancia del parque cae. Sin
+  esa comprobacion, un "Coliseo Municipal" a 30 km y una "Alcaldia" que era la de Anori
+  habrian entrado como buenas
+- **16 marcadas a mano sobre un mapa**, porque ningun proveedor las conoce. Entre ellas
+  **el parque**, que es el destino mas pedido del pueblo
+
+Ese segundo grupo es la razon de ser de la tabla. Para marcarlas se genero un mapa de un solo
+uso, un HTML con Mapbox GL donde el dueno hizo clic en cada sitio. Se probo antes de
+entregarlo, simulando los clics en el navegador.
+
+La validacion previa a escribir encontro dos duplicados reales: "estacion de policia" con
+"el comando" (11 m) y "alto de la virgen" con "alto de la linea" (39 m). Se fusionaron.
+
+### Que API de Mapbox, y por que
+
+| API | Aciertos sobre 39 sitios | Gratis al mes |
+|---|---|---|
+| Search Box | **22** | 500 |
+| Geocoding v6 | 3 | 100.000 |
+| Geocoding v5 | 3 | 100.000 |
+
+Para el camino inverso, en cambio, las dos devolvieron **lo mismo** en los 12 puntos
+probados, asi que ahi se usa la barata (D128).
+
+### El hallazgo del camino inverso
+
+**Amalfi si tiene direcciones en los datos de Mapbox.** Al soltar un punto en el parque
+devuelve "Carrera 21 19 068", y acierta en todo el casco urbano.
+
+Es lo contrario de lo que pasa al buscar: nadie teclea "Carrera 21 #19-068" en un buscador,
+pero al pinchar en el mapa esa direccion existe y es correcta. El camino inverso funciona
+mucho mejor que el directo, y por eso el punto en el mapa acabo siendo mas util que el
+buscador.
+
+### Archivos
+
+```
+supabase/migrations/20260801012726_seed_amalfi_places.sql   Los 36 lugares
+supabase/migrations/20260801015032_list_places_function.sql Lectura con lat y lng
+
+src/features/destination/types.ts             Tipos y patron de resultado
+src/features/destination/geo.ts               Distancias y lugar mas cercano
+src/features/destination/places-service.ts    Lee los lugares
+src/features/destination/use-places.ts        Cache de modulo
+src/features/destination/mapbox-service.ts    Buscar, ubicar y camino inverso
+src/features/destination/describe-point.ts    La logica de D127
+src/features/ride/ride-draft.tsx              El formulario a medio hacer
+
+src/app/passenger/destination.tsx             Buscador. Sirve a origen y destino
+src/app/passenger/pick-on-map.tsx             Chincheta fija y mapa que se arrastra
+src/app/passenger/index.tsx                   Resumen del viaje en la hoja
+src/app/passenger/_layout.tsx                 Envuelve la zona con el borrador
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Un buscador que falla no debe vaciar la lista y callarse.** El pasajero leia "no
+   encontramos ese sitio" cuando lo que pasaba era que Mapbox no respondio: buscaria otro
+   nombre, fallaria igual, y concluiria que la aplicacion no sirve. Un error tecnico no
+   puede disfrazarse de conclusion sobre lo que el usuario busca.
+2. **Un recuadro de busqueda de 25 km alcanza municipios enteros.** Sin filtrar, "hospital"
+   ofrecia el de Anori y el de Campamento con el mismo aspecto que el de aqui. El filtro se
+   midio contra los 39 sitios antes de darlo por bueno: conserva los 22 de Amalfi y bloquea
+   los 5 de fuera.
+3. **`keyboardShouldPersistTaps` en 'handled' se come el primer toque.** Con el teclado
+   abierto, tocar un resultado solo cerraba el teclado; habia que tocar dos veces, y la
+   segunda vez la lista ya se habia movido. Con 'always' funciona al primer toque.
+4. `initialRegion` **solo se lee en el primer render**, y para entonces la ubicacion casi
+   nunca esta lista. Dejarlo asi hace que la pantalla abra en un sitio u otro segun quien
+   gane la carrera. Mismo error que E16 y misma correccion: esperar a `onMapReady`.
+5. Las variables `EXPO_PUBLIC_` **se leen cuando arranca Metro**. Anadir una al `.env` con el
+   servidor ya en marcha no la hace aparecer: hay que reiniciarlo.
+6. El generador de tipos de Supabase declara como `string` una columna de retorno que admite
+   nulos. Se normaliza en la capa de servicio para que la mentira no se propague.
+7. En Windows PowerShell 5.1 **no existe `-Encoding utf8NoBOM`**, y su `utf8` escribe BOM.
+   Para regenerar los tipos hay que usar `[System.IO.File]::WriteAllText` con
+   `UTF8Encoding($false)`.
+
+### Pruebas de la fase
+
+26 puntos de validacion, superados en tablet a 800 dp y emulador a 411 dp, en modo claro y
+oscuro. Los tres caminos al destino y las cuatro ramas de la etiqueta, cada una con captura.
+Probado sin conexion: la lista sigue funcionando desde la cache y el buscador dice la verdad.
+Cuatro ataques por la base de datos suplantando a un pasajero, todos rechazados.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 8 completadas y aprobadas. **Fase 9 pendiente de autorizacion**
-- **Paso actual:** Ninguno en curso. La Fase 8 esta pendiente de commit
-- **Ultimo paso completado:** Cierre de la Fase 8. Mapa de Google a pantalla completa,
-  ubicacion en primer plano con sus siete estados, y salida a build de desarrollo propio
+- **Fase actual:** Fases 0 a 9 completadas y aprobadas. **Fase 10 pendiente de autorizacion**
+- **Paso actual:** Ninguno en curso. La Fase 9 esta pendiente de commit
+- **Ultimo paso completado:** Cierre de la Fase 9. Los 36 lugares de Amalfi en la base de
+  datos, buscador de direcciones, punto en el mapa y resumen del viaje
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
-  cuenta, perfil del pasajero con edicion, contrasena y foto, y mapa principal con permisos,
-  ubicacion, marcador, camara y estados degradados
+  cuenta, perfil del pasajero con edicion, contrasena y foto, mapa principal con permisos,
+  ubicacion, marcador, camara y estados degradados, y seleccion de origen y destino por
+  lista de lugares, buscador de direcciones y punto en el mapa
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
   en 15.6, incluidos 10 ataques por la API. Mapa y ubicacion 15 puntos, detallados en 15.7,
-  con los siete estados verificados por captura
+  con los siete estados verificados por captura. Origen y destino 26 puntos, detallados en
+  15.8, incluidas las pruebas sin conexion
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E18. Los ocho ultimos, todos del asistente.
+- **Errores resueltos hasta ahora:** E1 a E22. Los doce ultimos, todos del asistente.
+  **Fase 9, los cuatro del asistente, todos encontrados probando en el dispositivo y ninguno
+  leyendo el codigo:** E19 el buscador vaciaba la lista y se callaba cuando Mapbox fallaba,
+  con lo que el pasajero leia "no encontramos ese sitio" ante un problema de red; E20 salian
+  destinos de Anori y Campamento con el mismo aspecto que los de Amalfi, y un pasajero podia
+  mandar al conductor veinte kilometros fuera sin enterarse; E21 el mapa del selector abria
+  en un sitio u otro segun quien ganara la carrera entre el GPS y el mapa, que es E16 otra
+  vez; E22 con el teclado abierto habia que tocar **dos veces** para elegir un resultado,
+  porque el primer toque se gastaba en cerrar el teclado.
+  Los ocho anteriores, tambien del asistente.
   **Fase 8, los cuatro del asistente:** E15 dar una huella SHA-1 equivocada por suponer que
   Gradle usa el keystore del sistema, cuando Expo trae el suyo dentro del proyecto, con el
   sintoma de un mapa en blanco sin ningun error en el log; E16 mover la camara antes de que
@@ -1095,13 +1236,27 @@ parque de Amalfi y con GPS real en la tablet.
   H5 `profiles_protect_columns` no exime al rol privilegiado. H6 la API de Auth rechaza los
   correos `@motomoto.test`. H9 `adjustResize` dejo de encoger la ventana con el modo de
   borde a borde, corregido en `BottomSheet` y documentado en `Screen`
-- **Hallazgos abiertos:** H7 el navegador de Android no entrega el enlace de recuperacion a
+- **Hallazgos abiertos:** H10 el indice unico de `places` normaliza mayusculas y espacios de
+  los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
+  lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
+  H11 el buscador esta restringido a Amalfi pero **el punto en el mapa no**: se puede
+  arrastrar hasta otro municipio y confirmarlo. No se corrige en el cliente porque hacerlo
+  bien necesita el limite real del municipio y no un rectangulo, y esa validacion pertenece
+  al servidor al crear la solicitud (D83, Fase 11).
+  H7 el navegador de Android no entrega el enlace de recuperacion a
   la app, aceptado por D95 y a resolver en la Fase 25. H8 los 21 mensajes de las funciones de
   la base de datos estan escritos sin tildes, contra D56
 - **Commits:** 21a12b7 inicial, 8ad6705 configuracion, 442e7ce licencia,
   d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
-  3c4f30e base de datos, e4a8648 estado de la Fase 6, b6f92e6 autenticacion y perfil
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 9
+  3c4f30e base de datos, e4a8648 estado de la Fase 6, b6f92e6 autenticacion y perfil,
+  1850acf mapa principal con permisos y estados de ubicacion
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 10
+
+### Lo que desaparecio en la Fase 9
+
+- El "Parque principal" de mentira que mostraba la hoja del pasajero. Ahora la lista sale de
+  la base de datos
+- El campo de texto real dentro de la hoja, sustituido por un boton con su aspecto (D139)
 
 ### Lo que desaparecio en la Fase 8
 
@@ -1115,9 +1270,10 @@ parque de Amalfi y con GPS real en la tablet.
 
 - El vehiculo del panel del conductor, "Motorraton 12 / Placa ABC12". Sale de la base de
   datos en la Fase 12
-- El unico lugar frecuente de la hoja del pasajero, "Parque principal", que es dato de
-  ejemplo. Sale de la tabla `places` en la Fase 9
-- El campo "¿A donde vas?" no busca nada todavia. Se conecta en la Fase 9
+- El boton "Continuar" del resumen del viaje no hace nada. La cantidad de pasajeros es de la
+  Fase 10 y la solicitud real de la Fase 11
+- El borrador del viaje se pierde si la aplicacion se cierra del todo (D137). Restaurar un
+  viaje ACTIVO es otra cosa y es de la Fase 15
 
 ### Lo que desaparecio en la Fase 6
 
@@ -1159,8 +1315,13 @@ parque de Amalfi y con GPS real en la tablet.
 - **Permisos heredados de las herramientas:** `RECORD_AUDIO` y `SYSTEM_ALERT_WINDOW` entran
   en el manifest por el cliente de desarrollo y el selector de fotos. Hay que revisarlos
   antes de publicar, porque Google Play pregunta por ellos (Fase 25)
-- Comparar el Search Box de Mapbox (500 busquedas gratis al mes) con su API de
-  geocodificacion (100.000 gratis) antes de construir el buscador (Fase 9)
+- **Vigilar el consumo del buscador.** Search Box trae 500 sesiones gratis al mes y no hay
+  alternativa: la API barata no conoce Amalfi (D126). Con las tres medidas puestas (testigo
+  por busqueda, pausa de 400 ms y la lista de lugares primero) deberia sobrar para el piloto,
+  pero conviene mirar el consumo real en Mapbox tras el primer mes de uso (Fase 24)
+- **Ampliar la lista de lugares.** Los 36 actuales son el arranque. Hay 16 sitios del
+  municipio que ningun proveedor conoce y que se marcaron a mano; con el uso apareceran mas.
+  Se dan de alta desde el panel (Fase 20)
 - Anadir la huella SHA-1 de la clave de publicacion a la clave de Google Maps (Fase 26)
 - Configuracion de un servidor de correo propio para la recuperacion de contrasena en
   produccion. El correo integrado de Supabase tiene limites bajos y no sirve para usuarios

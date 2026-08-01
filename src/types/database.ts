@@ -951,6 +951,16 @@ export type Database = {
         Returns: boolean;
       };
       is_admin: { Args: never; Returns: boolean };
+      list_places: {
+        Args: never;
+        Returns: {
+          description: string;
+          id: string;
+          lat: number;
+          lng: number;
+          name: string;
+        }[];
+      };
       offer_request_to_drivers: {
         Args: { p_limit?: number; p_request_id: string };
         Returns: number;

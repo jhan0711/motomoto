@@ -1,6 +1,7 @@
 import { Redirect, Stack } from 'expo-router';
 
 import { homeRouteFor, useSession } from '@/features/auth/session';
+import { RideDraftProvider } from '@/features/ride/ride-draft';
 
 /**
  * Passenger zone guard.
@@ -41,5 +42,12 @@ export default function PassengerLayout() {
     return <Redirect href={homeRouteFor(user.role)} />;
   }
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  // El borrador envuelve toda la zona del pasajero y no solo el mapa: elegir
+  // destino ocurre en otra pantalla, y lo elegido tiene que sobrevivir a ir y
+  // volver entre ellas.
+  return (
+    <RideDraftProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </RideDraftProvider>
+  );
 }

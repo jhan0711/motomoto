@@ -20,6 +20,16 @@ export interface MapProps {
    * silently, with no error and no return value to check.
    */
   onReady?: () => void;
+  /**
+   * Se dispara cuando la camara termina de moverse, no mientras se mueve.
+   *
+   * Lo usa la pantalla de elegir un punto en el mapa. Con el evento continuo
+   * habria una peticion de direccion por cada fotograma del arrastre; con este,
+   * una cuando el dedo se levanta.
+   */
+  onRegionSettled?: (region: Region) => void;
+  /** Oculta el marcador del usuario. La pantalla de elegir punto usa su propia chincheta. */
+  showUser?: boolean;
 }
 
 /**
@@ -33,7 +43,14 @@ export interface MapProps {
  * default already is Google, but stating it means the code says which map this
  * is instead of relying on a platform default that could shift.
  */
-export function Map({ ref, initialRegion, userCoords, onReady }: MapProps) {
+export function Map({
+  ref,
+  initialRegion,
+  userCoords,
+  onReady,
+  onRegionSettled,
+  showUser = true,
+}: MapProps) {
   const { isDark } = useTheme();
   const tracksMarker = useMarkerSettle();
 
@@ -44,6 +61,7 @@ export function Map({ ref, initialRegion, userCoords, onReady }: MapProps) {
       style={StyleSheet.absoluteFill}
       initialRegion={initialRegion}
       onMapReady={onReady}
+      onRegionChangeComplete={onRegionSettled}
       customMapStyle={isDark ? darkMapStyle : lightMapStyle}
       // Google's own blue dot is switched off in favour of our marker below.
       // Two dots for one person is confusing, and the built-in one ignores the
@@ -58,7 +76,7 @@ export function Map({ ref, initialRegion, userCoords, onReady }: MapProps) {
       rotateEnabled={false}
       pitchEnabled={false}
     >
-      {userCoords !== null && (
+      {showUser && userCoords !== null && (
         <Marker
           coordinate={userCoords}
           anchor={{ x: 0.5, y: 0.5 }}
