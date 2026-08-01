@@ -32,14 +32,28 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_CONTENT_WIDTH, radius, shadows, spacing, useTheme } from '@/theme';
 
+/**
+ * Una altura de reposo de la hoja.
+ *
+ * Un numero es una fraccion de la pantalla: `0.3` es el treinta por ciento.
+ *
+ * `'content'` es la altura que pide lo que hay dentro, medida al vuelo. Existe
+ * porque las fracciones no saben nada del contenido: el mismo `0.3` da 240 dp en
+ * la tablet y 274 dp en el telefono, mientras que un panel de confirmacion
+ * necesita los que necesita. Con fracciones, o sobra sitio en un aparato o se
+ * corta el boton en el otro, y la unica forma de acertar es ir probando numeros
+ * en cada pantalla nueva.
+ */
+export type SnapPoint = number | 'content';
+
 export interface BottomSheetProps {
   children: ReactNode;
   /**
-   * Heights as a fraction of the screen, ascending. `[0.25, 0.7]` means a
-   * collapsed state covering a quarter of the screen and an expanded one
-   * covering seventy percent.
+   * Alturas de reposo, de menor a mayor. `[0.09, 'content']` es una hoja que se
+   * puede bajar hasta dejar solo el asa y que en reposo mide lo que mide su
+   * contenido.
    */
-  snapPoints?: readonly number[];
+  snapPoints?: readonly SnapPoint[];
   /** Index of the active snap point. Controlled by the parent. */
   index?: number;
   onIndexChange?: (index: number) => void;
@@ -48,7 +62,18 @@ export interface BottomSheetProps {
   style?: StyleProp<ViewStyle>;
 }
 
-const DEFAULT_SNAP_POINTS = [0.28, 0.68] as const;
+const DEFAULT_SNAP_POINTS: readonly SnapPoint[] = [0.28, 0.68];
+
+/**
+ * Alto del asa con su espacio: `paddingTop` + la barra + `paddingBottom`.
+ *
+ * Se suma a mano al medir el contenido porque el asa vive fuera del bloque que
+ * se mide, y sin ella la hoja se quedaria corta justo por esos pixeles.
+ */
+const GRABBER_BLOCK = spacing.md + 4 + spacing.sm;
+
+/** Techo de seguridad: la hoja nunca se come la pantalla entera. */
+const MAX_CONTENT_FRACTION = 0.85;
 
 /** Tuned for a sheet that feels responsive without overshooting. */
 const SPRING_CONFIG = {
@@ -116,14 +141,39 @@ export function BottomSheet({
 
   const isKeyboardVisible = keyboardHeight > 0;
 
-  /** Ascending fractions, defensive against an unsorted prop. */
-  const points = useMemo(() => [...snapPoints].sort((a, b) => a - b), [snapPoints]);
+  /**
+   * Alto natural de la cabecera mas el contenido, medido cuando se dibuja.
+   *
+   * Empieza en cero y en el primer dibujado la hoja usa el techo de seguridad.
+   * Dura un fotograma y nadie lo ve, pero es la razon de que este valor no
+   * pueda ser un `useMemo`: no se sabe hasta que el sistema mide.
+   */
+  const [naturalHeight, setNaturalHeight] = useState(0);
+
+  const medir = useCallback((height: number) => {
+    // Redondeado: las medidas llegan con decimales y una diferencia de medio
+    // pixel provocaria un nuevo render en cada pasada, sin fin.
+    const redondeado = Math.round(height);
+    setNaturalHeight((anterior) => (anterior === redondeado ? anterior : redondeado));
+  }, []);
+
+  /** Cada punto de anclaje resuelto a pixeles, de menor a mayor. */
+  const heights = useMemo(() => {
+    const techo = screenHeight * MAX_CONTENT_FRACTION;
+
+    return snapPoints
+      .map((point) => {
+        if (point !== 'content') return screenHeight * point;
+        // Antes de la primera medida no hay nada que ajustar: se usa el techo,
+        // que es preferible a una hoja de altura cero.
+        if (naturalHeight === 0) return techo;
+        return Math.min(naturalHeight + GRABBER_BLOCK + insets.bottom, techo);
+      })
+      .sort((a, b) => a - b);
+  }, [snapPoints, screenHeight, naturalHeight, insets.bottom]);
 
   /** The sheet is always as tall as its largest snap point. */
-  const sheetHeight = useMemo(
-    () => screenHeight * (points[points.length - 1] ?? 0.7),
-    [points, screenHeight],
-  );
+  const sheetHeight = heights[heights.length - 1] ?? screenHeight * 0.7;
 
   /**
    * How tall the sheet actually is right now.
@@ -140,7 +190,7 @@ export function BottomSheet({
    * The cap is still needed for a small screen with a large keyboard, where even
    * that height would push the header off the top.
    */
-  const activeSnapHeight = screenHeight * (points[index] ?? points[0] ?? 0.3);
+  const activeSnapHeight = heights[index] ?? heights[0] ?? screenHeight * 0.3;
   const visibleHeight = isKeyboardVisible
     ? Math.min(activeSnapHeight, screenHeight - keyboardHeight - insets.top)
     : sheetHeight;
@@ -150,8 +200,8 @@ export function BottomSheet({
    * expanded; larger values push the sheet further down.
    */
   const offsets = useMemo(
-    () => points.map((point) => sheetHeight - screenHeight * point),
-    [points, screenHeight, sheetHeight],
+    () => heights.map((height) => sheetHeight - height),
+    [heights, sheetHeight],
   );
 
   const collapsedOffset = offsets[0] ?? 0;
@@ -267,9 +317,14 @@ export function BottomSheet({
             800dp-wide row of controls is as unusable inside a sheet as anywhere
             else. */}
         <View style={styles.inner}>
-          {header !== undefined && <View style={styles.header}>{header}</View>}
+          {/* Este bloque es el que se mide, y por eso NO se estira. Con `flex: 1`
+              siempre reportaria el alto de la hoja en vez del que pide su
+              contenido, que es justo el dato que hace falta para 'content'. */}
+          <View onLayout={(event) => medir(event.nativeEvent.layout.height)}>
+            {header !== undefined && <View style={styles.header}>{header}</View>}
 
-          <View style={styles.content}>{children}</View>
+            <View style={styles.content}>{children}</View>
+          </View>
         </View>
       </Animated.View>
     </GestureDetector>
@@ -278,7 +333,6 @@ export function BottomSheet({
 
 const styles = StyleSheet.create({
   content: {
-    flex: 1,
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
   },

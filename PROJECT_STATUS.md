@@ -8,10 +8,10 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
-  9 seleccion de origen y destino
-- **Fase siguiente:** FASE 10 — Seleccion de pasajeros (NO INICIADA)
-- **Ultimo commit:** 1850acf feat: implement main map with location permissions and states
-  (la Fase 9 esta pendiente de commit)
+  9 seleccion de origen y destino, 10 seleccion de pasajeros
+- **Fase siguiente:** FASE 11 — Creacion de solicitud (NO INICIADA)
+- **Ultimo commit:** bf58d19 feat: add origin and destination selection with Amalfi places
+  (la Fase 10 esta pendiente de commit)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -217,6 +217,20 @@ el sistema.
 | D137 | Donde vive el formulario a medio hacer | En memoria, no en disco. Es un formulario, no un viaje en curso. Si la aplicacion se cierra del todo, empezar otra vez es razonable y honesto: la ubicacion habra cambiado. Restaurar un viaje activo es de la Fase 15 |
 | D138 | Origen y destino comparten pantalla | Elegir un sitio es el mismo gesto en los dos casos. Duplicar la pantalla significaria arreglar cada fallo dos veces |
 | D139 | El campo de la hoja no es un campo | Es un boton con aspecto de campo que abre la pantalla de busqueda. Escribir dentro de la hoja obligaria a subirla por encima del teclado y meter los resultados en trescientos pixeles |
+
+### Decisiones de la Fase 10
+
+| # | Decision | Valor |
+|---|---|---|
+| D140 | Forma del selector | Control de menos y mas, no tres botones fijos con los numeros. Los fijos serian un toque mas rapido con el maximo actual de tres y dejarian de servir el dia que la empresa suba el limite. El maximo es un dato de la flota (R11), no una constante del programa |
+| D141 | De donde sale el maximo | De `app_settings`, leido en cada arranque. Verificado cambiandolo a 4 en la base de datos: la aplicacion dejo elegir 4 y el mensaje se adapto solo |
+| D142 | Si falla la lectura del maximo | Se sigue con 3, el valor de la flota actual. Quedarse sin poder pedir un servicio porque no se leyo un parametro seria desproporcionado, y la cantidad la valida el servidor de todos modos |
+| D143 | El boton "+" en el maximo | Se atenua pero **no se deshabilita**. Pulsarlo es lo que muestra la explicacion de pedir dos servicios (R11), y un boton apagado no explica nada |
+| D144 | Cuando aparece el aviso del limite | Solo al intentar pasarse, no siempre. Tenerlo fijo ocuparia sitio permanentemente para advertir de algo que casi nunca pasa: la mayoria de los viajes son de una persona |
+| D145 | Alturas del bottom sheet | Ademas de fracciones de pantalla, acepta `'content'`: la altura que pide lo que hay dentro, medida al vuelo. Las fracciones no saben nada del contenido, y el mismo 0,5 sobraba en la tablet y cortaba el boton en el telefono |
+| D146 | Punto de anclaje minimo | Toda hoja del mapa tiene un anclaje bajo que la reduce al asa, para apartarla y ver el mapa. No baja a cero: una hoja que desaparece del todo no deja nada que agarrar para subirla |
+| D147 | Ruta y pasajeros | En una sola tarjeta y no en tres bloques sueltos. Son tres decisiones del mismo viaje, y separarlas gastaba dos huecos y un borde de mas en una hoja donde cada pixel se le quita al mapa |
+| D148 | Donde se descarta el viaje elegido | Un aspa en la cabecera del resumen. Alto cero, porque la cabecera ya existia, y sigue a la vista con el panel bajado, que es cuando el pasajero mira el mapa y puede darse cuenta de que se equivoco. **No confundir con cancelar un viaje ya solicitado**, que es de la Fase 18 |
 
 ### Decisiones revertidas
 
@@ -571,7 +585,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 7 | Perfil del pasajero | COMPLETADA Y APROBADA |
 | 8 | Mapa principal | COMPLETADA Y APROBADA |
 | 9 | Seleccion de origen y destino | COMPLETADA Y APROBADA |
-| 10 | Seleccion de pasajeros | Pendiente |
+| 10 | Seleccion de pasajeros | COMPLETADA Y APROBADA |
 | 11 | Creacion de solicitud | Pendiente |
 | 12 | Modulo del conductor | Pendiente |
 | 13 | Asignacion en tiempo real | Pendiente |
@@ -1182,26 +1196,98 @@ Cuatro ataques por la base de datos suplantando a un pasajero, todos rechazados.
 
 ---
 
+## 15.9 CANTIDAD DE PASAJEROS (Fase 10)
+
+### Sin migraciones
+
+`max_passengers_per_request` ya existia en `app_settings` desde la Fase 5, con valor 3 y
+lectura abierta a cualquier usuario autenticado. No hubo que tocar la base de datos.
+
+Se comprobo que se lee de verdad y no esta escrito en el codigo: se cambio a 4 en el
+servidor, la aplicacion dejo elegir 4 y el mensaje del limite se adapto solo. Devuelto a 3
+y reiniciada, vuelve a detenerse en 3.
+
+### El fallo que destapo esta fase
+
+El resumen del viaje **cortaba el boton "Continuar"** en el telefono. La causa no era el
+selector nuevo: los puntos de anclaje de la hoja eran una fraccion de la pantalla, y una
+fraccion no sabe nada de lo que hay dentro. El mismo 0,3 da 240 dp en la tablet y 274 dp en
+el telefono, mientras que el contenido pide los que pide. Al revisar capturas anteriores se
+vio que **ya rozaba el limite antes de esta fase**; el selector fue lo que lo empujo fuera.
+
+La correccion no fue subir la fraccion hasta que cupiera, que es ir probando numeros en cada
+pantalla nueva, sino enseñarle a la hoja a medirse (D145). Ahora un panel puede decir "tan
+alto como lo que llevo dentro" y acierta en cualquier pantalla.
+
+Resultado: el resumen paso de ocupar la mitad de la pantalla a un cuarto en la tablet y un
+tercio en el telefono.
+
+### Archivos
+
+```
+src/features/ride/settings.ts          Lee el maximo de app_settings
+src/features/ride/passenger-count.tsx  El selector
+src/features/ride/ride-draft.tsx       Guarda la cantidad
+src/components/ui/bottom-sheet.tsx     Anclaje 'content' y medida del contenido
+src/app/passenger/index.tsx            Tarjeta unica, anclaje minimo y aspa de descarte
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Un punto de anclaje en fracciones no garantiza que el contenido quepa.** Da alturas
+   distintas en cada aparato mientras el contenido pide siempre la misma, asi que o sobra
+   sitio o se corta un boton. La solucion es medir el contenido, no ajustar la fraccion a
+   ojo hasta que se vea bien en el aparato que se tenga delante.
+2. Para medir el alto natural de un bloque, ese bloque **no puede llevar `flex: 1`**. Con el
+   puesto reporta el alto del contenedor, que es justo el dato que no sirve.
+3. Las medidas de `onLayout` llegan con decimales. Sin redondear, una diferencia de medio
+   pixel dispara otro render, que vuelve a medir, sin fin.
+4. Tercera vez con la regla del `setState` dentro de un efecto. Aqui la solucion correcta no
+   era diferirlo con un temporizador como en las dos anteriores, sino **ajustar el estado en
+   el render**, porque era estado derivado de otro y no una tarea asincrona.
+5. **Quitar un control por parecer redundante exige comprobar que su funcion sigue estando.**
+   Se retiro "Cambiar de destino" alegando que la fila del destino ya tenia "Cambiar", y era
+   falso: aquel boton descartaba el viaje entero y el otro solo abre el buscador. El pasajero
+   se quedo sin forma de echarse atras. **Lo detecto el usuario preguntando, no las pruebas.**
+
+### Pruebas de la fase
+
+12 puntos de validacion en tablet a 800 dp y emulador a 411 dp, en modo claro y oscuro,
+incluida la comprobacion del maximo cambiandolo en el servidor. Panel medido en los dos
+aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 9 completadas y aprobadas. **Fase 10 pendiente de autorizacion**
-- **Paso actual:** Ninguno en curso. La Fase 9 esta pendiente de commit
-- **Ultimo paso completado:** Cierre de la Fase 9. Los 36 lugares de Amalfi en la base de
-  datos, buscador de direcciones, punto en el mapa y resumen del viaje
+- **Fase actual:** Fases 0 a 10 completadas y aprobadas. **Fase 11 pendiente de autorizacion**
+- **Paso actual:** Ninguno en curso. La Fase 10 esta pendiente de commit
+- **Ultimo paso completado:** Cierre de la Fase 10. Selector de pasajeros con el maximo leido
+  del servidor, y hoja que se ajusta a su contenido y se puede apartar para ver el mapa
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
   cuenta, perfil del pasajero con edicion, contrasena y foto, mapa principal con permisos,
   ubicacion, marcador, camara y estados degradados, y seleccion de origen y destino por
-  lista de lugares, buscador de direcciones y punto en el mapa
+  lista de lugares, buscador de direcciones y punto en el mapa, y seleccion de la cantidad
+  de pasajeros con el maximo configurado por la empresa
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
   en 15.6, incluidos 10 ataques por la API. Mapa y ubicacion 15 puntos, detallados en 15.7,
   con los siete estados verificados por captura. Origen y destino 26 puntos, detallados en
-  15.8, incluidas las pruebas sin conexion
+  15.8, incluidas las pruebas sin conexion. Cantidad de pasajeros 12 puntos, detallados en
+  15.9, con el maximo verificado cambiandolo en el servidor
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E22. Los doce ultimos, todos del asistente.
+- **Errores resueltos hasta ahora:** E1 a E24. Los catorce ultimos, todos del asistente.
+  **Fase 10, los dos del asistente:** E23 el resumen del viaje cortaba el boton "Continuar"
+  en el telefono, porque las alturas de la hoja eran una fraccion de la pantalla y no del
+  contenido; ya rozaba el limite antes de esta fase y el selector lo empujo fuera. E24 se
+  retiro el boton "Cambiar de destino" alegando que era redundante con el "Cambiar" de la
+  fila del destino, y era falso: aquel descartaba el viaje entero y este solo abre el
+  buscador, asi que el pasajero se quedo sin forma de echarse atras. **Lo detecto el usuario
+  preguntando donde habia quedado, no las pruebas.**
+  Los doce anteriores, tambien del asistente.
   **Fase 9, los cuatro del asistente, todos encontrados probando en el dispositivo y ninguno
   leyendo el codigo:** E19 el buscador vaciaba la lista y se callaba cuando Mapbox fallaba,
   con lo que el pasajero leia "no encontramos ese sitio" ante un problema de red; E20 salian
@@ -1249,8 +1335,16 @@ Cuatro ataques por la base de datos suplantando a un pasajero, todos rechazados.
 - **Commits:** 21a12b7 inicial, 8ad6705 configuracion, 442e7ce licencia,
   d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
   3c4f30e base de datos, e4a8648 estado de la Fase 6, b6f92e6 autenticacion y perfil,
-  1850acf mapa principal con permisos y estados de ubicacion
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 10
+  1850acf mapa principal con permisos y estados de ubicacion,
+  bf58d19 seleccion de origen y destino con los lugares de Amalfi
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 11
+
+### Lo que desaparecio en la Fase 10
+
+- El boton "Cambiar de destino" a pie de hoja. Su funcion no desaparecio: vive ahora en el
+  aspa de la cabecera (D148), que no gasta alto y se ve con el panel bajado
+- Las alturas fijas en fracciones para el resumen del viaje, sustituidas por la medida real
+  del contenido (D145)
 
 ### Lo que desaparecio en la Fase 9
 
@@ -1270,8 +1364,9 @@ Cuatro ataques por la base de datos suplantando a un pasajero, todos rechazados.
 
 - El vehiculo del panel del conductor, "Motorraton 12 / Placa ABC12". Sale de la base de
   datos en la Fase 12
-- El boton "Continuar" del resumen del viaje no hace nada. La cantidad de pasajeros es de la
-  Fase 10 y la solicitud real de la Fase 11
+- El boton "Continuar" del resumen del viaje **sigue sin hacer nada**. La solicitud real es
+  de la Fase 11, y es ahi donde el servidor validara la cantidad contra la capacidad del
+  vehiculo: el cliente solo propone
 - El borrador del viaje se pierde si la aplicacion se cierra del todo (D137). Restaurar un
   viaje ACTIVO es otra cosa y es de la Fase 15
 

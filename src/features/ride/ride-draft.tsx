@@ -23,11 +23,17 @@ export interface RideDraft {
    */
   origin: ChosenPoint | null;
   destination: ChosenPoint | null;
+  /**
+   * Cuantos viajan. Empieza en 1, que es el caso mayoritario: quien va solo no
+   * deberia tener que tocar nada.
+   */
+  passengerCount: number;
 }
 
 interface RideDraftValue extends RideDraft {
   setOrigin: (point: ChosenPoint | null) => void;
   setDestination: (point: ChosenPoint | null) => void;
+  setPassengerCount: (count: number) => void;
   clear: () => void;
   /** Hay lo suficiente para pasar al siguiente paso. */
   isReady: boolean;
@@ -38,24 +44,29 @@ const RideDraftContext = createContext<RideDraftValue | null>(null);
 export function RideDraftProvider({ children }: { children: ReactNode }) {
   const [origin, setOrigin] = useState<ChosenPoint | null>(null);
   const [destination, setDestination] = useState<ChosenPoint | null>(null);
+  const [passengerCount, setPassengerCount] = useState(1);
 
   const clear = useCallback(() => {
     setOrigin(null);
     setDestination(null);
+    setPassengerCount(1);
   }, []);
 
   const value = useMemo<RideDraftValue>(
     () => ({
       origin,
       destination,
+      passengerCount,
       setOrigin,
       setDestination,
+      setPassengerCount,
       clear,
       // Solo el destino. El origen en null es valido y significa la ubicacion
-      // actual, que es justo lo que quiere la mayoria.
+      // actual, que es justo lo que quiere la mayoria. La cantidad siempre tiene
+      // un valor valido, asi que tampoco condiciona nada.
       isReady: destination !== null,
     }),
-    [origin, destination, clear],
+    [origin, destination, passengerCount, clear],
   );
 
   return <RideDraftContext.Provider value={value}>{children}</RideDraftContext.Provider>;

@@ -26,7 +26,9 @@ import { LocationGate, blockingState } from '@/features/map/location-gate';
 import { Map } from '@/features/map/map';
 import { AMALFI_REGION, regionAround } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
+import { PassengerCount } from '@/features/ride/passenger-count';
 import { useRideDraft } from '@/features/ride/ride-draft';
+import { useMaxPassengers } from '@/features/ride/settings';
 import {
   MIN_TOUCH_TARGET,
   iconSize,
@@ -52,12 +54,36 @@ export default function PassengerHome() {
   const { user } = useSession();
   const insets = useSafeAreaInsets();
 
-  const [sheetIndex, setSheetIndex] = useState(0);
+  /**
+   * Arranca en 1 y no en 0 porque el 0 es ahora la hoja bajada del todo. Es un
+   * sitio al que se va a proposito para mirar el mapa, no donde se empieza.
+   */
+  const [sheetIndex, setSheetIndex] = useState(1);
   const location = useLocation();
   const mapRef = useRef<MapView>(null);
 
-  const { origin, destination, setDestination } = useRideDraft();
+  const { origin, destination, passengerCount, setDestination, setPassengerCount } = useRideDraft();
   const { places } = usePlaces();
+  const maxPasajeros = useMaxPassengers();
+
+  /**
+   * La hoja vuelve a su altura minima cuando cambia lo que contiene.
+   *
+   * Sin esto, quien despliega la hoja para ver mas lugares y elige uno se
+   * encuentra el resumen ocupando tres cuartos de pantalla: el indice se quedo
+   * en 1, y en el resumen ese 1 ya significa otra altura.
+   *
+   * Ajustado en el render y no en un efecto. Es la forma que React documenta
+   * para corregir estado cuando cambia una entrada, y ademas la unica que no
+   * provoca un segundo render con la hoja ya pintada a la altura equivocada.
+   */
+  const modoResumen = destination !== null;
+  const [modoAnterior, setModoAnterior] = useState(modoResumen);
+
+  if (modoResumen !== modoAnterior) {
+    setModoAnterior(modoResumen);
+    setSheetIndex(1);
+  }
 
   const abrirBuscador = useCallback(() => {
     router.push('/passenger/destination');
@@ -178,13 +204,24 @@ export default function PassengerHome() {
       )}
 
       <BottomSheet
-        snapPoints={[0.3, 0.72]}
+        // El primer valor deja la hoja reducida al asa, para apartarla y ver el
+        // mapa. El segundo es distinto en cada estado:
+        //
+        //   Buscando  -> una fraccion, porque la lista de lugares no tiene un
+        //                alto natural: cuantos se vean es una decision de
+        //                diseno, no del contenido.
+        //   Resumen   -> 'content', porque aqui si lo tiene. Con fracciones, la
+        //                misma cifra sobraba en la tablet y cortaba el boton
+        //                "Continuar" en el telefono.
+        snapPoints={destination === null ? [PEEK, 0.3, 0.72] : [PEEK, 'content']}
         index={sheetIndex}
         onIndexChange={setSheetIndex}
         header={
-          <Text variant="subheading">
-            {destination === null ? `Hola, ${user?.fullName ?? 'pasajero'}` : 'Tu viaje'}
-          </Text>
+          destination === null ? (
+            <Text variant="subheading">Hola, {user?.fullName ?? 'pasajero'}</Text>
+          ) : (
+            <CabeceraDelViaje onCancelar={() => setDestination(null)} />
+          )
         }
       >
         {destination === null ? (
@@ -193,11 +230,13 @@ export default function PassengerHome() {
           <ResumenDelViaje
             origen={origin}
             destino={destination}
+            pasajeros={passengerCount}
+            maxPasajeros={maxPasajeros}
+            onCambiarPasajeros={setPassengerCount}
             onEditarOrigen={() =>
               router.push({ pathname: '/passenger/destination', params: { for: 'origin' } })
             }
             onEditarDestino={abrirBuscador}
-            onQuitarDestino={() => setDestination(null)}
           />
         )}
       </BottomSheet>
@@ -207,6 +246,15 @@ export default function PassengerHome() {
 
 /** Cuantos lugares caben en la hoja sin obligar a desplegarla. */
 const ATAJOS_VISIBLES = 4;
+
+/**
+ * La hoja bajada del todo: solo el asa y un dedo de superficie.
+ *
+ * Es la salida para quien quiere mirar el mapa. Sin ella, el panel se queda
+ * siempre delante y no hay forma de apartarlo. No baja a cero a proposito: una
+ * hoja que desaparece por completo no deja nada que agarrar para subirla.
+ */
+const PEEK = 0.07;
 
 interface BuscarDestinoProps {
   places: readonly Place[];
@@ -284,12 +332,48 @@ function BuscarDestino({ places, onOpenSearch, onPickPlace }: BuscarDestinoProps
   );
 }
 
+/**
+ * Cabecera del resumen: el titulo y la salida para dejarlo.
+ *
+ * La cancelacion vive aqui y no como un boton mas abajo por dos razones. Ocupa
+ * alto cero, porque la cabecera ya existia. Y sigue a la vista cuando el
+ * pasajero baja el panel para mirar el mapa, que es justo cuando puede decidir
+ * que se ha equivocado de sitio.
+ *
+ * Esto NO es cancelar un viaje ya solicitado, que es de la Fase 18 y tiene sus
+ * propias reglas. Aqui todavia no se ha pedido nada: solo se descarta lo elegido.
+ */
+function CabeceraDelViaje({ onCancelar }: { onCancelar: () => void }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={styles.cabeceraViaje}>
+      <Text variant="subheading">Tu viaje</Text>
+
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Cancelar y elegir otro destino"
+        onPress={onCancelar}
+        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        style={({ pressed }) => [
+          styles.botonCancelar,
+          { backgroundColor: pressed ? colors.surfacePressed : 'transparent' },
+        ]}
+      >
+        <X size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+      </Pressable>
+    </View>
+  );
+}
+
 interface ResumenDelViajeProps {
   origen: ChosenPoint | null;
   destino: ChosenPoint;
+  pasajeros: number;
+  maxPasajeros: number;
+  onCambiarPasajeros: (valor: number) => void;
   onEditarOrigen: () => void;
   onEditarDestino: () => void;
-  onQuitarDestino: () => void;
 }
 
 /**
@@ -305,15 +389,21 @@ interface ResumenDelViajeProps {
 function ResumenDelViaje({
   origen,
   destino,
+  pasajeros,
+  maxPasajeros,
+  onCambiarPasajeros,
   onEditarOrigen,
   onEditarDestino,
-  onQuitarDestino,
 }: ResumenDelViajeProps) {
   const { colors } = useTheme();
 
   return (
     <>
-      <Card variant="outlined" padding="md">
+      {/* Ruta y pasajeros en una sola tarjeta y no en tres bloques sueltos. Son
+          tres decisiones del mismo viaje, y separarlas en cajas distintas
+          gastaba dos huecos y un borde de mas en una hoja donde cada pixel se
+          le quita al mapa. */}
+      <Card variant="outlined" padding="sm">
         <PuntoDelViaje
           icon={Circle}
           color={colors.textSecondary}
@@ -333,6 +423,10 @@ function ResumenDelViaje({
           onPress={onEditarDestino}
           accesible="Cambiar el destino"
         />
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <PassengerCount value={pasajeros} onChange={onCambiarPasajeros} max={maxPasajeros} />
       </Card>
 
       <Button
@@ -343,8 +437,6 @@ function ResumenDelViaje({
         fullWidth
         onPress={() => {}}
       />
-
-      <Button label="Cambiar de destino" variant="ghost" icon={X} onPress={onQuitarDestino} />
     </>
   );
 }
@@ -418,6 +510,18 @@ function FloatingButton({ label, icon: Icon, onPress }: FloatingButtonProps) {
 }
 
 const styles = StyleSheet.create({
+  botonCancelar: {
+    alignItems: 'center',
+    borderRadius: radius.full,
+    height: 32,
+    justifyContent: 'center',
+    width: 32,
+  },
+  cabeceraViaje: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   campoFalso: {
     alignItems: 'center',
     borderRadius: radius.lg,
@@ -453,7 +557,10 @@ const styles = StyleSheet.create({
   },
   separadorViaje: {
     height: StyleSheet.hairlineWidth,
+    // Sangrado hasta donde empieza el texto, para que la linea separe las filas
+    // sin cortar la columna de iconos.
     marginLeft: spacing.xl,
+    marginVertical: spacing.xxs,
   },
   floatingButton: {
     alignItems: 'center',
