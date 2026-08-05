@@ -996,6 +996,42 @@ export type Database = {
         Args: { p_lat: number; p_lng: number };
         Returns: boolean;
       };
+      list_driver_active_rides: {
+        Args: never;
+        Returns: {
+          accepted_at: string;
+          destination_label: string;
+          destination_lat: number;
+          destination_lng: number;
+          origin_label: string;
+          origin_lat: number;
+          origin_lng: number;
+          passenger_count: number;
+          passenger_name: string;
+          passenger_phone: string;
+          request_id: string;
+          ride_id: string;
+          status: Database['public']['Enums']['ride_status'];
+        }[];
+      };
+      list_driver_offers: {
+        Args: never;
+        Returns: {
+          destination_label: string;
+          destination_lat: number;
+          destination_lng: number;
+          distance_m: number;
+          expires_at: string;
+          offer_id: string;
+          origin_label: string;
+          origin_lat: number;
+          origin_lng: number;
+          passenger_count: number;
+          request_id: string;
+          requested_at: string;
+          seconds_remaining: number;
+        }[];
+      };
       list_places: {
         Args: never;
         Returns: {
@@ -1006,6 +1042,7 @@ export type Database = {
           name: string;
         }[];
       };
+      offer_pending_requests: { Args: never; Returns: number };
       offer_request_to_drivers: {
         Args: { p_limit?: number; p_request_id: string };
         Returns: number;

@@ -9,10 +9,11 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
-  11 creacion de solicitud
-- **Fase siguiente:** FASE 12 — Modulo del conductor (NO INICIADA)
-- **Ultimo commit:** 3490d35 feat: add passenger count selector and content-sized bottom sheet.
-  **La Fase 11 esta pendiente de commit**
+  11 creacion de solicitud, 12 modulo del conductor
+- **Trabajo siguiente:** **D161, recoger pasajeros en ruta.** No es una fase del plan
+  original: sustituye la regla R7 y se acordo abordarlo justo al cerrar la Fase 12
+- **Ultimo commit:** f1982c4 feat: implement ride request creation with service area and expiry.
+  **La Fase 12 esta pendiente de commit**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -62,17 +63,26 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue:** Fase 12, modulo del conductor. No esta autorizada. Antes de empezar
-hay que presentarle el plan y esperar su visto bueno.
+**Por donde se sigue:** **D161, recoger pasajeros en ruta.** No esta autorizado el trabajo
+todavia: hay que presentarle el plan y esperar su visto bueno, como con cualquier fase. Y
+queda una decision suya sin responder, apuntada mas abajo en D161.
 
-**Dos cosas del entorno que la Fase 11 dejo montadas y conviene no redescubrir:**
+**Cosas del entorno que conviene no redescubrir:**
 
-- Existe un **conductor de prueba** en `supabase/dev-tools/seed_test_driver.sql`. Sin el,
-  `request_ride` siempre responde que no hay motorratones. **Su ubicacion caduca a los dos
-  minutos**, asi que hay que reejecutar el archivo justo antes de cada prueba. Paso mas de
-  una vez durante la fase.
-- El **emulador tiene la sesion de una cuenta de prueba**, `fase11.auth@motomoto-qa.co`, no
-  la del usuario. La tablet si tiene la suya.
+- Existe un **conductor de prueba** en `supabase/dev-tools/seed_test_driver.sql`, que ya puede
+  iniciar sesion: `conductor.prueba@motomoto-qa.co` / `Conductor.2026`. **Su ubicacion caduca
+  a los dos minutos**, asi que hay que reejecutar el archivo justo antes de cada prueba. Paso
+  varias veces durante las fases 11 y 12.
+- **La tablet tiene la sesion del conductor de prueba**, no la del usuario. El emulador
+  tambien. Para usarlas como pasajero hay que volver a entrar.
+- **El emulador no le entrega el GPS a la aplicacion**, ni siquiera con `emu geo fix` y con el
+  permiso concedido. No es del codigo: la pantalla del pasajero, de la Fase 8, tampoco lo
+  recibe. Lo que dependa de ubicacion real hay que probarlo en la tablet.
+- **La tablet esta en Medellin, no en Amalfi.** Aun asi recibe ofertas de Amalfi, y eso no es
+  un fallo del entorno sino el hallazgo H16.
+- **Los tiempos de R1 y R2 son cortos para probar a mano.** Veinte segundos de ventana de
+  oferta se agotan entre una captura y el toque siguiente. Se suben temporalmente desde
+  `app_settings` y se restauran al terminar.
 
 ---
 
@@ -304,6 +314,20 @@ el sistema.
 | D155 | Errores de la base de datos | Se traducen en el cliente desde el codigo del `hint`, nunca se muestra el texto del servidor. Cierra el pendiente que venia de la Fase 6 y esquiva H8: los 21 mensajes sin tildes ya no llegan a ninguna pantalla |
 | D156 | Color del aviso de error | Token propio `onDangerSubtle`, separado de `danger`. Un mismo tono no puede ser fondo de boton y texto sobre fondo teñido a la vez: en oscuro daba 1,44:1 y el mensaje no se leia (H14) |
 | D157 | Navegacion giro a giro | Fuera del alcance. La ruta dibujada en el mapa si esta prevista (Fase 14). Para guiar al conductor la via razonable es abrir Google Maps o Waze con el destino puesto, que es un enlace y no un modulo. Se decide en la Fase 14 |
+
+### Decisiones de la Fase 12
+
+| # | Decision | Valor |
+|---|---|---|
+| D158 | Como le llegan las ofertas al conductor | Tiempo real de Supabase, adelantado desde la Fase 13. El motivo es la regla R2: con veinte segundos para responder, sondear cada diez se come la mitad de su tiempo. Medido: el aviso llega en poco mas de un segundo desde que el pasajero confirma. Se publico `ride_offers`, la primera tabla de la publicacion |
+| D159 | Envio de posicion del conductor | Cada 30 segundos mientras esta disponible, y para al apagarlo. Solo en primer plano (D116). Sin esto un conductor real nunca apareceria en una busqueda, porque su posicion caduca a los dos minutos |
+| D160 | A quien se ofrece una solicitud | A TODOS los conductores disponibles, no a los cinco mas cercanos. El cinco era el valor por defecto de un parametro y contradecia a la regla R4, aprobada en la Fase 0 |
+| **D161** | **Recoger pasajeros en ruta** | **Aprobado, sustituye a la regla R7.** Un conductor con asientos libres podra tomar otra solicitud si le queda de camino, y decide el mirando la ruta. Es como se trabaja en Amalfi. **Pendiente de decidir: si al pasajero se le avisa de que va a compartir y de que su viaje puede alargarse.** El modelo de datos lo aguanta; los obstaculos son los indices `rides_one_active_per_driver` y `rides_one_active_per_vehicle` |
+
+**D160 deja obsoleta a D7.** La asignacion deja de ser "automatica por cercania" y pasa a ser
+del primero que acepte: con todas las ofertas creadas a la vez, gana quien toca antes y no
+quien esta mas cerca. Se eligio a sabiendas, razonando que en un pueblo con pocos motorratones
+se parece a la radio de toda la vida, donde todos oyen la llamada.
 
 ### Decisiones revertidas
 
@@ -660,7 +684,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 9 | Seleccion de origen y destino | COMPLETADA Y APROBADA |
 | 10 | Seleccion de pasajeros | COMPLETADA Y APROBADA |
 | 11 | Creacion de solicitud | COMPLETADA Y APROBADA |
-| 12 | Modulo del conductor | Pendiente |
+| 12 | Modulo del conductor | COMPLETADA Y APROBADA |
 | 13 | Asignacion en tiempo real | Pendiente |
 | 14 | Seguimiento del conductor | Pendiente |
 | 15 | Ciclo completo del servicio | Pendiente |
@@ -797,10 +821,17 @@ PostgreSQL 17.6, organizacion propia (no gestionada por Vercel). PostGIS 3.3.
 20260804235949_expire_requests_schedule            pg_cron y limpieza dirigida (Fase 11)
 20260805000923_get_active_request                  la solicitud viva del pasajero (Fase 11)
 20260805004304_fix_cancel_request_actor_cast       corrige E25 (Fase 11)
+20260805150842_driver_offers_and_realtime          ofertas del conductor y tiempo real (Fase 12)
+20260805153818_offer_to_all_available_drivers      D160, H12 y H13 (Fase 12)
+20260805180658_driver_active_rides                 viajes en curso con datos del pasajero (Fase 12)
 ```
 
-Totales, contados contra el servidor: **18 tablas, 47 politicas, 32 funciones**. Las 18 con
+Totales, contados contra el servidor: **18 tablas, 47 politicas, 35 funciones**. Las 18 con
 seguridad de fila activa.
+
+**Tiempo real activo** sobre `ride_offers`, la unica tabla nuestra publicada. Cada suscriptor
+recibe solo sus propias filas: las politicas de seguridad se aplican tambien ahi, comprobado
+con dos sesiones simultaneas, una de conductor y otra de pasajero.
 
 **pg_cron esta activo** con una tarea, `expire-stale-requests`, que corre cada minuto. Se
 consulta con `select * from cron.job;` y su historial con `select * from cron.job_run_details;`.
@@ -822,6 +853,8 @@ cancel_ride(ride_id, reason?)
 rate_ride(ride_id, stars, comment?) -> uuid
 list_places() -> id, name, description, lat, lng
 is_within_service_area(lng, lat) -> boolean                            (Fase 11)
+list_driver_offers() -> ofertas vivas del conductor, sin datos del pasajero  (Fase 12)
+list_driver_active_rides() -> viajes en curso, con nombre y telefono         (Fase 12)
 get_active_request() -> id, status, passenger_count, coordenadas,
                         etiquetas, requested_at, expires_at,
                         seconds_remaining                              (Fase 11)
@@ -1455,13 +1488,98 @@ restauracion tras matar la aplicacion y la resincronizacion al volver de segundo
 
 ---
 
+## 15.11 MODULO DEL CONDUCTOR (Fase 12)
+
+### El dato que decidio la arquitectura
+
+La regla R2 da al conductor **veinte segundos** para responder. Sondeando cada diez, la oferta
+le aparece cuando ya le quedan diez: la mitad de su tiempo se va antes de que vea nada. Para
+que no se notara habria que preguntar cada dos o tres segundos, y eso son mas de mil
+peticiones por hora y por conductor con datos moviles.
+
+Por eso se adelanto el tiempo real, que estaba previsto para la Fase 13. **Medido: el aviso
+llega en poco mas de un segundo desde que el pasajero confirma.**
+
+### Lo que estaba escrito y no se cumplia
+
+`offer_request_to_drivers` ofrecia a los **cinco** conductores mas cercanos. La regla R4,
+aprobada en la Fase 0, dice "se ofrece la solicitud a todos los conductores disponibles del
+municipio". Ese cinco no se decidio nunca: era el valor por defecto de un parametro.
+
+Al corregirlo aparecio una tension entre dos cosas ya aprobadas: **D7 dice cercania y R4 dice
+todos**. Si se ofrece a todos a la vez, gana quien toca antes, no el mas cercano. El lote de
+cinco era, sin decirlo, un intento de conciliarlas. Se resolvio a favor de R4 (D160).
+
+### La linea de la privacidad
+
+Es la primera fase donde el conductor ve datos de otra persona, y donde se dibuja la linea:
+
+- **Antes de aceptar** ve el viaje: de donde a donde, cuanta gente, a que distancia esta la
+  recogida. No ve el nombre. Comprobado con dos usuarios que nunca habian coincidido
+- **El telefono si es visible antes de aceptar** por la API, porque vive en `ride_requests` y
+  la politica deja leer la solicitud a quien recibio la oferta. La aplicacion no lo enseña,
+  pero no hay muro
+- **Al aceptar** aparecen nombre y telefono, y el telefono es un boton de llamada
+
+### Archivos
+
+```
+supabase/migrations/20260805150842_driver_offers_and_realtime.sql
+supabase/migrations/20260805153818_offer_to_all_available_drivers.sql
+supabase/migrations/20260805180658_driver_active_rides.sql
+
+src/features/driver/driver-service.ts          estado, vehiculo, ofertas, aceptar, rechazar
+src/features/driver/use-driver-offers.ts       tiempo real y lista de ofertas
+src/features/driver/use-location-reporting.ts  posicion cada 30 s mientras disponible
+src/features/driver/offer-card.tsx             la oferta con su temporizador
+src/features/driver/active-ride-card.tsx       el servicio aceptado y su pasajero
+src/features/ride/settings.ts                  generalizado a cualquier parametro numerico
+src/app/driver/index.tsx                       datos reales en lugar de la maqueta
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Un usuario insertado a mano en `auth.users` no puede iniciar sesion si deja columnas de
+   token en nulo.** GoTrue las lee como texto y responde 500 con "Database error querying
+   schema", que no dice nada de la causa. Son `confirmation_token`, `recovery_token`,
+   `email_change_token_new` y `email_change`, y van a cadena vacia.
+2. **Una ubicacion no se puede envejecer con un UPDATE.** `driver_locations` tiene un
+   disparador BEFORE UPDATE que reescribe `updated_at` con `now()`. La prueba que lo intentaba
+   salia verde por el motivo equivocado, confirmando que una fila "de treinta segundos" seguia
+   siendo elegible cuando en realidad era de cero. Se envejece borrando e insertando.
+3. **Un tamano fijo para un dato configurable acaba desbordandose.** La burbuja del
+   temporizador media 52 por 52, suficiente para los dos digitos de R2. Al subir
+   `offer_response_seconds` para poder probar sin prisa, el numero se salio y partio en dos
+   lineas. Misma familia que la leccion de la Fase 10 sobre las fracciones de pantalla.
+4. **Cuarta vez con el `setState` dentro de un efecto.** Y otra vez la solucion correcta era
+   ajustar el estado en el render, no diferirlo con un temporizador, porque era estado
+   derivado y no una tarea asincrona.
+5. **Lanzar un `.cmd` desde Node en Windows exige `shell: true`.** Sin el, `execFileSync` falla
+   con EINVAL y no explica por que.
+6. **El SQL con JSON dentro va por archivo, no por linea de comandos.** El shell de Windows
+   destroza las comillas y el error que se ve no tiene nada que ver con la causa.
+
+### Pruebas de la fase
+
+64 comprobaciones automaticas y 15 en dispositivo, todas en OK. Entre las automaticas: 9 de la
+lectura de ofertas con aislamiento entre dos conductores, 7 del tiempo real con dos sesiones
+reales, 9 del reparto a todos los disponibles, 19 del contrato del servicio por HTTP, 9 del
+envio de posicion y 7 de los viajes activos.
+
+En dispositivo: tablet a 800 dp con GPS real y emulador a 411 dp, en claro y oscuro. Se
+verifico el ciclo entero con solicitudes reales enviadas desde fuera, incluida la cadencia de
+treinta segundos del envio de posicion, medida entre dos envios consecutivos.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 11 completadas y aprobadas. **Fase 12 pendiente de autorizacion**
-- **Paso actual:** Ninguno en curso. La Fase 11 esta pendiente de commit
-- **Ultimo paso completado:** Cierre de la Fase 11. El pasajero puede pedir un servicio de
-  verdad: se valida contra la zona de servicio, se ofrece a los conductores cercanos, se ve la
-  cuenta atras, se puede cancelar, caduca sola y se restaura al reabrir la aplicacion
+- **Fase actual:** Fases 0 a 12 completadas y aprobadas. **Siguiente: D161, recoger pasajeros
+  en ruta, pendiente de autorizacion**
+- **Paso actual:** Ninguno en curso. La Fase 12 esta pendiente de commit
+- **Ultimo paso completado:** Cierre de la Fase 12. El conductor entra, ve su motorraton, se
+  pone disponible, manda su posicion, recibe solicitudes en tiempo real, las acepta o las
+  rechaza, y al aceptar ve a quien recoge y puede llamarlo
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -1470,7 +1588,8 @@ restauracion tras matar la aplicacion y la resincronizacion al volver de segundo
   lista de lugares, buscador de direcciones y punto en el mapa, y seleccion de la cantidad
   de pasajeros con el maximo configurado por la empresa, y creacion real de la solicitud con
   zona de servicio validada en servidor, distancia y tiempo por carretera, caducidad
-  automatica y restauracion del estado al reabrir
+  automatica y restauracion del estado al reabrir, y el modulo del conductor completo con
+  disponibilidad, envio de posicion, ofertas en tiempo real, aceptacion y rechazo
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -1478,9 +1597,16 @@ restauracion tras matar la aplicacion y la resincronizacion al volver de segundo
   con los siete estados verificados por captura. Origen y destino 26 puntos, detallados en
   15.8, incluidas las pruebas sin conexion. Cantidad de pasajeros 12 puntos, detallados en
   15.9, con el maximo verificado cambiandolo en el servidor. Creacion de solicitud 78
-  comprobaciones automaticas y 21 en dispositivo, detalladas en 15.10
+  comprobaciones automaticas y 21 en dispositivo, detalladas en 15.10. Modulo del conductor 64
+  automaticas y 15 en dispositivo, detalladas en 15.11
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E27. Los diecisiete ultimos, todos del asistente.
+- **Errores resueltos hasta ahora:** E1 a E29. Los diecinueve ultimos, todos del asistente.
+  **Fase 12, los dos del asistente:** E28 el conductor de prueba **no podia iniciar sesion**,
+  porque el archivo de semilla dejaba cuatro columnas de token en nulo y GoTrue no lo admite;
+  no se detecto en la Fase 11 porque nunca hizo falta que entrara, y en la 12 es lo primero que
+  se necesita. E29 la burbuja del temporizador se desbordaba cuando el numero pasaba de dos
+  digitos, y salio al subir un parametro **que la empresa puede cambiar**: con los veinte
+  segundos de R2 nunca habria aparecido.
   **Fase 11, los tres del asistente:** E25 `cancel_request` llevaba rota desde la Fase 5 por
   una conversion de tipo ausente en un CASE, es decir, **cancelar una solicitud nunca habia
   funcionado**, y no se detecto porque las pruebas de la Fase 5 cubrieron lo que la base de
@@ -1528,6 +1654,9 @@ restauracion tras matar la aplicacion y la resincronizacion al volver de segundo
   que la aplicacion seguia mostrando la anterior desde la cache mientras el servidor ya tenia
   la nueva. Un verde falso es peor que un rojo, y una pantalla que miente es peor que un error
   visible
+- **Hallazgos cerrados en la Fase 12:** H12, la antiguedad maxima de la ubicacion ya se lee de
+  `app_settings`. H13, con D160 se ofrece a todos, y un barrido periodico alcanza ademas a
+  quien se conecta despues de crearse la solicitud
 - **Hallazgos resueltos:** H1 .gitignore no protegia .env. H2 licencia MIT de Expo.
   H3 cabecera de expo-router sin tema. H4 Expo Go desactualizado en la tablet.
   H5 `profiles_protect_columns` no exime al rol privilegiado. H6 la API de Auth rechaza los
@@ -1536,14 +1665,18 @@ restauracion tras matar la aplicacion y la resincronizacion al volver de segundo
 - **Hallazgos abiertos:** H10 el indice unico de `places` normaliza mayusculas y espacios de
   los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
   lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
-  **H12** `driver_location_stale_seconds` esta en `app_settings` con la descripcion de la
-  regla R10 y **no lo lee nadie**: `find_available_drivers` lleva los dos minutos fijados como
-  valor por defecto de un parametro y quien la llama no se lo pasa. Hoy los dos valores
-  coinciden, asi que no hay diferencia, pero el dia que el administrador lo cambie desde el
-  panel no pasara nada. Revisar en la Fase 13, donde esa funcion es la protagonista.
-  **H13** `offer_request_to_drivers` se ejecuta **una sola vez** al crear la solicitud, a un
-  maximo de 5 conductores. Si todos dejan caducar su oferta a los 20 segundos, nadie vuelve a
-  ofrecerla y la solicitud agota sus cinco minutos sin que nadie mas se entere (Fase 13).
+  **H15** la politica `profiles_select_ride_counterpart` dice en su comentario "solo durante el
+  servicio", y la segunda mitad se cumple pero la primera no: `shares_ride_with` no filtra por
+  estado, asi que **una vez que un conductor lleva a alguien puede leer su nombre y su telefono
+  para siempre**. No esta claro que la intencion escrita sea la correcta, porque en la Fase 16
+  el conductor tendra un historial y ahi querra ver a quien llevo. Puede que sobre el
+  comentario y no el comportamiento, o que la respuesta sea "el nombre si, el telefono no".
+  Decidir en la Fase 16.
+  **H16** `find_available_drivers` **no tiene radio de corte**: la distancia solo se usa para
+  ordenar. Un conductor en Medellin es candidato para un viaje en Amalfi, a 130 km, y se vio en
+  pantalla durante las pruebas. En la Fase 5 se decidio asi razonando que "Amalfi cabe
+  holgadamente en el radio que habriamos puesto", dando por hecho que todos los conductores
+  estan dentro del municipio. Conviene decidir si eso debe seguir siendo cierto.
   **H14** los pares de color de estado del sistema de diseno no llegan al contraste minimo de
   4,5:1. El de error quedo corregido en la Fase 11 con el token `onDangerSubtle`, pero siguen
   bajo minimos exito, aviso e informacion, y el error **dentro de un campo**, que usa `danger`

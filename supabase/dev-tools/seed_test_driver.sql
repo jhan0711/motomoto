@@ -47,16 +47,28 @@ declare
   c_lat constant double precision := 6.9040;
 begin
   if not exists (select 1 from auth.users where id = c_driver) then
+    -- Las cuatro columnas de token van a cadena vacia y NO a nulo. Es la
+    -- diferencia entre un conductor que puede iniciar sesion y uno que no.
+    --
+    -- GoTrue, el servicio de autenticacion de Supabase, las lee como texto. Un
+    -- nulo hace que su consulta falle y el inicio de sesion responde 500 con
+    -- "Database error querying schema", que no dice nada sobre la causa. Un
+    -- usuario creado por la API las trae vacias; uno insertado a mano, nulas.
+    --
+    -- Esto se descubrio en la Fase 12, al necesitar por primera vez que el
+    -- conductor de prueba entrara de verdad en la aplicacion.
     insert into auth.users (
       id, instance_id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data
+      raw_app_meta_data, raw_user_meta_data,
+      confirmation_token, recovery_token, email_change_token_new, email_change
     ) values (
       c_driver, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
       c_email, extensions.crypt(c_password, extensions.gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}',
-      '{"full_name":"Conductor de prueba","phone":"3009998877"}'
+      '{"full_name":"Conductor de prueba","phone":"3009998877"}',
+      '', '', '', ''
     );
 
     -- El disparador on_auth_user_created ya creo el perfil, pero con rol

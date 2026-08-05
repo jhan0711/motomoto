@@ -22,23 +22,28 @@ import { supabase } from '@/lib/supabase';
  */
 const MAX_PASSENGERS_FALLBACK = 3;
 
-const KEY = 'max_passengers_per_request';
-
-let cache: number | null = null;
+/**
+ * Cada parametro se lee una vez por sesion de aplicacion.
+ *
+ * Un Map y no una variable suelta porque desde la Fase 12 hay mas de un
+ * parametro que leer: el maximo de pasajeros del pasajero y el intervalo de
+ * envio de posicion del conductor.
+ */
+const cache = new Map<string, number>();
 
 /** La usa la Fase 20 cuando el panel cambie los parametros. */
 export function invalidateSettingsCache(): void {
-  cache = null;
+  cache.clear();
 }
 
-async function fetchMaxPassengers(): Promise<number> {
+async function fetchNumericSetting(key: string, fallback: number): Promise<number> {
   const { data, error } = await supabase
     .from('app_settings')
     .select('value')
-    .eq('key', KEY)
+    .eq('key', key)
     .maybeSingle();
 
-  if (error || data === null) return MAX_PASSENGERS_FALLBACK;
+  if (error || data === null) return fallback;
 
   // La columna es jsonb, asi que el valor llega como numero o como texto segun
   // como se guardara. Se acepta lo uno y lo otro en lugar de confiar en que
@@ -47,36 +52,41 @@ async function fetchMaxPassengers(): Promise<number> {
   const raw = data.value;
   const parsed = typeof raw === 'number' ? raw : Number(raw);
 
-  if (!Number.isInteger(parsed) || parsed < 1) return MAX_PASSENGERS_FALLBACK;
+  if (!Number.isInteger(parsed) || parsed < 1) return fallback;
   return parsed;
 }
 
 /**
- * El maximo de pasajeros por solicitud.
+ * Un parametro numerico de la empresa, con un valor de reserva.
  *
  * Devuelve el valor de reserva desde el primer render y lo sustituye cuando
- * llega el real. Asi el selector aparece completo desde el principio en lugar de
- * parpadear, y en el caso normal, que es que el maximo siga siendo tres, el
- * pasajero no nota nada.
+ * llega el real. Asi la pantalla aparece completa desde el principio en lugar de
+ * parpadear, y en el caso normal, que es que el parametro siga en su valor
+ * habitual, no se nota nada.
  */
-export function useMaxPassengers(): number {
-  const [max, setMax] = useState(cache ?? MAX_PASSENGERS_FALLBACK);
+export function useNumericSetting(key: string, fallback: number): number {
+  const [value, setValue] = useState(cache.get(key) ?? fallback);
 
   const cargar = useCallback(async () => {
-    const value = await fetchMaxPassengers();
-    cache = value;
-    setMax(value);
-  }, []);
+    const leido = await fetchNumericSetting(key, fallback);
+    cache.set(key, leido);
+    setValue(leido);
+  }, [key, fallback]);
 
   useEffect(() => {
-    if (cache !== null) return;
+    if (cache.has(key)) return;
 
     // Diferido fuera del cuerpo del efecto, por la misma razon que en
     // use-location y use-places: el compilador de React rechaza un setState
     // alcanzable sincronamente desde un efecto.
     const id = setTimeout(() => void cargar(), 0);
     return () => clearTimeout(id);
-  }, [cargar]);
+  }, [cargar, key]);
 
-  return max;
+  return value;
+}
+
+/** El maximo de pasajeros por solicitud (R11). */
+export function useMaxPassengers(): number {
+  return useNumericSetting('max_passengers_per_request', MAX_PASSENGERS_FALLBACK);
 }

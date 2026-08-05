@@ -53,6 +53,19 @@ const MESSAGES: Record<string, string> = {
   ACCOUNT_BLOCKED: 'Tu cuenta está bloqueada. Comunícate con la empresa.',
   NOT_A_PASSENGER: 'Esta cuenta no puede solicitar servicios.',
   PROFILE_NOT_FOUND: 'No encontramos tu perfil. Cierra sesión y vuelve a entrar.',
+
+  // Lado del conductor, desde la Fase 12.
+  //
+  // REQUEST_ALREADY_TAKEN merece atencion: no es un fallo, es el desenlace normal
+  // de que varios conductores vean la misma solicitud. El criterio de aceptacion
+  // 3 lo dice con todas las letras: quien pierde "recibe un mensaje claro, no un
+  // error". Por eso el texto no se disculpa ni sugiere reintentar.
+  REQUEST_ALREADY_TAKEN: 'Otro motorratón tomó este servicio.',
+  OFFER_EXPIRED: 'Se acabó el tiempo para responder a esta solicitud.',
+  OFFER_ALREADY_ANSWERED: 'Ya habías respondido a esta solicitud.',
+  OFFER_NOT_AVAILABLE: 'Esa solicitud ya no está disponible.',
+  OFFER_NOT_FOUND: 'Esa solicitud no es tuya.',
+  NO_VEHICLE_ASSIGNED: 'No tienes un motorratón asignado. Comunícate con la empresa.',
 };
 
 const NETWORK_CODE = 'network_error';
@@ -120,6 +133,13 @@ export const RIDE_ERROR_CODES = {
   destinationOutOfArea: 'DESTINATION_OUT_OF_AREA',
   accountBlocked: 'ACCOUNT_BLOCKED',
   phoneRequired: 'PHONE_REQUIRED',
+
+  // El conductor perdio la carrera. La pantalla lo trata distinto que a un
+  // error: retira la tarjeta sin alarma y sigue esperando la siguiente.
+  requestAlreadyTaken: 'REQUEST_ALREADY_TAKEN',
+  offerExpired: 'OFFER_EXPIRED',
+  noVehicle: 'NO_VEHICLE_ASSIGNED',
+
   network: NETWORK_CODE,
   unknown: UNKNOWN_CODE,
 } as const;
