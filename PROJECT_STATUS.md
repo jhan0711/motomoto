@@ -12,8 +12,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   11 creacion de solicitud, 12 modulo del conductor
 - **Trabajo siguiente:** **D161, recoger pasajeros en ruta.** No es una fase del plan
   original: sustituye la regla R7 y se acordo abordarlo justo al cerrar la Fase 12
-- **Ultimo commit:** f1982c4 feat: implement ride request creation with service area and expiry.
-  **La Fase 12 esta pendiente de commit**
+- **Ultimo commit:** 5d7b363 feat: implement driver module with realtime offers.
+  Arbol limpio, nada pendiente de confirmar
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -64,8 +64,9 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
 **Por donde se sigue:** **D161, recoger pasajeros en ruta.** No esta autorizado el trabajo
-todavia: hay que presentarle el plan y esperar su visto bueno, como con cualquier fase. Y
-queda una decision suya sin responder, apuntada mas abajo en D161.
+todavia: hay que presentarle el plan y esperar su visto bueno, como con cualquier fase. **El
+analisis completo, con lo que hay que hacer y las tres preguntas que el usuario todavia no ha
+respondido, esta en la seccion 15.12.** Empezar leyendo esa seccion.
 
 **Cosas del entorno que conviene no redescubrir:**
 
@@ -1569,6 +1570,95 @@ envio de posicion y 7 de los viajes activos.
 En dispositivo: tablet a 800 dp con GPS real y emulador a 411 dp, en claro y oscuro. Se
 verifico el ciclo entero con solicitudes reales enviadas desde fuera, incluida la cadencia de
 treinta segundos del envio de posicion, medida entre dos envios consecutivos.
+
+---
+
+## 15.12 PROXIMO TRABAJO: D161, RECOGER PASAJEROS EN RUTA
+
+**Esto es lo siguiente que hay que hacer, y no es una fase del plan original.** El usuario lo
+pidio al terminar el paso 7 de la Fase 12 y se acordo abordarlo justo despues de cerrarla.
+Esta aprobado en el que, no en el como: **antes de tocar nada hay que presentarle un plan y
+esperar su visto bueno**, y hay tres preguntas suyas sin responder.
+
+### Que pidio, con sus palabras
+
+Que un conductor que ya lleva un servicio pueda **recoger a otro pasajero si le queda de
+camino y le sobran asientos**. Lo explico asi:
+
+> En Amalfi se acostumbra a que si el motorraton tiene el espacio para llevar a otro pasajero
+> y queda cerquita del destino o coincide con la ruta, lo recoge. Asi tambien lo quiero en la
+> aplicacion, que el conductor lo vea en la app para que si le sirve, lo acepte y asi optimice
+> el viaje y sus ganancias haciendo una sola ruta pero con dos viajes.
+
+Y comparo con Uber y DiDi, que no funcionan asi.
+
+### Que lo impide hoy
+
+La regla **R7**, aprobada en la Fase 0, dice "viajes activos simultaneos por conductor: 1". No
+es solo una frase del documento: hay **dos indices unicos** en `rides` que lo hacen imposible.
+
+```
+rides_one_active_per_driver    unique (driver_id)   where status in (activos)
+rides_one_active_per_vehicle   unique (vehicle_id)  where status in (activos)
+```
+
+**El modelo de datos si lo aguanta.** `rides.passenger_count` guarda cuantas personas van en
+ese vehiculo concreto, y su comentario de la Fase 5 dice:
+
+> Con un solo motorraton coincide con el total de la solicitud; el dia que se reparta un grupo,
+> cada viaje llevara su parte.
+
+Se diseño pensando en repartir **un grupo entre varios vehiculos**. Lo que se pide es la imagen
+espejo: **varias solicitudes en un vehiculo**. La estructura sirve igual. El obstaculo son los
+dos indices, no el diseño.
+
+### Que haria falta
+
+1. Sustituir los indices unicos por una regla de capacidad: la suma de pasajeros de los viajes
+   activos de un conductor no puede pasar de `vehicles.max_passengers`
+2. Que `find_available_drivers` cuente **asientos libres**, no un si o un no
+3. Que `accept_ride_offer` deje de apagar la disponibilidad sin mas, y la recalcule
+4. Que la pantalla del conductor muestre los viajes en curso **y** las ofertas nuevas a la vez
+5. Quien juzga si "queda de camino"
+
+**El punto 5 ya esta decidido: lo juzga el conductor, mirando la ruta.** El usuario lo dijo
+expresamente. Eso simplifica mucho, porque la alternativa era que el servidor calculara el
+desvio que añade cada solicitud, y eso es bastante mas trabajo.
+
+### Lo que ya se dejo preparado en la Fase 12
+
+Sabiendo que esto venia, dos piezas se escribieron en plural desde el principio y **no habra
+que reescribirlas**:
+
+- `list_driver_active_rides()` devuelve una lista de viajes, no una fila
+- La pantalla del conductor ya recorre esa lista con `viajes.map(...)`
+
+### La ruta deja de ser un adorno
+
+Dibujar el recorrido en el mapa esta previsto para la **Fase 14**. La navegacion giro a giro
+esta fuera de alcance y se resuelve abriendo Google Maps o Waze (D157).
+
+Pero esto cambia la prioridad: **sin ver la ruta, el conductor no puede juzgar si el segundo
+viaje le sirve**. Deja de ser un extra y pasa a ser lo que hace posible la funcion. Hay que
+decidir si se adelanta parte de la Fase 14 o si D161 se hace junto con ella.
+
+### LAS TRES PREGUNTAS QUE EL USUARIO NO HA RESPONDIDO
+
+Son del lado del pasajero, que es donde esto tiene consecuencias que nadie ve venir. **Hay que
+planteárselas antes de empezar y dejar la respuesta escrita aqui.**
+
+1. Su viaje va a tardar mas por el desvio. ¿Se le avisa? ¿Puede negarse?
+2. ¿Se le dice que va a compartir, o se entera al subirse?
+3. El tiempo estimado que le mostramos (D149) deja de ser fiable. ¿Que se hace con el?
+
+En Amalfi compartir es la costumbre, asi que la respuesta probablemente sea "no hace falta
+avisar". **Pero eso no se da por hecho: lo dice el usuario y se escribe.**
+
+### Consecuencia sobre R7
+
+Cuando esto se implemente, **R7 queda sustituida**. Hay que actualizar la seccion 9 de este
+documento, no solo añadir una decision nueva: dejar dos reglas que se contradicen es lo que
+nos mordio en la Fase 6 con el criterio de aceptacion 7.
 
 ---
 
