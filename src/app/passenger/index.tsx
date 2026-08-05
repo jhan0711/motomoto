@@ -2,22 +2,26 @@ import { useRouter } from 'expo-router';
 import {
   ArrowRight,
   Circle,
+  Clock,
   History,
   LocateFixed,
   MapPin,
+  RotateCw,
+  Route as RouteIcon,
   Search,
   Star,
   UserRound,
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
 import type MapView from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { FormError } from '@/components/ui/form-error';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
 import type { ChosenPoint, Place } from '@/features/destination/types';
@@ -28,7 +32,20 @@ import { AMALFI_REGION, regionAround } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
 import { PassengerCount } from '@/features/ride/passenger-count';
 import { useRideDraft } from '@/features/ride/ride-draft';
+import {
+  cancelRequest,
+  createRequest,
+  fetchActiveRequest,
+  type ActiveRequest,
+} from '@/features/ride/ride-service';
+import {
+  fetchRouteEstimate,
+  formatDistance,
+  formatDuration,
+  type RouteEstimate,
+} from '@/features/ride/route-service';
 import { useMaxPassengers } from '@/features/ride/settings';
+import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
 import {
   MIN_TOUCH_TARGET,
   iconSize,
@@ -67,6 +84,38 @@ export default function PassengerHome() {
   const maxPasajeros = useMaxPassengers();
 
   /**
+   * La solicitud ya enviada, cuando la hay.
+   *
+   * Se guarda con la forma que necesita el panel y no con la que devuelve el
+   * servidor, porque puede venir de dos sitios: de get_active_request o, si esa
+   * lectura falla justo despues de crearla, de lo que la propia pantalla ya
+   * sabe. Las dos rutas producen lo mismo y el panel no tiene que enterarse.
+   */
+  const [solicitud, setSolicitud] = useState<SolicitudEnCurso | null>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
+  const [errorSolicitud, setErrorSolicitud] = useState<string | null>(null);
+
+  /**
+   * Mientras se le pregunta al servidor si hay algo en marcha no se sabe nada.
+   *
+   * Arranca en true a proposito. Sin esta espera, quien reabre la aplicacion con
+   * un servicio pedido ve primero "¿A dónde vas?" y medio segundo despues el
+   * panel de busqueda: un parpadeo que da a entender que se habia perdido y ha
+   * vuelto. Medio segundo de girador honesto es mejor que un estado falso.
+   */
+  const [restaurando, setRestaurando] = useState(true);
+
+  /** Las cuatro caras de la hoja, en el orden en que las ve el pasajero. */
+  const modo: ModoHoja = restaurando
+    ? 'cargando'
+    : solicitud !== null
+      ? 'buscando'
+      : destination !== null
+        ? 'resumen'
+        : 'destino';
+
+  /**
    * La hoja vuelve a su altura minima cuando cambia lo que contiene.
    *
    * Sin esto, quien despliega la hoja para ver mas lugares y elige uno se
@@ -77,11 +126,10 @@ export default function PassengerHome() {
    * para corregir estado cuando cambia una entrada, y ademas la unica que no
    * provoca un segundo render con la hoja ya pintada a la altura equivocada.
    */
-  const modoResumen = destination !== null;
-  const [modoAnterior, setModoAnterior] = useState(modoResumen);
+  const [modoAnterior, setModoAnterior] = useState(modo);
 
-  if (modoResumen !== modoAnterior) {
-    setModoAnterior(modoResumen);
+  if (modo !== modoAnterior) {
+    setModoAnterior(modo);
     setSheetIndex(1);
   }
 
@@ -112,6 +160,258 @@ export default function PassengerHome() {
   const [skippedGate, setSkippedGate] = useState(false);
 
   const coords = location.state.kind === 'ready' ? location.state.coords : null;
+
+  /**
+   * De donde se recoge, ya resuelto a numeros.
+   *
+   * El borrador guarda el origen en null cuando significa "mi ubicacion actual"
+   * (D137). Traducir eso a una coordenada solo puede hacerse aqui, que es lo
+   * unico que sabe donde esta el telefono ahora mismo.
+   *
+   * Se guardan latitud y longitud sueltas, y no un objeto, porque son lo que
+   * llevan las dependencias del efecto de mas abajo. Un objeto nuevo en cada
+   * render dispararia una llamada a Mapbox en cada render.
+   */
+  const origenLat = origin?.latitude ?? coords?.latitude ?? null;
+  const origenLng = origin?.longitude ?? coords?.longitude ?? null;
+  const destinoLat = destination?.latitude ?? null;
+  const destinoLng = destination?.longitude ?? null;
+
+  const [estimacion, setEstimacion] = useState<RouteEstimate | null>(null);
+  const [estimando, setEstimando] = useState(false);
+
+  /**
+   * La estimacion caduca en cuanto cambia cualquiera de los cuatro numeros.
+   *
+   * Se limpia en el render, con el mismo patron que el modo de la hoja. Hacerlo
+   * dentro del efecto dejaria un fotograma con la distancia del viaje anterior
+   * bajo el destino nuevo, que es de las cosas que nadie reporta y todo el mundo
+   * ve.
+   */
+  const claveRuta = `${origenLat},${origenLng},${destinoLat},${destinoLng}`;
+  const [claveRutaAnterior, setClaveRutaAnterior] = useState(claveRuta);
+
+  if (claveRuta !== claveRutaAnterior) {
+    setClaveRutaAnterior(claveRuta);
+    setEstimacion(null);
+  }
+
+  /**
+   * El error del servidor caduca en cuanto cambia lo que se le pregunto.
+   *
+   * Sin esto, el pasajero que lee "el punto de recogida esta fuera de la zona de
+   * servicio", cambia el origen y lo arregla, sigue viendo el mismo aviso bajo un
+   * viaje que ya es valido. La pantalla estaria mintiendo, y ademas sobre lo
+   * unico que el pasajero acaba de corregir.
+   *
+   * Va la cantidad de pasajeros ademas de las coordenadas: "no hay motorratones
+   * disponibles" puede deberse a que ninguno tiene capacidad para tres, y baja a
+   * dos deja de ser cierto.
+   */
+  const claveSolicitud = `${claveRuta}|${passengerCount}`;
+  const [claveSolicitudAnterior, setClaveSolicitudAnterior] = useState(claveSolicitud);
+
+  if (claveSolicitud !== claveSolicitudAnterior) {
+    setClaveSolicitudAnterior(claveSolicitud);
+    setErrorSolicitud(null);
+  }
+
+  useEffect(() => {
+    if (origenLat === null || origenLng === null || destinoLat === null || destinoLng === null) {
+      return;
+    }
+
+    // Vigente evita que una respuesta lenta de un viaje ya descartado pise a la
+    // del viaje actual. Sin esto, cambiar de destino deprisa deja la distancia
+    // del anterior en pantalla.
+    let vigente = true;
+
+    // Diferido fuera del cuerpo del efecto, igual que en usePlaces: el
+    // compilador de React rechaza un setState alcanzable desde aqui, y no sabe
+    // seguir la frontera del await.
+    const id = setTimeout(() => {
+      void (async () => {
+        setEstimando(true);
+        const resultado = await fetchRouteEstimate(
+          { latitude: origenLat, longitude: origenLng },
+          { latitude: destinoLat, longitude: destinoLng },
+        );
+        if (!vigente) return;
+        // Un fallo deja la estimacion en null y la fila no se pinta (D149).
+        // Inventar una distancia seria peor que no dar ninguna.
+        setEstimacion(resultado.ok ? resultado.estimate : null);
+        setEstimando(false);
+      })();
+    }, 0);
+
+    return () => {
+      vigente = false;
+      clearTimeout(id);
+    };
+  }, [origenLat, origenLng, destinoLat, destinoLng]);
+
+  /**
+   * Envia la solicitud.
+   *
+   * Aqui no se valida la zona de servicio, ni la capacidad, ni si ya hay un
+   * servicio en curso: eso lo decide el servidor y vuelve como un mensaje ya
+   * traducido. Lo unico que se comprueba antes es que sepamos donde recoger,
+   * porque sin coordenada no hay ni siquiera algo que enviar.
+   */
+  const confirmar = useCallback(async () => {
+    if (destination === null) return;
+
+    if (origenLat === null || origenLng === null) {
+      setErrorSolicitud(
+        'No sabemos dónde recogerte. Toca el punto de recogida y elígelo en el mapa.',
+      );
+      return;
+    }
+
+    setEnviando(true);
+    setErrorSolicitud(null);
+
+    const origenLabel = origin?.label ?? 'Tu ubicación actual';
+
+    const creada = await createRequest({
+      origin: {
+        latitude: origenLat,
+        longitude: origenLng,
+        label: origenLabel,
+        placeId: origin?.placeId ?? null,
+      },
+      destination: {
+        latitude: destination.latitude,
+        longitude: destination.longitude,
+        label: destination.label,
+        placeId: destination.placeId,
+      },
+      passengerCount,
+    });
+
+    if (!creada.ok) {
+      setEnviando(false);
+      setErrorSolicitud(creada.failure.message);
+      return;
+    }
+
+    // La cuenta atras la da el servidor, no el reloj del telefono, que puede ir
+    // desviado. Por eso se relee en vez de construirla aqui.
+    const activa = await fetchActiveRequest();
+    setEnviando(false);
+
+    if (activa.ok && activa.data !== null) {
+      setSolicitud(aSolicitudEnCurso(activa.data));
+      return;
+    }
+
+    // La solicitud existe: el servidor devolvio su identificador. Si la relectura
+    // falla, dejar la pantalla en el resumen seria lo peor posible, porque el
+    // pasajero no veria lo que ya pidió ni tendria como cancelarlo.
+    setSolicitud({
+      id: creada.data,
+      origenLabel,
+      destinoLabel: destination.label,
+      pasajeros: passengerCount,
+      segundosRestantes: null,
+    });
+  }, [destination, origin, origenLat, origenLng, passengerCount]);
+
+  /**
+   * Cancela la solicitud enviada.
+   *
+   * No borra el viaje elegido a proposito: quien cancela suele querer cambiar un
+   * detalle y volver a pedir, no empezar de cero. Vuelve al resumen con todo
+   * puesto.
+   */
+  /**
+   * La cuenta atras de los cinco minutos de la regla R1.
+   *
+   * Arranca del numero que da el servidor y corre sola. Cuando llega a cero, la
+   * solicitud esta caducada de hecho aunque el servidor tarde hasta un minuto en
+   * marcarla, que es la ventana de pg_cron (D151). Ensenar "0:00" y seguir
+   * diciendo "buscando" seria la pantalla mintiendo otra vez.
+   */
+  // La clave es el identificador de la solicitud, no los segundos: dos
+  // solicitudes seguidas empiezan siempre con el mismo numero (E27).
+  const segundosRestantes = useCountdown(
+    solicitud?.segundosRestantes ?? null,
+    solicitud?.id ?? null,
+  );
+  const expirada = solicitud !== null && segundosRestantes !== null && segundosRestantes <= 0;
+
+  /**
+   * Pregunta al servidor si el pasajero tiene un servicio en marcha (D152).
+   *
+   * Corre al abrir la pantalla y cada vez que la aplicacion vuelve a primer
+   * plano. Lo segundo no es un extra: mientras el telefono esta bloqueado los
+   * temporizadores de JavaScript se frenan, asi que al volver la cuenta atras
+   * estaria retrasada. Al releer del servidor se corrige sola.
+   */
+  const sincronizacion = useRef(0);
+
+  const sincronizarSolicitud = useCallback(async () => {
+    const turno = ++sincronizacion.current;
+    const activa = await fetchActiveRequest();
+
+    // Una respuesta que llega tarde no puede pisar a una accion posterior del
+    // pasajero, como acabar de crear o de cancelar.
+    if (turno !== sincronizacion.current) return;
+
+    setRestaurando(false);
+
+    // No se pudo preguntar. No se toca nada: borrar lo que hay porque falla la
+    // red seria inventarse que la solicitud ya no existe.
+    if (!activa.ok) return;
+
+    if (activa.data !== null) {
+      setSolicitud(aSolicitudEnCurso(activa.data));
+      return;
+    }
+
+    // El servidor dice que no queda ninguna viva. Si teniamos una, no se borra
+    // en silencio: se deja en cero para que el pasajero vea que se acabo el
+    // tiempo, en lugar de encontrarse el mapa limpio y preguntarse que paso.
+    setSolicitud((actual) => (actual === null ? null : { ...actual, segundosRestantes: 0 }));
+  }, []);
+
+  useEffect(() => {
+    const listener = AppState.addEventListener('change', (siguiente) => {
+      if (siguiente === 'active') void sincronizarSolicitud();
+    });
+
+    // Diferido fuera del cuerpo del efecto, como en use-location y usePlaces.
+    const primera = setTimeout(() => void sincronizarSolicitud(), 0);
+
+    return () => {
+      listener.remove();
+      clearTimeout(primera);
+      sincronizacion.current += 1;
+    };
+  }, [sincronizarSolicitud]);
+
+  /** Deja el viaje elegido y vuelve al resumen, sin pedir nada. */
+  const descartarSolicitud = useCallback(() => {
+    setSolicitud(null);
+    setErrorSolicitud(null);
+  }, []);
+
+  const cancelar = useCallback(async () => {
+    if (solicitud === null) return;
+
+    setCancelando(true);
+    setErrorSolicitud(null);
+
+    const resultado = await cancelRequest(solicitud.id);
+    setCancelando(false);
+
+    if (!resultado.ok) {
+      setErrorSolicitud(resultado.failure.message);
+      return;
+    }
+
+    setSolicitud(null);
+  }, [solicitud]);
 
   /**
    * Slide to the passenger the first time we know where they are.
@@ -213,35 +513,105 @@ export default function PassengerHome() {
         //   Resumen   -> 'content', porque aqui si lo tiene. Con fracciones, la
         //                misma cifra sobraba en la tablet y cortaba el boton
         //                "Continuar" en el telefono.
-        snapPoints={destination === null ? [PEEK, 0.3, 0.72] : [PEEK, 'content']}
+        snapPoints={modo === 'destino' ? [PEEK, 0.3, 0.72] : [PEEK, 'content']}
         index={sheetIndex}
         onIndexChange={setSheetIndex}
         header={
-          destination === null ? (
+          modo === 'destino' || modo === 'cargando' ? (
             <Text variant="subheading">Hola, {user?.fullName ?? 'pasajero'}</Text>
-          ) : (
+          ) : modo === 'resumen' ? (
             <CabeceraDelViaje onCancelar={() => setDestination(null)} />
+          ) : (
+            // Sin aspa aqui. Descartar un viaje elegido y cancelar uno ya
+            // solicitado no son la misma accion, y la segunda no puede quedar a
+            // un toque descuidado: tiene su propio boton, con su nombre escrito.
+            <Text variant="subheading">
+              {expirada ? 'Nadie tomó tu servicio' : 'Buscando motorratón'}
+            </Text>
           )
         }
       >
-        {destination === null ? (
+        {modo === 'cargando' && (
+          <View style={styles.filaBuscando}>
+            <ActivityIndicator color={colors.brand} />
+            <Text variant="body" color="textSecondary">
+              Revisando si tienes un servicio en curso
+            </Text>
+          </View>
+        )}
+
+        {modo === 'destino' && (
           <BuscarDestino places={places} onOpenSearch={abrirBuscador} onPickPlace={elegirLugar} />
-        ) : (
+        )}
+
+        {modo === 'resumen' && destination !== null && (
           <ResumenDelViaje
             origen={origin}
             destino={destination}
             pasajeros={passengerCount}
             maxPasajeros={maxPasajeros}
+            estimacion={estimacion}
+            estimando={estimando}
+            enviando={enviando}
+            error={errorSolicitud}
             onCambiarPasajeros={setPassengerCount}
             onEditarOrigen={() =>
               router.push({ pathname: '/passenger/destination', params: { for: 'origin' } })
             }
             onEditarDestino={abrirBuscador}
+            onConfirmar={() => void confirmar()}
+          />
+        )}
+
+        {modo === 'buscando' && solicitud !== null && (
+          <BuscandoConductor
+            solicitud={solicitud}
+            segundosRestantes={segundosRestantes}
+            expirada={expirada}
+            cancelando={cancelando}
+            reintentando={enviando}
+            error={errorSolicitud}
+            onCancelar={() => void cancelar()}
+            onReintentar={() => void confirmar()}
+            onCambiarViaje={descartarSolicitud}
           />
         )}
       </BottomSheet>
     </View>
   );
+}
+
+/** Las cuatro caras de la hoja del pasajero. */
+type ModoHoja = 'cargando' | 'destino' | 'resumen' | 'buscando';
+
+/**
+ * Lo minimo para pintar el panel de busqueda.
+ *
+ * Se define aqui, y no se reutiliza ActiveRequest, porque este objeto se
+ * construye desde dos sitios: la lectura del servidor y, cuando esa lectura
+ * falla justo despues de crear, lo que la pantalla ya tiene en la mano. Pedir el
+ * tipo completo obligaria a rellenar campos que en el segundo caso no se
+ * conocen, y rellenarlos con valores inventados para contentar al tipo es
+ * exactamente como se cuela un dato falso en una pantalla.
+ */
+interface SolicitudEnCurso {
+  id: string;
+  origenLabel: string;
+  destinoLabel: string;
+  pasajeros: number;
+  /** Nulo cuando no se pudo leer del servidor: entonces no se pinta cuenta atras. */
+  segundosRestantes: number | null;
+}
+
+/** Traduce lo que devuelve el servidor a lo que pinta el panel. */
+function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
+  return {
+    id: activa.id,
+    origenLabel: activa.origin.label,
+    destinoLabel: activa.destination.label,
+    pasajeros: activa.passengerCount,
+    segundosRestantes: activa.secondsRemaining,
+  };
 }
 
 /** Cuantos lugares caben en la hoja sin obligar a desplegarla. */
@@ -371,9 +741,14 @@ interface ResumenDelViajeProps {
   destino: ChosenPoint;
   pasajeros: number;
   maxPasajeros: number;
+  estimacion: RouteEstimate | null;
+  estimando: boolean;
+  enviando: boolean;
+  error: string | null;
   onCambiarPasajeros: (valor: number) => void;
   onEditarOrigen: () => void;
   onEditarDestino: () => void;
+  onConfirmar: () => void;
 }
 
 /**
@@ -382,18 +757,20 @@ interface ResumenDelViajeProps {
  * El origen en null se muestra como "Tu ubicación actual", que es lo que quiere
  * casi todo el mundo y por eso no hay que elegirlo. Sigue siendo tocable, porque
  * a veces se pide el servicio para recoger en otro sitio.
- *
- * El boton todavia no crea nada. La cantidad de pasajeros es de la Fase 10 y la
- * solicitud real de la Fase 11.
  */
 function ResumenDelViaje({
   origen,
   destino,
   pasajeros,
   maxPasajeros,
+  estimacion,
+  estimando,
+  enviando,
+  error,
   onCambiarPasajeros,
   onEditarOrigen,
   onEditarDestino,
+  onConfirmar,
 }: ResumenDelViajeProps) {
   const { colors } = useTheme();
 
@@ -427,16 +804,162 @@ function ResumenDelViaje({
         <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
 
         <PassengerCount value={pasajeros} onChange={onCambiarPasajeros} max={maxPasajeros} />
+
+        {/* La estimacion solo ocupa sitio cuando existe. Si Mapbox no responde
+            no se pinta nada, en lugar de ensenar un numero fabricado (D149). */}
+        {(estimando || estimacion !== null) && (
+          <>
+            <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+            <View style={styles.filaEstimacion}>
+              <RouteIcon
+                size={iconSize.sm}
+                color={colors.textTertiary}
+                strokeWidth={iconStrokeWidth}
+              />
+              {estimacion !== null ? (
+                <Text variant="caption" color="textSecondary">
+                  {formatDistance(estimacion.meters)} · {formatDuration(estimacion.seconds)}{' '}
+                  aproximadamente
+                </Text>
+              ) : (
+                <Text variant="caption" color="textTertiary">
+                  Calculando el recorrido
+                </Text>
+              )}
+            </View>
+          </>
+        )}
       </Card>
 
+      <FormError message={error} />
+
       <Button
-        label="Continuar"
+        label="Confirmar servicio"
         variant="brand"
         icon={ArrowRight}
         iconPosition="right"
         fullWidth
-        onPress={() => {}}
+        loading={enviando}
+        onPress={onConfirmar}
       />
+    </>
+  );
+}
+
+interface BuscandoConductorProps {
+  solicitud: SolicitudEnCurso;
+  segundosRestantes: number | null;
+  expirada: boolean;
+  cancelando: boolean;
+  reintentando: boolean;
+  error: string | null;
+  onCancelar: () => void;
+  onReintentar: () => void;
+  onCambiarViaje: () => void;
+}
+
+/**
+ * La solicitud ya esta enviada: se busca quien la tome, o se acabo el tiempo.
+ *
+ * Es el primer estado de la aplicacion en el que existe algo en el servidor, asi
+ * que la salida no puede ser un aspa discreta: cancelar aqui deshace un servicio
+ * pedido, no una eleccion. Va como boton con su nombre completo.
+ *
+ * Cuando expira cambian las tres cosas a la vez, y a proposito: el texto, el
+ * icono y los botones. Dejar el mismo panel con un "0:00" seria pedirle al
+ * pasajero que dedujera el, de un numero, que ya no va a venir nadie.
+ *
+ * Que un conductor acepte todavia no se entera aqui. Eso llega con el tiempo
+ * real de la Fase 13.
+ */
+function BuscandoConductor({
+  solicitud,
+  segundosRestantes,
+  expirada,
+  cancelando,
+  reintentando,
+  error,
+  onCancelar,
+  onReintentar,
+  onCambiarViaje,
+}: BuscandoConductorProps) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <Card variant="outlined" padding="md">
+        <View style={styles.filaBuscando}>
+          {expirada ? (
+            <Clock size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          ) : (
+            <ActivityIndicator color={colors.brand} />
+          )}
+          <View style={styles.filaLugarTextos}>
+            <Text variant="bodyStrong">
+              {expirada
+                ? 'Ningún motorratón tomó el servicio'
+                : 'Avisando a los motorratones cercanos'}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              {expirada
+                ? 'Puedes volver a pedirlo o cambiar el viaje.'
+                : 'Te avisamos en cuanto uno acepte.'}
+            </Text>
+          </View>
+          {/* El tiempo solo se ensena mientras corre y solo si el servidor lo
+              dijo. Sin dato no se pinta nada: un contador inventado sobre el
+              reloj del telefono seria peor que no tener contador. */}
+          {!expirada && segundosRestantes !== null && (
+            <Text variant="bodyStrong" color="textSecondary">
+              {formatCountdown(segundosRestantes)}
+            </Text>
+          )}
+        </View>
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <View style={styles.puntoViaje}>
+          <Circle size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {solicitud.origenLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.puntoViaje}>
+          <MapPin size={iconSize.sm} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {solicitud.destinoLabel}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      <FormError message={error} />
+
+      {expirada ? (
+        <>
+          <Button
+            label="Volver a pedirlo"
+            variant="brand"
+            icon={RotateCw}
+            fullWidth
+            loading={reintentando}
+            onPress={onReintentar}
+          />
+          <Button label="Cambiar el viaje" variant="secondary" fullWidth onPress={onCambiarViaje} />
+        </>
+      ) : (
+        <Button
+          label="Cancelar servicio"
+          variant="secondary"
+          fullWidth
+          loading={cancelando}
+          onPress={onCancelar}
+        />
+      )}
     </>
   );
 }
@@ -535,6 +1058,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
     justifyContent: 'center',
+  },
+  filaBuscando: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: MIN_TOUCH_TARGET,
+  },
+  filaEstimacion: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.md,
+    minHeight: 32,
   },
   filaLugar: {
     alignItems: 'center',

@@ -18,7 +18,7 @@ import { Header } from '@/components/ui/header';
 import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
-import { FormError } from '@/features/auth/form-error';
+import { FormError } from '@/components/ui/form-error';
 import { useSession } from '@/features/auth/session';
 import { ProfileAvatar } from '@/features/profile/profile-avatar';
 import { iconSize, iconStrokeWidth, spacing, useTheme } from '@/theme';

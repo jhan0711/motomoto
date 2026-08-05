@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { updateProfile } from '@/features/auth/auth-service';
-import { FormError } from '@/features/auth/form-error';
+import { FormError } from '@/components/ui/form-error';
 import { editProfileSchema, type EditProfileValues } from '@/features/auth/schemas';
 import { useSession } from '@/features/auth/session';
 import { spacing } from '@/theme';

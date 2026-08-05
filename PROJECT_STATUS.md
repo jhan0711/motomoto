@@ -4,16 +4,75 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-07-31
+- **Ultima actualizacion:** 2026-08-05
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
-  9 seleccion de origen y destino, 10 seleccion de pasajeros
-- **Fase siguiente:** FASE 11 — Creacion de solicitud (NO INICIADA)
-- **Ultimo commit:** bf58d19 feat: add origin and destination selection with Amalfi places
-  (la Fase 10 esta pendiente de commit)
+  9 seleccion de origen y destino, 10 seleccion de pasajeros,
+  11 creacion de solicitud
+- **Fase siguiente:** FASE 12 — Modulo del conductor (NO INICIADA)
+- **Ultimo commit:** 3490d35 feat: add passenger count selector and content-sized bottom sheet.
+  **La Fase 11 esta pendiente de commit**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
+
+---
+
+## LEE ESTO PRIMERO
+
+Si eres un asistente que acaba de recibir este archivo, esto es lo que necesitas antes de
+escribir una sola linea. El detalle completo esta en la seccion 17; esto es lo que no se
+puede negociar.
+
+**Quien es el usuario.** Nunca habia desarrollado una aplicacion movil. Su experiencia es
+web y QA. Trabaja en Windows y desarrolla solo. **Prefiere respuestas cortas**: los mensajes
+largos con muchas tablas y alternativas le confunden. Una cosa por mensaje.
+
+**Como se trabaja aqui, en cinco reglas:**
+
+1. **Estrictamente por fases.** No se empieza una fase sin que el la autorice de forma
+   expresa, ni aunque parezca obvio. Cada fase termina en un checklist de validacion, nunca
+   en la fase siguiente.
+2. **Verificar, no suponer.** Nada se da por bueno porque el codigo compile o el SQL parezca
+   correcto. Se comprueba contra el servidor, se ejecuta en el emulador o en la tablet, y se
+   toma captura. **Una captura no se juzga a ojo**: se contrasta contra el dato.
+3. **Probar intentando romper.** Despues de cada migracion se escribe un script que intenta
+   violar cada restriccion a proposito. Ese metodo ha encontrado fallos que ninguna revision
+   de codigo habria visto.
+4. **Ante un error, parar.** Se diagnostica la causa real, se aplica **una sola** correccion
+   controlada y se verifica. No se cambian varias cosas a la vez, y no se deja puesto un
+   cambio hecho sobre una hipotesis que resulto falsa.
+5. **Reconocer los propios errores sin adornos.** Veinticuatro errores registrados; la
+   mayoria fueron del asistente. Estan escritos con su causa y su leccion, y varios los
+   encontro el usuario, no las pruebas. Eso se dice tal cual.
+
+**Antes de cada commit:** `npm.cmd run typecheck`, `npm.cmd run lint` y
+`npm.cmd run format:check`, los tres en 0. **Los commits los hace el usuario** desde GitHub
+Desktop; el asistente no ejecuta git salvo para consultar.
+
+**Cosas del entorno que muerden si se olvidan:**
+
+- En PowerShell, **siempre `npx.cmd` y `npm.cmd`**. Sin el sufijo fallan.
+- **Ya no se usa Expo Go.** Hay un cliente de desarrollo propio, ya instalado en la tablet y
+  en el emulador. Solo hay que recompilar si se toca codigo nativo o se anade una libreria.
+- Los comandos de `adb` con rutas del dispositivo van por **PowerShell**, no por Git Bash.
+- Nada de emojis en la interfaz. Iconos de `lucide-react-native`.
+- Los textos que ve el usuario van en **espanol correcto, con tildes**. Los comentarios del
+  codigo y de las migraciones van en ingles o sin tildes segun el archivo; mirar el vecino.
+- **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
+- Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
+
+**Por donde se sigue:** Fase 12, modulo del conductor. No esta autorizada. Antes de empezar
+hay que presentarle el plan y esperar su visto bueno.
+
+**Dos cosas del entorno que la Fase 11 dejo montadas y conviene no redescubrir:**
+
+- Existe un **conductor de prueba** en `supabase/dev-tools/seed_test_driver.sql`. Sin el,
+  `request_ride` siempre responde que no hay motorratones. **Su ubicacion caduca a los dos
+  minutos**, asi que hay que reejecutar el archivo justo antes de cada prueba. Paso mas de
+  una vez durante la fase.
+- El **emulador tiene la sesion de una cuenta de prueba**, `fase11.auth@motomoto-qa.co`, no
+  la del usuario. La tablet si tiene la suya.
 
 ---
 
@@ -231,6 +290,20 @@ el sistema.
 | D146 | Punto de anclaje minimo | Toda hoja del mapa tiene un anclaje bajo que la reduce al asa, para apartarla y ver el mapa. No baja a cero: una hoja que desaparece del todo no deja nada que agarrar para subirla |
 | D147 | Ruta y pasajeros | En una sola tarjeta y no en tres bloques sueltos. Son tres decisiones del mismo viaje, y separarlas gastaba dos huecos y un borde de mas en una hoja donde cada pixel se le quita al mapa |
 | D148 | Donde se descarta el viaje elegido | Un aspa en la cabecera del resumen. Alto cero, porque la cabecera ya existia, y sigue a la vista con el panel bajado, que es cuando el pasajero mira el mapa y puede darse cuenta de que se equivoco. **No confundir con cancelar un viaje ya solicitado**, que es de la Fase 18 |
+
+### Decisiones de la Fase 11
+
+| # | Decision | Valor |
+|---|---|---|
+| D149 | Distancia y tiempo | Mapbox Directions, 100.000 peticiones gratis al mes. Se descarto la linea recta midiendo: en Amalfi un viaje de 16,8 km en recta son 37,0 km de carretera, mas del doble. Si la red falla no se muestra estimacion, en lugar de inventar un numero |
+| D150 | Area de servicio | El poligono real del municipio (OpenStreetMap 1316177) mas 1 km de margen. El circulo se descarto por los numeros: cubrir el municipio exigiria 43 km de radio y eso se tragaria Anori, Campamento, Yolombo y Segovia. Simplificado a 0,0005 grados, 490 puntos, sin mover el area ni una decima |
+| D151 | Quien caduca las solicitudes | pg_cron cada minuto, mas una limpieza dirigida dentro de `request_ride`. La primera deja los datos correctos aunque todos cierren la aplicacion; la segunda solo evita que el pasajero lea "ya tienes un servicio en curso" por algo que expiro hace cuarenta segundos |
+| D152 | Al reabrir la aplicacion | Se restaura el estado de busqueda leyendolo del servidor, con los segundos que quedan de verdad. Tambien al volver de segundo plano: con el telefono bloqueado los temporizadores se frenan y la cuenta atras quedaria retrasada |
+| D153 | Margen del area | En `app_settings`, no en el codigo. Existe porque el limite de OpenStreetMap en zona rural puede estar desviado y el GPS en zona de montana tambien. Un kilometro no alcanza el casco de ningun municipio vecino |
+| D154 | Segundos restantes | Los calcula el servidor, no el telefono. Un reloj desajustado ensenaria una cuenta atras falsa. La pantalla arranca de ese numero y a partir de ahi descuenta sola, que es medir tiempo transcurrido y no comparar relojes |
+| D155 | Errores de la base de datos | Se traducen en el cliente desde el codigo del `hint`, nunca se muestra el texto del servidor. Cierra el pendiente que venia de la Fase 6 y esquiva H8: los 21 mensajes sin tildes ya no llegan a ninguna pantalla |
+| D156 | Color del aviso de error | Token propio `onDangerSubtle`, separado de `danger`. Un mismo tono no puede ser fondo de boton y texto sobre fondo teñido a la vez: en oscuro daba 1,44:1 y el mensaje no se leia (H14) |
+| D157 | Navegacion giro a giro | Fuera del alcance. La ruta dibujada en el mapa si esta prevista (Fase 14). Para guiar al conductor la via razonable es abrir Google Maps o Waze con el destino puesto, que es un enlace y no un modulo. Se decide en la Fase 14 |
 
 ### Decisiones revertidas
 
@@ -586,7 +659,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 8 | Mapa principal | COMPLETADA Y APROBADA |
 | 9 | Seleccion de origen y destino | COMPLETADA Y APROBADA |
 | 10 | Seleccion de pasajeros | COMPLETADA Y APROBADA |
-| 11 | Creacion de solicitud | Pendiente |
+| 11 | Creacion de solicitud | COMPLETADA Y APROBADA |
 | 12 | Modulo del conductor | Pendiente |
 | 13 | Asignacion en tiempo real | Pendiente |
 | 14 | Seguimiento del conductor | Pendiente |
@@ -720,9 +793,17 @@ PostgreSQL 17.6, organizacion propia (no gestionada por Vercel). PostGIS 3.3.
 20260729014732_fix_rating_refresh_blocked_by_guard corrige el choque entre dos disparadores
 20260801012726_seed_amalfi_places                  los 36 lugares frecuentes (Fase 9)
 20260801015032_list_places_function                lectura con latitud y longitud (Fase 9)
+20260804234258_service_area                        poligono de Amalfi, margen y validacion (Fase 11)
+20260804235949_expire_requests_schedule            pg_cron y limpieza dirigida (Fase 11)
+20260805000923_get_active_request                  la solicitud viva del pasajero (Fase 11)
+20260805004304_fix_cancel_request_actor_cast       corrige E25 (Fase 11)
 ```
 
-Totales: **17 tablas, 46 politicas, 30 funciones**. Las 17 con seguridad de fila activa.
+Totales, contados contra el servidor: **18 tablas, 47 politicas, 32 funciones**. Las 18 con
+seguridad de fila activa.
+
+**pg_cron esta activo** con una tarea, `expire-stale-requests`, que corre cada minuto. Se
+consulta con `select * from cron.job;` y su historial con `select * from cron.job_run_details;`.
 
 ### Funciones accesibles desde la aplicacion
 
@@ -740,6 +821,10 @@ complete_ride(ride_id)
 cancel_ride(ride_id, reason?)
 rate_ride(ride_id, stars, comment?) -> uuid
 list_places() -> id, name, description, lat, lng
+is_within_service_area(lng, lat) -> boolean                            (Fase 11)
+get_active_request() -> id, status, passenger_count, coordenadas,
+                        etiquetas, requested_at, expires_at,
+                        seconds_remaining                              (Fase 11)
 ```
 
 `list_places` es la unica **security invoker** de la lista, a proposito: se ejecuta con los
@@ -1258,28 +1343,154 @@ aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
 
 ---
 
+## 15.10 CREACION DE SOLICITUD (Fase 11)
+
+### El area de servicio dejo de ser una idea
+
+Hasta esta fase, "todo el municipio" (D11) era una frase. Ahora es un poligono en la base de
+datos. El dato salio de OpenStreetMap y se comprobo antes de usarlo: **1206 km2, que coincide
+con la superficie real de Amalfi**, y los 36 lugares de la Fase 9 caen dentro.
+
+El circulo se descarto midiendo, no opinando. Desde el parque, el municipio llega a 43 km al
+norte pero solo a 12 al oeste. Un circulo que lo cubriera entero se tragaria cuatro municipios
+vecinos.
+
+La simplificacion tambien se midio en lugar de elegirse a ojo:
+
+```
+sin simplificar    2485 puntos   desviacion   0 m   area 1206,0 km2
+tolerancia 0,0005   490 puntos   desviacion  56 m   area 1206,0 km2   <- elegida
+tolerancia 0,001    270 puntos   desviacion 111 m   area 1205,8 km2
+```
+
+**H11 queda cerrado.** El punto en el mapa ya no puede mandar a un conductor a otro municipio.
+
+### El dato que cambio una decision
+
+Al probar Directions con puntos reales de Amalfi:
+
+| Viaje | Linea recta | Por carretera | Rodeo |
+|---|---|---|---|
+| Dentro del casco | 693 m | 873 m | x1,26 |
+| Al norte del municipio | 16,8 km | **37,0 km** | **x2,21** |
+
+Ese viaje al norte le sale a Mapbox en **2 h 25 min en coche**, y en motorraton seria mas. Es
+informacion nueva para la conversacion sobre cobertura real con la empresa: el municipio
+acordado como zona de servicio tiene su extremo a mas de dos horas.
+
+### Lo que existia en el servidor y nadie habia ejecutado
+
+`cancel_request` estaba escrita desde la Fase 5 y **nunca habia funcionado** (E25). Y
+`expire_stale_requests` existia con un comentario que decia "la invocara una tarea
+programada", tarea que no se habia creado: hasta esta fase ninguna solicitud caducaba.
+
+Las dos aparecieron el mismo dia, al hacer la primera prueba de extremo a extremo. Las 57
+verificaciones de la Fase 5 se centraron en lo que la base de datos debe RECHAZAR, y el camino
+feliz de cada funcion no se recorrio, entre otras cosas porque sin conductores sembrados no
+habia forma de llegar a tener una solicitud viva que cancelar.
+
+### Archivos
+
+```
+supabase/migrations/20260804234258_service_area.sql            poligono, margen y validacion
+supabase/migrations/20260804235949_expire_requests_schedule.sql pg_cron y limpieza dirigida
+supabase/migrations/20260805000923_get_active_request.sql       lectura de la solicitud viva
+supabase/migrations/20260805004304_fix_cancel_request_actor_cast.sql  correccion de E25
+
+supabase/dev-tools/seed_test_driver.sql     conductor de prueba, repetible
+supabase/dev-tools/remove_test_driver.sql   lo deshace
+
+src/features/ride/errors.ts          traduccion de los codigos del hint
+src/features/ride/ride-service.ts    unico punto que llama a las tres funciones
+src/features/ride/route-service.ts   Mapbox Directions y formateadores
+src/features/ride/use-countdown.ts   cuenta atras con clave de reinicio
+
+src/components/ui/form-error.tsx     movida desde features/auth/
+src/theme/colors.ts                  token onDangerSubtle y escalones danger300 y danger900
+src/app/passenger/index.tsx          las cuatro caras de la hoja
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Un CASE que asigna a una columna de tipo enumerado necesita conversion explicita.** Un
+   literal suelto se resuelve solo, pero dentro de un CASE PostgreSQL fija el tipo del CASE
+   primero, y con dos literales sin tipo sale `text`. De `text` a un enumerado no hay
+   conversion implicita. No dependia de que hubiera filas: PL/pgSQL prepara la sentencia al
+   ejecutarla y ahi ya falla.
+2. **Un bloque con `exception` es un punto de guardado.** Si la funcion lanza despues de haber
+   escrito algo, ese algo se deshace. La limpieza dirigida de `request_ride` no sobrevive a un
+   `NO_DRIVERS_AVAILABLE`, y esta bien: lo que importaba era el mensaje que ve el pasajero, y
+   la durabilidad la pone pg_cron.
+3. **Un valor no sirve como identidad.** La cuenta atras se reiniciaba cuando cambiaba el
+   numero de partida, y dos solicitudes seguidas empiezan siempre igual. En produccion habrian
+   sido 300 y 300, con lo que "Volver a pedirlo" habria estado roto SIEMPRE: creaba la
+   solicitud y la pantalla seguia diciendo que nadie la tomo.
+4. **Si se cambia la firma de un hook, la prueba no vale sin reinicio completo.** El recambio
+   en caliente mantuvo el comportamiento antiguo sin avisar, la correccion parecio no
+   funcionar y estuve a punto de buscar la causa donde no estaba. Solo al matar la aplicacion
+   se vio que era correcta desde el principio.
+5. **Un mensaje de error que ya no es cierto es una pantalla que miente.** Tras rechazar el
+   origen por estar fuera de zona, cambiar el punto de recogida dejaba el aviso puesto bajo un
+   viaje que ya era valido. Ahora el error caduca en cuanto cambia cualquier dato de la
+   solicitud, incluida la cantidad de pasajeros.
+6. **Un token de color no puede hacer dos trabajos.** `danger` servia de fondo de boton y de
+   texto sobre fondo teñido. En el tema oscuro eso daba 1,44:1 y el aviso no se leia.
+7. El generador de tipos de Supabase volvio a declarar como no nulo un retorno que admite
+   nulos, esta vez `seconds_remaining`. Segunda vez, misma solucion: normalizar en el servicio.
+8. **La ubicacion del conductor de prueba caduca a los dos minutos.** Ese valor es un
+   parametro por defecto de `find_available_drivers` y no se lee de la configuracion (H12).
+
+### Pruebas de la fase
+
+78 comprobaciones automaticas y 21 en dispositivo, todas en OK. Las automaticas incluyen 15
+del area de servicio contra PostGIS y suplantando roles, 5 de la caducidad incluido el barrido
+real de pg_cron esperando al minuto, 8 de aislamiento entre pasajeros, 7 del ciclo completo de
+solicitud, 15 de la traduccion de errores contra el archivo compilado, 14 del contrato HTTP con
+un token real y 14 de Directions contra la API.
+
+En dispositivo: tablet a 800 dp y emulador a 411 dp, en claro y oscuro, con el emulador
+simulando ubicacion dentro de Amalfi para poder probar "Tu ubicacion actual" como origen. Se
+verifico el ciclo entero, la expiracion bajando el parametro del servidor a 30 segundos, la
+restauracion tras matar la aplicacion y la resincronizacion al volver de segundo plano.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 10 completadas y aprobadas. **Fase 11 pendiente de autorizacion**
-- **Paso actual:** Ninguno en curso. La Fase 10 esta pendiente de commit
-- **Ultimo paso completado:** Cierre de la Fase 10. Selector de pasajeros con el maximo leido
-  del servidor, y hoja que se ajusta a su contenido y se puede apartar para ver el mapa
+- **Fase actual:** Fases 0 a 11 completadas y aprobadas. **Fase 12 pendiente de autorizacion**
+- **Paso actual:** Ninguno en curso. La Fase 11 esta pendiente de commit
+- **Ultimo paso completado:** Cierre de la Fase 11. El pasajero puede pedir un servicio de
+  verdad: se valida contra la zona de servicio, se ofrece a los conductores cercanos, se ve la
+  cuenta atras, se puede cancelar, caduca sola y se restaura al reabrir la aplicacion
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
   cuenta, perfil del pasajero con edicion, contrasena y foto, mapa principal con permisos,
   ubicacion, marcador, camara y estados degradados, y seleccion de origen y destino por
   lista de lugares, buscador de direcciones y punto en el mapa, y seleccion de la cantidad
-  de pasajeros con el maximo configurado por la empresa
+  de pasajeros con el maximo configurado por la empresa, y creacion real de la solicitud con
+  zona de servicio validada en servidor, distancia y tiempo por carretera, caducidad
+  automatica y restauracion del estado al reabrir
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
   en 15.6, incluidos 10 ataques por la API. Mapa y ubicacion 15 puntos, detallados en 15.7,
   con los siete estados verificados por captura. Origen y destino 26 puntos, detallados en
   15.8, incluidas las pruebas sin conexion. Cantidad de pasajeros 12 puntos, detallados en
-  15.9, con el maximo verificado cambiandolo en el servidor
+  15.9, con el maximo verificado cambiandolo en el servidor. Creacion de solicitud 78
+  comprobaciones automaticas y 21 en dispositivo, detalladas en 15.10
 - **Errores pendientes:** Ninguno
-- **Errores resueltos hasta ahora:** E1 a E24. Los catorce ultimos, todos del asistente.
+- **Errores resueltos hasta ahora:** E1 a E27. Los diecisiete ultimos, todos del asistente.
+  **Fase 11, los tres del asistente:** E25 `cancel_request` llevaba rota desde la Fase 5 por
+  una conversion de tipo ausente en un CASE, es decir, **cancelar una solicitud nunca habia
+  funcionado**, y no se detecto porque las pruebas de la Fase 5 cubrieron lo que la base de
+  datos debe rechazar y no el camino feliz de cada funcion; E26 el error del servidor no
+  caducaba al corregir el viaje, asi que quien arreglaba el punto de recogida seguia leyendo
+  que estaba fuera de zona; E27 la cuenta atras se reiniciaba segun el valor y no segun la
+  solicitud, con lo que "Volver a pedirlo" habria estado roto siempre en produccion, creando
+  solicitudes reales que el pasajero no veia. **Los tres salieron de usar la aplicacion, no de
+  leer el codigo.**
+  Los catorce anteriores, tambien del asistente.
   **Fase 10, los dos del asistente:** E23 el resumen del viaje cortaba el boton "Continuar"
   en el telefono, porque las alturas de la hoja eran una fraccion de la pantalla y no del
   contenido; ya rozaba el limite antes de esta fase y el selector lo empujo fuera. E24 se
@@ -1325,10 +1536,18 @@ aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
 - **Hallazgos abiertos:** H10 el indice unico de `places` normaliza mayusculas y espacios de
   los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
   lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
-  H11 el buscador esta restringido a Amalfi pero **el punto en el mapa no**: se puede
-  arrastrar hasta otro municipio y confirmarlo. No se corrige en el cliente porque hacerlo
-  bien necesita el limite real del municipio y no un rectangulo, y esa validacion pertenece
-  al servidor al crear la solicitud (D83, Fase 11).
+  **H12** `driver_location_stale_seconds` esta en `app_settings` con la descripcion de la
+  regla R10 y **no lo lee nadie**: `find_available_drivers` lleva los dos minutos fijados como
+  valor por defecto de un parametro y quien la llama no se lo pasa. Hoy los dos valores
+  coinciden, asi que no hay diferencia, pero el dia que el administrador lo cambie desde el
+  panel no pasara nada. Revisar en la Fase 13, donde esa funcion es la protagonista.
+  **H13** `offer_request_to_drivers` se ejecuta **una sola vez** al crear la solicitud, a un
+  maximo de 5 conductores. Si todos dejan caducar su oferta a los 20 segundos, nadie vuelve a
+  ofrecerla y la solicitud agota sus cinco minutos sin que nadie mas se entere (Fase 13).
+  **H14** los pares de color de estado del sistema de diseno no llegan al contraste minimo de
+  4,5:1. El de error quedo corregido en la Fase 11 con el token `onDangerSubtle`, pero siguen
+  bajo minimos exito, aviso e informacion, y el error **dentro de un campo**, que usa `danger`
+  sobre la superficie y en oscuro da 3,08:1: por debajo del estandar aunque legible.
   H7 el navegador de Android no entrega el enlace de recuperacion a
   la app, aceptado por D95 y a resolver en la Fase 25. H8 los 21 mensajes de las funciones de
   la base de datos estan escritos sin tildes, contra D56
@@ -1336,8 +1555,43 @@ aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
   d52d7a7 sistema de diseno, 06588b8 navegacion, 1c415ba ancho en pantallas grandes,
   3c4f30e base de datos, e4a8648 estado de la Fase 6, b6f92e6 autenticacion y perfil,
   1850acf mapa principal con permisos y estados de ubicacion,
-  bf58d19 seleccion de origen y destino con los lugares de Amalfi
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 11
+  bf58d19 seleccion de origen y destino con los lugares de Amalfi,
+  3490d35 selector de pasajeros y hoja ajustada al contenido
+- **Datos de prueba que quedaron en el servidor:** nueve solicitudes de la cuenta del usuario,
+  una cancelada y ocho caducadas, todas de "Alto de la Virgen" a "El parque". Se dejaron a
+  proposito, porque borrarlas no se deshace y sirven para probar el historial de la Fase 16.
+  Ademas dos cuentas de prueba: `conductor.prueba@motomoto-qa.co`, que es la semilla, y
+  `fase11.auth@motomoto-qa.co`, creada para poder cerrar sesion en el emulador sin pedirle la
+  contrasena al usuario
+- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 12
+
+### Estado del equipo ahora mismo
+
+Para no rehacer trabajo ya hecho al retomar en otra conversacion:
+
+- **El cliente de desarrollo esta instalado** en la tablet `HVA59QB5` y en el emulador
+  `motomoto_phone`. No hay que compilar nada salvo que se toque codigo nativo o se anada una
+  libreria
+- **Las claves estan en `C:\dev\motomoto\.env`**: la de Google Maps para Android, la de
+  pruebas de Google para el PC, el token de Mapbox y sus dos variantes. Ese archivo no sube
+  al repositorio y no hay que pedirselas al usuario otra vez
+- La base de datos tiene los 36 lugares cargados y `max_passengers_per_request` en 3
+- Existe `C:\dev\ubicar-amalfi.html`, el mapa de un solo uso con el que se marcaron los 16
+  sitios que ningun proveedor conoce. Sirve para anadir mas lugares mientras no exista el
+  panel. Se puede borrar sin consecuencias
+- El servidor de desarrollo se arranca con `npx.cmd expo start --dev-client`. Si la aplicacion
+  se queda en la pantalla de inicio del cliente, hay que hacer `adb reverse` y abrirla con el
+  enlace `motomoto://expo-development-client/?url=...` de la seccion 17
+
+### Lo que desaparecio en la Fase 11
+
+- El `onPress={() => {}}` del boton del resumen. Ahora crea la solicitud de verdad, y el boton
+  se llama "Confirmar servicio" en lugar de "Continuar", porque ya no continua a ningun sitio:
+  compromete algo
+- `src/features/auth/form-error.tsx`, movida a `src/components/ui/`. No tenia nada de
+  especifico de autenticacion y la carpeta de viajes tambien la necesitaba
+- El pendiente sobre si mostrar los mensajes de la base de datos o traducirlos, abierto desde
+  la Fase 6. Se traducen desde el codigo del `hint` (D155)
 
 ### Lo que desaparecio en la Fase 10
 
@@ -1364,11 +1618,11 @@ aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
 
 - El vehiculo del panel del conductor, "Motorraton 12 / Placa ABC12". Sale de la base de
   datos en la Fase 12
-- El boton "Continuar" del resumen del viaje **sigue sin hacer nada**. La solicitud real es
-  de la Fase 11, y es ahi donde el servidor validara la cantidad contra la capacidad del
-  vehiculo: el cliente solo propone
-- El borrador del viaje se pierde si la aplicacion se cierra del todo (D137). Restaurar un
-  viaje ACTIVO es otra cosa y es de la Fase 15
+- El borrador del viaje se pierde si la aplicacion se cierra del todo (D137). Eso sigue
+  siendo asi y es correcto: lo que si se restaura desde la Fase 11 es la solicitud ya enviada,
+  que vive en el servidor
+- Que un conductor acepte todavia no se entera nadie. El panel dice "buscando" hasta que
+  caduca, porque el tiempo real es de la Fase 13
 
 ### Lo que desaparecio en la Fase 6
 
@@ -1428,10 +1682,13 @@ aparatos antes y despues de la correccion, y anclaje minimo verificado en ambos.
 - Verificar la recuperacion de contrasena con esquema `motomoto://` en la primera compilacion
   real. Hoy solo se pudo probar `exp://` dentro de Expo Go, donde el navegador no entrega el
   enlace (Fase 26)
-- Decidir si la aplicacion muestra los mensajes que devuelven las funciones de la base de
-  datos o los traduce desde el codigo del `hint`. Los 21 mensajes actuales estan sin tildes
-  (H8), contra D56. La recomendacion es traducir desde el codigo, como ya hace `errors.ts`
-  para autenticacion, para desacoplar los textos del esquema (Fase 11)
+- **RESUELTO en la Fase 11.** Se decidio traducir desde el codigo del `hint` (D155). H8 deja
+  de afectar al pasajero: los 21 mensajes sin tildes ya no llegan a ninguna pantalla. Los
+  codigos del conductor, que son otros doce, se anaden a `src/features/ride/errors.ts` en las
+  fases 12 y 13, cuando existan las pantallas que los provocan
+- Terminar H14: los pares de exito, aviso e informacion siguen sin contraste suficiente, y el
+  error dentro de un campo se queda en 3,08:1 en el tema oscuro. Solo se corrigio el aviso de
+  error, que era el unico ilegible
 - Quitar al rol `anon` el permiso de ejecutar `request_ride`. Hoy puede llamarla y la funcion
   la rechaza desde dentro; revocarlo seria una capa mas (Fase 22)
 - Revisar el almacenamiento de la sesion, AsyncStorage frente a expo-secure-store (D93,

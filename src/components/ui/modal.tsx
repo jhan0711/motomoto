@@ -86,7 +86,7 @@ export function Modal({
             >
               <Icon
                 size={iconSize.xl}
-                color={isDanger ? colors.danger : colors.textSecondary}
+                color={isDanger ? colors.onDangerSubtle : colors.textSecondary}
                 strokeWidth={iconStrokeWidth}
               />
             </View>

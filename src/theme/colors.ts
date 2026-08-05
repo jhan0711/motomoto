@@ -48,8 +48,14 @@ const palette = {
   warning600: '#C77C05',
   warning100: '#FDF0D5',
 
+  // El rojo tiene mas escalones que sus hermanos porque es el unico que se usa
+  // como texto sobre un fondo teñido, y ahi el 500 no da contraste suficiente ni
+  // en claro ni en oscuro (hallazgo H14). El 300 y el 900 son los que hacen
+  // legible el aviso de error en el tema oscuro.
+  danger300: '#FCA5A5',
   danger500: '#DC2626',
   danger600: '#B01B1B',
+  danger900: '#3A1010',
   danger100: '#FBDDDD',
 
   info500: '#2563EB',
@@ -117,7 +123,17 @@ export interface ThemeColors {
 
   danger: string;
   dangerSubtle: string;
+  /** Contenido sobre `danger` en solido: el texto de un boton destructivo. */
   onDanger: string;
+  /**
+   * Contenido sobre `dangerSubtle`: el texto y el icono de un aviso de error.
+   *
+   * Existe porque `danger` hacia dos trabajos incompatibles. Servia de fondo de
+   * boton y a la vez de color de texto sobre el fondo teñido, y un mismo tono no
+   * puede cumplir las dos cosas: en el tema oscuro daba un contraste de 1,44:1,
+   * es decir, un mensaje de error que no se podia leer (H14).
+   */
+  onDangerSubtle: string;
 
   info: string;
   infoSubtle: string;
@@ -166,6 +182,9 @@ export const lightColors: ThemeColors = {
   danger: palette.danger500,
   dangerSubtle: palette.danger100,
   onDanger: palette.white,
+  // Un escalon mas oscuro que `danger` a proposito: sobre el rosa palido, el 500
+  // se queda en 3,79:1 y el 600 sube a 5,46:1.
+  onDangerSubtle: palette.danger600,
 
   info: palette.info500,
   infoSubtle: palette.info100,
@@ -213,8 +232,12 @@ export const darkColors: ThemeColors = {
   onWarning: palette.neutral900,
 
   danger: palette.danger500,
-  dangerSubtle: palette.danger600,
+  // Mismo criterio que `brandSubtle` unas lineas mas arriba, que si se hizo asi
+  // en la Fase 3: en un tema oscuro el fondo teñido tiene que ser el escalon
+  // hondo, no uno intermedio. Con el 600 el aviso quedaba en 1,44:1.
+  dangerSubtle: palette.danger900,
   onDanger: palette.white,
+  onDangerSubtle: palette.danger300,
 
   info: palette.info500,
   infoSubtle: palette.info600,

@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { sendPasswordReset } from '@/features/auth/auth-service';
-import { FormError } from '@/features/auth/form-error';
+import { FormError } from '@/components/ui/form-error';
 import { forgotPasswordSchema, type ForgotPasswordValues } from '@/features/auth/schemas';
 import { spacing } from '@/theme';
 

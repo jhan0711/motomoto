@@ -13,7 +13,7 @@ import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { changePassword } from '@/features/auth/auth-service';
-import { FormError } from '@/features/auth/form-error';
+import { FormError } from '@/components/ui/form-error';
 import { changePasswordSchema, type ChangePasswordValues } from '@/features/auth/schemas';
 import { useSession } from '@/features/auth/session';
 import { spacing } from '@/theme';

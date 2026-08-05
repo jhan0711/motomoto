@@ -830,6 +830,30 @@ export type Database = {
           },
         ];
       };
+      service_area: {
+        Row: {
+          boundary: unknown;
+          id: boolean;
+          name: string;
+          source: string;
+          updated_at: string;
+        };
+        Insert: {
+          boundary: unknown;
+          id?: boolean;
+          name: string;
+          source: string;
+          updated_at?: string;
+        };
+        Update: {
+          boundary?: unknown;
+          id?: boolean;
+          name?: string;
+          source?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       vehicles: {
         Row: {
           created_at: string;
@@ -941,6 +965,23 @@ export type Database = {
           unit_number: number;
         }[];
       };
+      get_active_request: {
+        Args: never;
+        Returns: {
+          destination_label: string;
+          destination_lat: number;
+          destination_lng: number;
+          expires_at: string;
+          id: string;
+          origin_label: string;
+          origin_lat: number;
+          origin_lng: number;
+          passenger_count: number;
+          requested_at: string;
+          seconds_remaining: number;
+          status: Database['public']['Enums']['ride_request_status'];
+        }[];
+      };
       get_setting: { Args: { p_default?: Json; p_key: string }; Returns: Json };
       has_active_ride_with_driver: {
         Args: { p_driver_id: string };
@@ -951,6 +992,10 @@ export type Database = {
         Returns: boolean;
       };
       is_admin: { Args: never; Returns: boolean };
+      is_within_service_area: {
+        Args: { p_lat: number; p_lng: number };
+        Returns: boolean;
+      };
       list_places: {
         Args: never;
         Returns: {

@@ -52,7 +52,7 @@ export function EmptyState({
       >
         <Icon
           size={iconSize.xxl}
-          color={isDanger ? colors.danger : colors.textTertiary}
+          color={isDanger ? colors.onDangerSubtle : colors.textTertiary}
           strokeWidth={iconStrokeWidth}
         />
       </View>

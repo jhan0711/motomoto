@@ -23,9 +23,9 @@ export function FormError({ message }: { message: string | null }) {
 
   return (
     <View accessibilityRole="alert" style={[styles.box, { backgroundColor: colors.dangerSubtle }]}>
-      <CircleAlert size={iconSize.md} color={colors.danger} strokeWidth={iconStrokeWidth} />
+      <CircleAlert size={iconSize.md} color={colors.onDangerSubtle} strokeWidth={iconStrokeWidth} />
       <View style={styles.copy}>
-        <Text variant="caption" color="danger">
+        <Text variant="caption" color="onDangerSubtle">
           {message}
         </Text>
       </View>
