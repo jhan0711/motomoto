@@ -66,6 +66,15 @@ const MESSAGES: Record<string, string> = {
   OFFER_NOT_AVAILABLE: 'Esa solicitud ya no está disponible.',
   OFFER_NOT_FOUND: 'Esa solicitud no es tuya.',
   NO_VEHICLE_ASSIGNED: 'No tienes un motorratón asignado. Comunícate con la empresa.',
+
+  // Recoger pasajeros en ruta, decision D161.
+  //
+  // VEHICLE_CAPACITY_EXCEEDED es el hermano de REQUEST_ALREADY_TAKEN y merece el
+  // mismo trato: tampoco es un fallo. Ahora que un conductor puede tener dos
+  // ofertas vivas a la vez, puede aceptar una y descubrir al tocar la otra que ya
+  // no le caben. Pasa entre la oferta y el toque, y no hay nada que corregir.
+  VEHICLE_CAPACITY_EXCEEDED: 'Ya no te quedan asientos libres para ese servicio.',
+  DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motorratón.',
 };
 
 const NETWORK_CODE = 'network_error';
@@ -138,7 +147,13 @@ export const RIDE_ERROR_CODES = {
   // error: retira la tarjeta sin alarma y sigue esperando la siguiente.
   requestAlreadyTaken: 'REQUEST_ALREADY_TAKEN',
   offerExpired: 'OFFER_EXPIRED',
+  offerAlreadyAnswered: 'OFFER_ALREADY_ANSWERED',
   noVehicle: 'NO_VEHICLE_ASSIGNED',
+
+  // Se lleno entre que le llego la oferta y la toco. La pantalla retira la
+  // tarjeta y vuelve a leer sus viajes, porque el motorraton ya no esta como ella
+  // creia.
+  vehicleCapacityExceeded: 'VEHICLE_CAPACITY_EXCEEDED',
 
   network: NETWORK_CODE,
   unknown: UNKNOWN_CODE,

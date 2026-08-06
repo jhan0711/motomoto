@@ -10,10 +10,14 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
   11 creacion de solicitud, 12 modulo del conductor
-- **Trabajo siguiente:** **D161, recoger pasajeros en ruta.** No es una fase del plan
-  original: sustituye la regla R7 y se acordo abordarlo justo al cerrar la Fase 12
-- **Ultimo commit:** 5d7b363 feat: implement driver module with realtime offers.
-  Arbol limpio, nada pendiente de confirmar
+- **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
+  original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
+- **Trabajo siguiente:** **Fase 13, asignacion en tiempo real.** Buena parte ya esta hecha:
+  el tiempo real se adelanto en la Fase 12 y las carreras entre conductores estan resueltas y
+  probadas. Conviene revisar que queda de esa fase antes de darla por empezada
+- **Ultimo commit:** fe6c852 docs: hand off phase 12 and the shared-ride decision.
+  **D161 esta hecho y probado pero SIN CONFIRMAR:** tres migraciones nuevas, un componente
+  nuevo y siete archivos modificados esperan commit
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -63,10 +67,14 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue:** **D161, recoger pasajeros en ruta.** No esta autorizado el trabajo
-todavia: hay que presentarle el plan y esperar su visto bueno, como con cualquier fase. **El
-analisis completo, con lo que hay que hacer y las tres preguntas que el usuario todavia no ha
-respondido, esta en la seccion 15.12.** Empezar leyendo esa seccion.
+**Por donde se sigue:** **la Fase 13, asignacion en tiempo real**, y conviene mirarla con
+cuidado antes de empezar: parte de su contenido ya se hizo antes de tiempo. El tiempo real se
+adelanto en la Fase 12 por la regla R2, y la prevencion de carreras entre conductores esta
+resuelta y probada con procesos simultaneos reales. Puede que quede menos de lo que el plan
+original supone.
+
+**D161, recoger pasajeros en ruta, esta terminado** y su registro completo esta en la seccion
+15.12, incluidas dos cosas que quedaron sin verificar y estan escritas alli.
 
 **Cosas del entorno que conviene no redescubrir:**
 
@@ -323,7 +331,17 @@ el sistema.
 | D158 | Como le llegan las ofertas al conductor | Tiempo real de Supabase, adelantado desde la Fase 13. El motivo es la regla R2: con veinte segundos para responder, sondear cada diez se come la mitad de su tiempo. Medido: el aviso llega en poco mas de un segundo desde que el pasajero confirma. Se publico `ride_offers`, la primera tabla de la publicacion |
 | D159 | Envio de posicion del conductor | Cada 30 segundos mientras esta disponible, y para al apagarlo. Solo en primer plano (D116). Sin esto un conductor real nunca apareceria en una busqueda, porque su posicion caduca a los dos minutos |
 | D160 | A quien se ofrece una solicitud | A TODOS los conductores disponibles, no a los cinco mas cercanos. El cinco era el valor por defecto de un parametro y contradecia a la regla R4, aprobada en la Fase 0 |
-| **D161** | **Recoger pasajeros en ruta** | **Aprobado, sustituye a la regla R7.** Un conductor con asientos libres podra tomar otra solicitud si le queda de camino, y decide el mirando la ruta. Es como se trabaja en Amalfi. **Pendiente de decidir: si al pasajero se le avisa de que va a compartir y de que su viaje puede alargarse.** El modelo de datos lo aguanta; los obstaculos son los indices `rides_one_active_per_driver` y `rides_one_active_per_vehicle` |
+| D161 | Recoger pasajeros en ruta | **IMPLEMENTADO. Sustituye a la regla R7**, que ya no existe como tal. Un conductor con asientos libres recibe y puede tomar otra solicitud; quien juzga si le queda de camino es el, mirando la ruta. Es como se trabaja en Amalfi. **No toca ninguna pantalla del pasajero**: no se le avisa, no puede negarse y el tiempo estimado se deja como esta |
+
+### Decisiones de D161
+
+| # | Decision | Valor |
+|---|---|---|
+| D162 | Como se hace cumplir la capacidad | Un disparador, no un indice unico. Un indice sabe decir "este valor ya esta" pero no sabe sumar, y la regla nueva es una suma contra `vehicles.max_passengers`. Perder el indice es perder la garantia del motor, asi que el disparador bloquea el conductor y despues su vehiculo, siempre en ese orden, antes de contar |
+| D163 | Un conductor, un motorraton | Puede llevar varios viajes, pero todos en la misma unidad. Es lo que queda vivo del segundo indice: sin ello, reasignarle otro vehiculo a mitad de servicio le dejaria dos en la calle a la vez |
+| D164 | La disponibilidad al aceptar | Se recalcula en lugar de apagarse. Sigue disponible mientras le queden asientos. **Aceptar puede apagarla, nunca encenderla**: quien apago el interruptor a mano no debe reaparecer disponible por aceptar una oferta que ya tenia viva |
+| D165 | Que parte de la Fase 14 se adelanta | Solo el dibujo del recorrido en la pantalla del conductor. El seguimiento y el marcador en movimiento se quedan en su turno. Sin ver la ruta, D161 le pide al conductor una decision a ciegas |
+| D166 | Que dibuja el mapa de una oferta | Dos rutas y no una: la ofrecida en color de marca y las que ya lleva en el color del texto. La pregunta no es "por donde va este viaje" sino "por donde va respecto de lo que ya tengo". **Si una ruta en curso no se puede dibujar, el mapa lo dice**: un mapa incompleto que no se declara incompleto es peor que no tener mapa |
 
 **D160 deja obsoleta a D7.** La asignacion deja de ser "automatica por cercania" y pasa a ser
 del primero que acepte: con todas las ofertas creadas a la vez, gana quien toca antes y no
@@ -554,7 +572,7 @@ administrador bloquea a un conductor durante una operacion.
 | R4 | Se ofrece la solicitud a todos los conductores disponibles del municipio, ordenados por cercania. Sin radio de corte | Sin radio |
 | R5 | Distancia para habilitar "He llegado" | 150 metros |
 | R6 | Solicitudes activas simultaneas por pasajero | 1 |
-| R7 | Viajes activos simultaneos por conductor | 1 |
+| R7 | **SUSTITUIDA POR D161.** Un conductor puede llevar varios viajes a la vez mientras la suma de sus pasajeros no pase de la capacidad de su motorraton, y todos en la misma unidad. Quien juzga si una solicitud le queda de camino es el, mirando la ruta | Por asientos, no por viajes |
 | R8 | Calificaciones por servicio y por parte | 1, no editable |
 | R9 | Frecuencia de envio de ubicacion del conductor | Disponible: 30 s. En viaje: 10 s o 50 m |
 | R10 | Conductor sin senal durante un viaje activo | 3 min, alerta al admin, sin cancelacion automatica |
@@ -1573,12 +1591,11 @@ treinta segundos del envio de posicion, medida entre dos envios consecutivos.
 
 ---
 
-## 15.12 PROXIMO TRABAJO: D161, RECOGER PASAJEROS EN RUTA
+## 15.12 RECOGER PASAJEROS EN RUTA (D161)
 
-**Esto es lo siguiente que hay que hacer, y no es una fase del plan original.** El usuario lo
-pidio al terminar el paso 7 de la Fase 12 y se acordo abordarlo justo despues de cerrarla.
-Esta aprobado en el que, no en el como: **antes de tocar nada hay que presentarle un plan y
-esperar su visto bueno**, y hay tres preguntas suyas sin responder.
+**Terminado el 2026-08-05.** No es una fase del plan original: el usuario lo pidio al acabar el
+paso 7 de la Fase 12 y se abordo justo despues de cerrarla, en siete pasos autorizados uno a
+uno.
 
 ### Que pidio, con sus palabras
 
@@ -1592,10 +1609,11 @@ camino y le sobran asientos**. Lo explico asi:
 
 Y comparo con Uber y DiDi, que no funcionan asi.
 
-### Que lo impide hoy
+### Que lo impedia
 
-La regla **R7**, aprobada en la Fase 0, dice "viajes activos simultaneos por conductor: 1". No
-es solo una frase del documento: hay **dos indices unicos** en `rides` que lo hacen imposible.
+La regla **R7**, aprobada en la Fase 0, decia "viajes activos simultaneos por conductor: 1". No
+era solo una frase del documento: habia **dos indices unicos** en `rides` que lo hacian
+imposible.
 
 ```
 rides_one_active_per_driver    unique (driver_id)   where status in (activos)
@@ -1612,64 +1630,173 @@ Se diseño pensando en repartir **un grupo entre varios vehiculos**. Lo que se p
 espejo: **varias solicitudes en un vehiculo**. La estructura sirve igual. El obstaculo son los
 dos indices, no el diseño.
 
-### Que haria falta
+### Los siete pasos, y que hizo cada uno
 
-1. Sustituir los indices unicos por una regla de capacidad: la suma de pasajeros de los viajes
-   activos de un conductor no puede pasar de `vehicles.max_passengers`
-2. Que `find_available_drivers` cuente **asientos libres**, no un si o un no
-3. Que `accept_ride_offer` deje de apagar la disponibilidad sin mas, y la recalcule
-4. Que la pantalla del conductor muestre los viajes en curso **y** las ofertas nuevas a la vez
-5. Quien juzga si "queda de camino"
-
-**El punto 5 ya esta decidido: lo juzga el conductor, mirando la ruta.** El usuario lo dijo
-expresamente. Eso simplifica mucho, porque la alternativa era que el servidor calculara el
-desvio que añade cada solicitud, y eso es bastante mas trabajo.
+1. **La regla de capacidad.** Fuera los dos indices unicos, dentro un disparador que suma los
+   pasajeros de los viajes activos del vehiculo y los compara con su capacidad (D162). Un
+   indice no sabe sumar. Se repusieron los dos indices como no unicos, porque la suma los
+   necesita para buscar
+2. **Asientos libres.** `find_available_drivers` deja de comparar `max_passengers` con el grupo
+   y resta primero lo que el motorraton ya lleva encima
+3. **Disponibilidad recalculada.** `accept_ride_offer` deja de apagarla y la recalcula (D164).
+   **Este es el paso que enciende la funcion**: los dos anteriores prepararon el terreno sin
+   cambiar nada visible
+4. **La pantalla del conductor.** Viajes en curso y ofertas a la vez, con los asientos libres a
+   la vista y el aviso de por que el interruptor se apago solo
+5. **La ruta en el mapa**, adelantada de la Fase 14 (D165, D166)
+6. **Pruebas de conjunto** y checklist de regresion
+7. **Documentacion**, que es esto
 
 ### Lo que ya se dejo preparado en la Fase 12
 
-Sabiendo que esto venia, dos piezas se escribieron en plural desde el principio y **no habra
-que reescribirlas**:
+Sabiendo que esto venia, dos piezas se escribieron en plural desde el principio y **no hubo que
+reescribirlas**. Funcionaron tal cual:
 
 - `list_driver_active_rides()` devuelve una lista de viajes, no una fila
-- La pantalla del conductor ya recorre esa lista con `viajes.map(...)`
+- La pantalla del conductor ya recorria esa lista con `viajes.map(...)`
 
-### La ruta deja de ser un adorno
+### La ruta dejo de ser un adorno
 
-Dibujar el recorrido en el mapa esta previsto para la **Fase 14**. La navegacion giro a giro
-esta fuera de alcance y se resuelve abriendo Google Maps o Waze (D157).
+Dibujar el recorrido estaba previsto para la **Fase 14**, como un extra. Pero **sin ver la ruta
+el conductor no puede juzgar si el segundo viaje le sirve**, asi que pasa a ser lo que hace
+posible la funcion. Se adelanto solo eso (D165); el seguimiento y el marcador en movimiento se
+quedan en la Fase 14. La navegacion giro a giro sigue fuera de alcance (D157).
 
-Pero esto cambia la prioridad: **sin ver la ruta, el conductor no puede juzgar si el segundo
-viaje le sirve**. Deja de ser un extra y pasa a ser lo que hace posible la funcion. Hay que
-decidir si se adelanta parte de la Fase 14 o si D161 se hace junto con ella.
+### LAS TRES PREGUNTAS DEL LADO DEL PASAJERO, YA RESPONDIDAS
 
-### LAS TRES PREGUNTAS QUE EL USUARIO NO HA RESPONDIDO
+Son del lado del pasajero, que es donde esto tiene consecuencias que nadie ve venir. El usuario
+las respondio el 2026-08-05, antes de autorizar el trabajo.
 
-Son del lado del pasajero, que es donde esto tiene consecuencias que nadie ve venir. **Hay que
-planteárselas antes de empezar y dejar la respuesta escrita aqui.**
+1. **Su viaje va a tardar mas por el desvio. ¿Se le avisa? ¿Puede negarse?**
+   No se le avisa y no puede negarse. En Amalfi compartir es la costumbre.
+2. **¿Se le dice que va a compartir, o se entera al subirse?**
+   Se entera al subirse. Con sus palabras: "el conductor toma la decision solo, alla es asi
+   como se maneja normalmente". La aplicacion no muestra nada al pasajero sobre esto.
+3. **El tiempo estimado que le mostramos (D149) deja de ser fiable. ¿Que se hace con el?**
+   Se deja como esta. Se sigue mostrando el mismo calculo aunque el desvio lo deje corto.
 
-1. Su viaje va a tardar mas por el desvio. ¿Se le avisa? ¿Puede negarse?
-2. ¿Se le dice que va a compartir, o se entera al subirse?
-3. El tiempo estimado que le mostramos (D149) deja de ser fiable. ¿Que se hace con el?
+**Consecuencia de las tres juntas: D161 no toca ni una pantalla del pasajero.** Todo el trabajo
+esta en el servidor y en la pantalla del conductor. Si alguna vez aparece la necesidad de
+avisar, sera una decision nueva, no un olvido de esta.
 
-En Amalfi compartir es la costumbre, asi que la respuesta probablemente sea "no hace falta
-avisar". **Pero eso no se da por hecho: lo dice el usuario y se escribe.**
+### Archivos
 
-### Consecuencia sobre R7
+```
+supabase/migrations/20260805215913_replace_r7_with_vehicle_capacity.sql
+supabase/migrations/20260805221747_count_free_seats_for_offers.sql
+supabase/migrations/20260805222621_recalculate_availability_on_accept.sql
 
-Cuando esto se implemente, **R7 queda sustituida**. Hay que actualizar la seccion 9 de este
-documento, no solo añadir una decision nueva: dejar dos reglas que se contradicen es lo que
-nos mordio en la Fase 6 con el criterio de aceptacion 7.
+src/features/driver/route-preview.tsx   NUEVO. El mapa de la oferta con las rutas en curso
+src/features/map/map.tsx                admite trazados, marcadores y modo no interactivo
+src/features/map/region.ts              regionContaining, para encuadrar varios puntos
+src/features/ride/route-service.ts      fetchRouteGeometry, y la peticion comun extraida
+src/features/ride/errors.ts             VEHICLE_CAPACITY_EXCEEDED y DRIVER_VEHICLE_CONFLICT
+src/features/driver/offer-card.tsx      el mapa, entre las direcciones y los botones
+src/features/driver/driver-service.ts   comentarios que ya no decian la verdad sobre R7
+src/app/driver/index.tsx                asientos libres, encabezados y el aviso de completo
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Una prueba puede pasar por el motivo equivocado y no notarse hasta semanas despues.**
+   `prueba_ciclo` comprueba casos que esperan NO_DRIVERS_AVAILABLE, y eso exige que su
+   conductor sea el unico disponible. Paso en el paso 3 porque la ubicacion del conductor de
+   prueba llevaba mas de dos minutos sin refrescarse. Al reejecutarla con el seed recien
+   corrido se cayo entera. Ahora aisla a los demas conductores y los restaura al terminar.
+   Misma familia que la leccion 2 de la Fase 12.
+2. **Un mapa incompleto que no se declara incompleto es peor que no tener mapa.** Con la red
+   estrangulada, la ruta ofrecida cargo y la del servicio en curso no. El codigo descartaba en
+   silencio las que fallan, asi que el conductor veia un mapa aparentemente completo con una
+   sola linea y habria concluido que la solicitud nueva no se cruza con nada. Ahora se cuentan
+   las que faltan y se dicen.
+3. **El tono mas apagado del tema no sirve sobre un mapa.** `textTertiary` esta pensado para
+   texto sobre fondo blanco; el mapa ya es gris claro y la ruta desaparecia. La primera captura
+   parecia demostrar que las rutas en curso no llegaban del servidor, cuando llegaban
+   perfectamente. Se usa `textPrimary`, que ademas se invierte con el tema.
+4. **Una comprobacion puede funcionar por accidente.** Para distinguir "no llega" de "no se ve"
+   se puso `colors.text`, que **no existe** en el tema. El color llego indefinido y Android
+   pinto negro por defecto: la ruta aparecio y el diagnostico resulto correcto, pero por el
+   motivo equivocado. Lo cazo el `typecheck`. En modo oscuro ese negro accidental era casi
+   invisible.
+5. **`RETURNING ... INTO` no admite un elemento de array** en PL/pgSQL. Hace falta una variable
+   suelta y asignar despues.
+6. **`ride_offers` no tiene `created_at`, tiene `offered_at`.** Ordenar por la columna
+   equivocada revienta con 42703 en mitad de una prueba de concurrencia.
+7. **`supabase db query -f` solo devuelve el ultimo SELECT del archivo.** Poner la comprobacion
+   y la limpieza en el mismo fichero borra los datos antes de poder leer el resultado.
+8. **Un script de limpieza que borra por patron de correo es un cuchillo sin mango.** Se uso
+   `like '%@motomoto-qa.co'` excluyendo a mano el conductor de prueba. No causo daño porque no
+   habia otras cuentas con ese dominio, pero lo correcto es borrar por los identificadores
+   fijos que uno mismo creo.
+
+### Pruebas
+
+**41 comprobaciones automaticas** repartidas en cuatro scripts, mas **dos carreras con procesos
+simultaneos reales**, mas **15 comprobaciones en dispositivo**.
+
+Las dos carreras merecen mencion aparte, porque al quitar los indices unicos se perdio la
+garantia que daba el motor de la base de datos y hubo que reponerla con bloqueos:
+
+- **Dos conductores aceptando la misma solicitud en el mismo instante.** Entra uno. Se ejecuto
+  dos veces y gano un proceso distinto cada vez, asi que la carrera es real
+- **Un mismo conductor con dos ofertas de 2 pasajeros y 3 asientos.** Entra una, la otra muere
+  con VEHICLE_CAPACITY_EXCEEDED. **Esta carrera no podia existir antes de D161**: con R7,
+  aceptar la primera oferta te dejaba sin disponibilidad y no habia segunda
+
+En dispositivo: tablet a 800 dp y emulador a 411 dp, en claro y oscuro, aceptando desde la
+pantalla y comprobando cada estado contra el dato del servidor.
+
+### Lo que quedo sin verificar
+
+**El aviso de mapa incompleto no se ha visto en pantalla.** Se provoco una vez estrangulando la
+red del emulador, se escribio la correccion, y en dos intentos posteriores de reproducirlo las
+dos rutas cargaron igualmente. Compila y pasa lint, pero segun el criterio de terminado de este
+proyecto eso no basta. La via para verlo es poner un token de Mapbox invalido un momento.
+
+**El flujo del pasajero no se probo en dispositivo** tras refactorizar `route-service.ts`. La
+tablet tiene la sesion del conductor y el emulador no entrega GPS. Se cubrio por el contrato de
+la API, comprobando que la variante del pasajero sigue pidiendo `overview=false` y no descarga
+geometria, y por `request_ride` en las pruebas automaticas.
+
+### Checklist de regresion
+
+Volver a pasarlo cada vez que se toque la capacidad, las ofertas o la disponibilidad. **Antes de
+nada, refrescar el conductor de prueba**, porque su ubicacion caduca a los dos minutos.
+
+| Script | Comprobaciones | Que protege |
+|---|---|---|
+| `prueba_capacidad.sql` | 15 | La regla que sustituyo a R7 |
+| `prueba_asientos.sql` | 13 | Que el buscador reste los asientos ocupados |
+| `prueba_ciclo.sql` | 12 | El ciclo entero por las funciones reales |
+| `prueba_interruptor.sql` | 1 | Que aceptar no encienda la disponibilidad de quien la apago |
+
+En dispositivo, con `demo_01_montar.sql` y `demo_02_segunda_solicitud.sql`, y `demo_03_limpiar.sql`
+al terminar, que ademas devuelve `offer_response_seconds` a los veinte segundos de R2:
+
+1. Con un servicio de 2 encima, el conductor sigue en **Disponible**
+2. La tarjeta del motorraton dice **"Un asiento libre · 2 a bordo"**
+3. Aparece **"Esperando otra solicitud, te queda un asiento"**
+4. La segunda oferta entra **en tiempo real**, con su temporizador
+5. Aparecen los encabezados **TU SERVICIO** y **NUEVA SOLICITUD**
+6. El mapa de la oferta dibuja **dos rutas**, la ofrecida y la que ya lleva
+7. Al aceptar: **"Completo · 3 a bordo"** y el aviso de que el motorraton esta lleno, no de que
+   el conductor apago algo
+8. Las dos tarjetas de servicio, con su boton de llamada
+9. Todo lo anterior en claro y oscuro, y en los dos anchos
 
 ---
 
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 12 completadas y aprobadas. **Siguiente: D161, recoger pasajeros
-  en ruta, pendiente de autorizacion**
-- **Paso actual:** Ninguno en curso. La Fase 12 esta pendiente de commit
-- **Ultimo paso completado:** Cierre de la Fase 12. El conductor entra, ve su motorraton, se
-  pone disponible, manda su posicion, recibe solicitudes en tiempo real, las acepta o las
-  rechaza, y al aceptar ve a quien recoge y puede llamarlo
+- **Fase actual:** Fases 0 a 12 completadas y aprobadas, **mas D161 terminado**. Siguiente:
+  Fase 13, asignacion en tiempo real, pendiente de autorizacion y de revisar cuanto queda
+  realmente de ella
+- **Paso actual:** Ninguno en curso. **D161 esta sin confirmar en git**: tres migraciones
+  nuevas, un componente nuevo y siete archivos modificados
+- **Ultimo paso completado:** Cierre de D161, recoger pasajeros en ruta. Un conductor con
+  asientos libres sigue recibiendo solicitudes mientras lleva un servicio, ve la ruta de la
+  oferta dibujada contra las que ya lleva, y el servidor le impide pasarse de capacidad aunque
+  dos ofertas lleguen a la vez
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -1679,7 +1806,8 @@ nos mordio en la Fase 6 con el criterio de aceptacion 7.
   de pasajeros con el maximo configurado por la empresa, y creacion real de la solicitud con
   zona de servicio validada en servidor, distancia y tiempo por carretera, caducidad
   automatica y restauracion del estado al reabrir, y el modulo del conductor completo con
-  disponibilidad, envio de posicion, ofertas en tiempo real, aceptacion y rechazo
+  disponibilidad, envio de posicion, ofertas en tiempo real, aceptacion y rechazo, y **recoger
+  pasajeros en ruta**, con la capacidad controlada por asientos y la ruta dibujada en el mapa
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -1688,8 +1816,11 @@ nos mordio en la Fase 6 con el criterio de aceptacion 7.
   15.8, incluidas las pruebas sin conexion. Cantidad de pasajeros 12 puntos, detallados en
   15.9, con el maximo verificado cambiandolo en el servidor. Creacion de solicitud 78
   comprobaciones automaticas y 21 en dispositivo, detalladas en 15.10. Modulo del conductor 64
-  automaticas y 15 en dispositivo, detalladas en 15.11
-- **Errores pendientes:** Ninguno
+  automaticas y 15 en dispositivo, detalladas en 15.11. D161 41 automaticas, dos carreras con
+  procesos simultaneos y 15 en dispositivo, detalladas en 15.12
+- **Errores pendientes:** Ninguno. **Dos cosas sin verificar en D161**, escritas en 15.12: el
+  aviso de mapa incompleto no se ha visto en pantalla, y el flujo del pasajero no se probo en
+  dispositivo tras refactorizar `route-service.ts`
 - **Errores resueltos hasta ahora:** E1 a E29. Los diecinueve ultimos, todos del asistente.
   **Fase 12, los dos del asistente:** E28 el conductor de prueba **no podia iniciar sesion**,
   porque el archivo de semilla dejaba cuatro columnas de token en nulo y GoTrue no lo admite;
@@ -1891,6 +2022,14 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
   alternativa: la API barata no conoce Amalfi (D126). Con las tres medidas puestas (testigo
   por busqueda, pausa de 400 ms y la lista de lugares primero) deberia sobrar para el piloto,
   pero conviene mirar el consumo real en Mapbox tras el primer mes de uso (Fase 24)
+- **Condiciones de uso de Mapbox sobre un mapa de Google.** Sus terminos restringen mostrar
+  datos de Mapbox sobre un mapa base de otro proveedor, y aqui el mapa lo dibuja Google (D110)
+  mientras la ruta la calcula Mapbox (D149). Venia ocurriendo desde la Fase 11 con el tiempo
+  estimado; con D161 la ruta se dibuja y es mas visible. No bloquea nada hoy y esto no es una
+  lectura legal, pero conviene mirarlo antes de publicar (Fase 26)
+- **Peticiones de ruta por oferta.** Cada oferta pide su trazado mas el de cada viaje en curso.
+  Con el cupo de 100.000 al mes sobra para el piloto, pero es la primera vez que una pantalla
+  hace varias llamadas a Directions a la vez y conviene medirlo con uso real (Fase 24)
 - **Ampliar la lista de lugares.** Los 36 actuales son el arranque. Hay 16 sitios del
   municipio que ningun proveedor conoce y que se marcaron a mano; con el uso apareceran mas.
   Se dan de alta desde el panel (Fase 20)

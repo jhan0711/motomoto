@@ -1,11 +1,34 @@
 import { useEffect, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
-import MapView, { Marker, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
+import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
 
 import { radius, shadows, useTheme } from '@/theme';
 
 import { darkMapStyle, lightMapStyle } from './map-style';
 import type { Coordinates } from './region';
+
+/**
+ * Un trazado dibujado sobre el mapa.
+ *
+ * El color lo decide quien lo pinta y no este componente, porque el mismo mapa
+ * ensena rutas que significan cosas distintas: desde D161, el conductor ve a la
+ * vez el viaje que ya lleva y el que le estan ofreciendo, y distinguirlos es
+ * justo lo que le permite decidir.
+ */
+export interface MapRoute {
+  coordinates: Coordinates[];
+  color: string;
+  /** Mas fina para lo secundario. Por defecto, el grosor normal. */
+  width?: number;
+}
+
+/** Un punto senalado en el mapa. */
+export interface MapMarker {
+  coordinate: Coordinates;
+  color: string;
+  /** Relleno para el destino, hueco para la recogida. */
+  filled: boolean;
+}
 
 export interface MapProps {
   ref?: Ref<MapView>;
@@ -13,6 +36,18 @@ export interface MapProps {
   initialRegion: Region;
   /** The passenger's position, or null while unknown. */
   userCoords: Coordinates | null;
+  /** Trazados a dibujar. Se pintan en orden: el ultimo queda encima. */
+  routes?: MapRoute[];
+  /** Puntos senalados, como la recogida y el destino. */
+  markers?: MapMarker[];
+  /**
+   * A false, el mapa se mira pero no se toca.
+   *
+   * Lo necesita el recuadro dentro de una tarjeta: ahi el mapa vive dentro de
+   * una lista que se desplaza, y un mapa que captura el gesto deja al conductor
+   * sin poder pasar de largo la tarjeta.
+   */
+  interactive?: boolean;
   /**
    * Fires when the native map is ready to accept camera commands.
    *
@@ -47,6 +82,9 @@ export function Map({
   ref,
   initialRegion,
   userCoords,
+  routes,
+  markers,
+  interactive = true,
   onReady,
   onRegionSettled,
   showUser = true,
@@ -63,6 +101,8 @@ export function Map({
       onMapReady={onReady}
       onRegionChangeComplete={onRegionSettled}
       customMapStyle={isDark ? darkMapStyle : lightMapStyle}
+      scrollEnabled={interactive}
+      zoomEnabled={interactive}
       // Google's own blue dot is switched off in favour of our marker below.
       // Two dots for one person is confusing, and the built-in one ignores the
       // brand color that was chosen in Phase 3 precisely for map legibility.
@@ -76,6 +116,29 @@ export function Map({
       rotateEnabled={false}
       pitchEnabled={false}
     >
+      {routes?.map((ruta, indice) => (
+        <Polyline
+          // Las rutas no tienen identidad propia: son el trazado de un viaje o
+          // de una oferta, y quien las ordena es el que llama. El indice sirve
+          // porque la lista se reconstruye entera cada vez que cambia.
+          key={indice}
+          coordinates={ruta.coordinates}
+          strokeColor={ruta.color}
+          strokeWidth={ruta.width ?? 4}
+        />
+      ))}
+
+      {markers?.map((marca, indice) => (
+        <Marker
+          key={indice}
+          coordinate={marca.coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          tracksViewChanges={tracksMarker}
+        >
+          <RoutePoint color={marca.color} filled={marca.filled} />
+        </Marker>
+      ))}
+
       {showUser && userCoords !== null && (
         <Marker
           coordinate={userCoords}
@@ -86,6 +149,30 @@ export function Map({
         </Marker>
       )}
     </MapView>
+  );
+}
+
+/**
+ * Los extremos de una ruta.
+ *
+ * Hueco para la recogida y relleno para el destino, que es la misma pareja de
+ * formas que usan las tarjetas del conductor desde la Fase 12. Repetir ahi el
+ * criterio de un icono y aqui otro obligaria a traducir mentalmente entre la
+ * lista y el mapa.
+ */
+function RoutePoint({ color, filled }: { color: string; filled: boolean }) {
+  const { colors } = useTheme();
+
+  return (
+    <View
+      style={[
+        styles.routePoint,
+        {
+          backgroundColor: filled ? color : colors.surface,
+          borderColor: color,
+        },
+      ]}
+    />
   );
 }
 
@@ -137,5 +224,11 @@ const styles = StyleSheet.create({
     height: 24,
     justifyContent: 'center',
     width: 24,
+  },
+  routePoint: {
+    borderRadius: radius.full,
+    borderWidth: 3,
+    height: 14,
+    width: 14,
   },
 });

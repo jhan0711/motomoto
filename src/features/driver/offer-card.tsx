@@ -9,6 +9,7 @@ import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
 import type { DriverOffer } from './driver-service';
+import { RoutePreview, type RouteEnds } from './route-preview';
 
 /**
  * Una solicitud ofrecida, con el tiempo que queda para responderla.
@@ -32,6 +33,13 @@ export interface OfferCardProps {
   onRechazar: () => void;
   /** Se llama cuando se agota el tiempo, para que quien manda la retire. */
   onExpirar: () => void;
+  /**
+   * Los viajes que el conductor ya lleva, para dibujarlos bajo esta ruta.
+   *
+   * DECISION D161: sin verlos junto a la ruta ofrecida no puede juzgar si le
+   * queda de camino, que es exactamente lo que la decision le pide decidir.
+   */
+  enCurso?: RouteEnds[];
 }
 
 export function OfferCard({
@@ -41,6 +49,7 @@ export function OfferCard({
   onAceptar,
   onRechazar,
   onExpirar,
+  enCurso,
 }: OfferCardProps) {
   const { colors } = useTheme();
   const restantes = useCountdown(offer.secondsRemaining, offer.offerId);
@@ -109,6 +118,16 @@ export function OfferCard({
           {offer.passengerCount === 1 ? 'Un pasajero' : `${offer.passengerCount} pasajeros`}
         </Text>
       </View>
+
+      {/* El mapa va despues de las direcciones y antes de los botones. Ese orden
+          es el de la decision: primero se lee a donde, luego se mira por donde,
+          y solo entonces se acepta. Ponerlo arriba del todo lo convertiria en
+          adorno; ponerlo debajo de los botones seria pedirle que decida antes de
+          ver. */}
+      <RoutePreview
+        route={{ origin: offer.origin, destination: offer.destination }}
+        context={enCurso}
+      />
 
       <View style={styles.acciones}>
         <Button

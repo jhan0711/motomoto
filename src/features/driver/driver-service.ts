@@ -252,9 +252,11 @@ export interface DriverRide {
 /**
  * Los viajes en curso del conductor.
  *
- * Lista y no un solo viaje, aunque hoy la regla R7 admita uno. La decision D161
- * aprueba recoger pasajeros en ruta cuando quede capacidad, y cuando eso entre,
- * esto ya devuelve lo que hara falta.
+ * Pueden ser varios desde D161, que sustituyo a la regla R7. Van todos en el
+ * mismo motorraton: el disparador `enforce_ride_capacity` no admite que un
+ * conductor tenga servicios activos en dos unidades a la vez, y por eso la
+ * pantalla puede sumar los pasajeros de esta lista para saber cuantos asientos
+ * le quedan libres sin preguntarselo al servidor.
  */
 export async function fetchActiveRides(): Promise<Result<DriverRide[]>> {
   const { data, error } = await supabase.rpc('list_driver_active_rides');
@@ -294,6 +296,11 @@ export async function fetchActiveRides(): Promise<Result<DriverRide[]>> {
  * el otro conductor. La base de datos resuelve la carrera con un indice unico
  * parcial, y quien pierde recibe REQUEST_ALREADY_TAKEN, que no es un error sino
  * el desenlace normal de que dos personas quieran el mismo viaje.
+ *
+ * Desde D161 hay una segunda carrera con el mismo criterio, y esta la puede
+ * perder un conductor contra si mismo: con dos ofertas vivas a la vez puede
+ * aceptar una y quedarse sin sitio para la otra. El servidor responde
+ * VEHICLE_CAPACITY_EXCEEDED y tampoco es un fallo.
  */
 export async function acceptOffer(offerId: string): Promise<Result<string>> {
   const { data, error } = await supabase.rpc('accept_ride_offer', { p_offer_id: offerId });

@@ -58,3 +58,60 @@ export function regionAround(coords: Coordinates): Region {
     longitudeDelta: CLOSE_DELTA,
   };
 }
+
+/**
+ * Margen alrededor de lo que se encuadra.
+ *
+ * Sin el, la ruta empieza y acaba pegada al borde del recuadro y parece cortada.
+ * Un cuarto a cada lado deja respirar a los marcadores de recogida y destino,
+ * que se dibujan centrados sobre su punto y sobresaldrian.
+ */
+const FIT_MARGIN = 1.5;
+
+/**
+ * La vista mas cercana que se permite al encuadrar.
+ *
+ * Hace falta un suelo porque dos puntos separados por cincuenta metros darian un
+ * delta minusculo, y el mapa entraria a un nivel de zoom donde solo se ve
+ * asfalto sin referencias. Ahi el conductor no reconoce nada.
+ */
+const MIN_FIT_DELTA = 0.004;
+
+/**
+ * La region mas ajustada que contiene todos los puntos.
+ *
+ * Se calcula en lugar de usar `fitToCoordinates` de react-native-maps, que
+ * necesita una referencia al mapa y esperar a que este listo. Para un recuadro
+ * pequeno dentro de una tarjeta eso es mucha maquinaria y una fuente conocida de
+ * mapas que aparecen en blanco cuando la llamada llega antes de tiempo. Un
+ * calculo directo entra en `initialRegion` y no depende de ningun momento.
+ *
+ * Devuelve null con la lista vacia: no hay nada que encuadrar, y el que llama
+ * decide que ensenar.
+ */
+export function regionContaining(points: Coordinates[]): Region | null {
+  const primero = points[0];
+
+  if (primero === undefined) {
+    return null;
+  }
+
+  let minLat = primero.latitude;
+  let maxLat = primero.latitude;
+  let minLng = primero.longitude;
+  let maxLng = primero.longitude;
+
+  for (const punto of points) {
+    minLat = Math.min(minLat, punto.latitude);
+    maxLat = Math.max(maxLat, punto.latitude);
+    minLng = Math.min(minLng, punto.longitude);
+    maxLng = Math.max(maxLng, punto.longitude);
+  }
+
+  return {
+    latitude: (minLat + maxLat) / 2,
+    longitude: (minLng + maxLng) / 2,
+    latitudeDelta: Math.max(MIN_FIT_DELTA, (maxLat - minLat) * FIT_MARGIN),
+    longitudeDelta: Math.max(MIN_FIT_DELTA, (maxLng - minLng) * FIT_MARGIN),
+  };
+}

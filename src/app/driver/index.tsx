@@ -91,9 +91,9 @@ export default function DriverHome() {
   /**
    * Los servicios que ya lleva encima.
    *
-   * Es una lista porque la decision D161 aprueba recoger pasajeros en ruta.
-   * Mientras la regla R7 siga vigente habra como mucho uno, pero la pantalla ya
-   * sabe pintar varios.
+   * Desde D161 pueden ser varios a la vez: si al conductor le sobran asientos y
+   * la solicitud le queda de camino, la recoge. Quien juzga si le queda de camino
+   * es el, mirando la ruta, y no el servidor calculando desvios.
    */
   const [viajes, setViajes] = useState<DriverRide[]>([]);
 
@@ -123,10 +123,11 @@ export default function DriverHome() {
       if (resultado.ok) {
         ofertas.removeOffer(offerId);
 
-        // Al aceptar, el servidor pone al conductor como no disponible: la regla
-        // R7 solo admite un viaje activo a la vez. Sin releer el estado, el
-        // interruptor se queda diciendo "Disponible" sobre un servidor que dice
-        // lo contrario, y la pantalla estaria mintiendo.
+        // Hay que releer las dos cosas. Desde D161 el servidor ya no apaga la
+        // disponibilidad sin mas: la recalcula, y solo la apaga si el motorraton
+        // se lleno. Sin volver a preguntar, el interruptor diria una cosa y el
+        // servidor otra, y ademas los asientos libres que se pintan mas arriba se
+        // calculan a partir de los viajes.
         void cargar();
         void cargarViajes();
         return;
@@ -134,15 +135,25 @@ export default function DriverHome() {
 
       setError(resultado.failure.message);
 
-      // Cualquiera de estos tres significa que esa oferta ya no sirve para nada,
-      // asi que la tarjeta desaparece en lugar de quedarse invitando a insistir.
+      // Cualquiera de estos cuatro significa que esa oferta ya no sirve para
+      // nada, asi que la tarjeta desaparece en lugar de quedarse invitando a
+      // insistir.
       const codigo = resultado.failure.code;
       if (
         codigo === RIDE_ERROR_CODES.requestAlreadyTaken ||
         codigo === RIDE_ERROR_CODES.offerExpired ||
-        codigo === 'OFFER_ALREADY_ANSWERED'
+        codigo === RIDE_ERROR_CODES.offerAlreadyAnswered ||
+        codigo === RIDE_ERROR_CODES.vehicleCapacityExceeded
       ) {
         ofertas.removeOffer(offerId);
+      }
+
+      // Si se lleno, lo que la pantalla creia saber del motorraton ya no vale.
+      // Puede haber aceptado otra oferta hace un instante, asi que se releen los
+      // viajes y el estado para que los asientos libres cuadren con la realidad.
+      if (codigo === RIDE_ERROR_CODES.vehicleCapacityExceeded) {
+        void cargar();
+        void cargarViajes();
       }
     },
     [ofertas, cargar, cargarViajes],
@@ -216,6 +227,26 @@ export default function DriverHome() {
   const sinVehiculo = estado !== null && estado.vehicle === null;
   const sinUbicacion = disponible && coords === null;
 
+  /**
+   * Cuanta gente lleva encima y cuanto sitio le queda.
+   *
+   * Se cuenta aqui en lugar de pedirselo al servidor porque el dato ya esta: los
+   * viajes activos de un conductor van todos en su motorraton, que es una regla
+   * que la base de datos hace cumplir desde D161. Sumar lo que ya tenemos evita
+   * una consulta mas por cada vez que cambia algo.
+   */
+  const aBordo = viajes.reduce((total, viaje) => total + viaje.passengerCount, 0);
+  const capacidad = estado?.vehicle?.maxPassengers ?? 0;
+  const libres = Math.max(0, capacidad - aBordo);
+
+  // Los extremos de lo que ya lleva, para que el mapa de cada oferta los dibuje
+  // debajo. Es lo que convierte "por donde va este viaje" en "por donde va
+  // respecto de lo que ya tengo", que es la pregunta de D161.
+  const rutasEnCurso = viajes.map((viaje) => ({
+    origin: viaje.origin,
+    destination: viaje.destination,
+  }));
+
   return (
     <Screen scroll header={<Header title={`Hola, ${user?.fullName ?? 'conductor'}`} />}>
       <View style={styles.panels}>
@@ -231,9 +262,16 @@ export default function DriverHome() {
             <View style={styles.statusCopy}>
               <Text variant="title">{disponible ? 'Disponible' : 'No disponible'}</Text>
               <Text variant="caption" color="textSecondary">
+                {/* Desde D161 el interruptor puede apagarse solo, sin que el
+                    conductor lo toque: ocurre en cuanto acepta el servicio que
+                    llena el motorraton. Decirle ahi "no recibirás solicitudes
+                    mientras estés en este estado" le haria buscar que hizo mal,
+                    cuando no hizo nada. */}
                 {disponible
                   ? 'Estás recibiendo solicitudes de servicio.'
-                  : 'No recibirás solicitudes mientras estés en este estado.'}
+                  : aBordo > 0 && libres === 0
+                    ? 'Tu motorratón está completo. Volverás a recibir solicitudes cuando termines un servicio.'
+                    : 'No recibirás solicitudes mientras estés en este estado.'}
               </Text>
             </View>
             <Switch
@@ -264,6 +302,16 @@ export default function DriverHome() {
               <Text variant="caption" color="textSecondary">
                 Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
               </Text>
+              {/* Los asientos libres solo aparecen cuando lleva a alguien. Con el
+                  motorraton vacio seria repetir la capacidad con otras palabras, y
+                  la linea de arriba ya la dice. */}
+              {aBordo > 0 && (
+                <Text variant="bodyStrong" color={libres === 0 ? 'textSecondary' : 'brand'}>
+                  {libres === 0
+                    ? `Completo · ${aBordo} a bordo`
+                    : `${libres === 1 ? 'Un asiento libre' : `${libres} asientos libres`} · ${aBordo} a bordo`}
+                </Text>
+              )}
             </>
           )}
         </Card>
@@ -306,9 +354,25 @@ export default function DriverHome() {
       <View style={styles.feed}>
         {ofertas.error !== null && <FormError message={ofertas.error} />}
 
+        {/* Los encabezados solo aparecen cuando hay las dos cosas a la vez. Con
+            una sola lista serian una etiqueta sobre lo evidente; con las dos,
+            son lo que impide que se lean como un unico monton de tarjetas.
+            Antes de D161 esta situacion no podia darse. */}
+        {viajes.length > 0 && ofertas.offers.length > 0 && (
+          <Text variant="caption" color="textTertiary" style={styles.seccion}>
+            {viajes.length === 1 ? 'TU SERVICIO' : `TUS ${viajes.length} SERVICIOS`}
+          </Text>
+        )}
+
         {viajes.map((viaje) => (
           <ActiveRideCard key={viaje.rideId} ride={viaje} />
         ))}
+
+        {viajes.length > 0 && ofertas.offers.length > 0 && (
+          <Text variant="caption" color="textTertiary" style={styles.seccion}>
+            {ofertas.offers.length === 1 ? 'NUEVA SOLICITUD' : 'NUEVAS SOLICITUDES'}
+          </Text>
+        )}
 
         {ofertas.offers.map((oferta) => (
           <OfferCard
@@ -319,8 +383,22 @@ export default function DriverHome() {
             onAceptar={() => void aceptar(oferta.offerId)}
             onRechazar={() => void rechazar(oferta.offerId)}
             onExpirar={() => ofertas.removeOffer(oferta.offerId)}
+            enCurso={rutasEnCurso}
           />
         ))}
+
+        {/* Con un servicio encima y sitio de sobra, el conductor sigue en la cola
+            y conviene decirselo: si no, un hueco debajo de su servicio parece que
+            la aplicacion dejo de buscarle nada. */}
+        {ofertas.offers.length === 0 && viajes.length > 0 && disponible && libres > 0 && (
+          <Spinner
+            label={
+              libres === 1
+                ? 'Esperando otra solicitud, te queda un asiento'
+                : `Esperando otra solicitud, te quedan ${libres} asientos`
+            }
+          />
+        )}
 
         {ofertas.offers.length === 0 &&
           viajes.length === 0 &&
@@ -399,6 +477,10 @@ const styles = StyleSheet.create({
   statusCopy: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  seccion: {
+    marginBottom: spacing.sm,
+    marginTop: spacing.lg,
   },
   statusRow: {
     alignItems: 'center',
