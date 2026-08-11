@@ -12,9 +12,11 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   11 creacion de solicitud, 12 modulo del conductor
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
-- **Trabajo siguiente:** **Fase 13, asignacion en tiempo real.** Buena parte ya esta hecha:
-  el tiempo real se adelanto en la Fase 12 y las carreras entre conductores estan resueltas y
-  probadas. Conviene revisar que queda de esa fase antes de darla por empezada
+- **Fase 13 terminada:** el pasajero se entera en tiempo real de que le asignaron conductor,
+  y ve quien es. Detalle en la seccion 15.13
+- **Trabajo siguiente:** **Fase 14, seguimiento del conductor.** Lleva un encargo escrito:
+  **dibujar la ruta tambien en la pantalla del pasajero**, que el usuario pidio durante la
+  Fase 13 y se acordo dejar para su turno
 - **Ultimo commit:** fe6c852 docs: hand off phase 12 and the shared-ride decision.
   **D161 esta hecho y probado pero SIN CONFIRMAR:** tres migraciones nuevas, un componente
   nuevo y siete archivos modificados esperan commit
@@ -67,21 +69,83 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue:** **la Fase 13, asignacion en tiempo real**, y conviene mirarla con
-cuidado antes de empezar: parte de su contenido ya se hizo antes de tiempo. El tiempo real se
-adelanto en la Fase 12 por la regla R2, y la prevencion de carreras entre conductores esta
-resuelta y probada con procesos simultaneos reales. Puede que quede menos de lo que el plan
-original supone.
+**Por donde se sigue:** **la Fase 14, seguimiento del conductor.** Llega con un encargo ya
+comprometido: **dibujar la ruta tambien en la pantalla del pasajero.** El usuario lo pidio
+durante la Fase 13, al ver que el conductor si la tiene, y se le dijo que se haria en la Fase
+14. Esta escrito en la seccion 15.13 y no debe perderse.
 
-**D161, recoger pasajeros en ruta, esta terminado** y su registro completo esta en la seccion
-15.12, incluidas dos cosas que quedaron sin verificar y estan escritas alli.
+Antes de empezarla conviene mirar que queda: de la Fase 14 ya se adelanto el dibujo de la ruta
+en la pantalla del conductor (D165), y del propio plan original varias piezas se hicieron en
+las fases 12 y 13.
+
+**D161 y la Fase 13 estan terminados**, con su registro en las secciones 15.12 y 15.13. En la
+15.12 hay dos cosas que quedaron sin verificar y estan escritas alli.
 
 **Cosas del entorno que conviene no redescubrir:**
 
-- Existe un **conductor de prueba** en `supabase/dev-tools/seed_test_driver.sql`, que ya puede
-  iniciar sesion: `conductor.prueba@motomoto-qa.co` / `Conductor.2026`. **Su ubicacion caduca
-  a los dos minutos**, asi que hay que reejecutar el archivo justo antes de cada prueba. Paso
-  varias veces durante las fases 11 y 12.
+- Hay **dos conductores de prueba**, los dos capaces de iniciar sesion, y **a los dos les
+  caduca la ubicacion a los dos minutos**: hay que reejecutar su archivo justo antes de cada
+  prueba. Paso varias veces durante las fases 11 y 12.
+  - `supabase/dev-tools/seed_test_driver.sql` -> `conductor.prueba@motomoto-qa.co` /
+    `Conductor.2026`, motorraton 99
+  - `supabase/dev-tools/seed_second_driver.sql` -> `conductor2.prueba@motomoto-qa.co` /
+    `Conductor2.2026`, motorraton 98. Creado en la Fase 13 y a 259 m del parque frente a los
+    109 del primero, para poder comprobar el orden por cercania
+- Hay tambien un **pasajero de prueba**: `pasajero.prueba@motomoto-qa.co` / `Pasajero.2026`,
+  a nombre de Ana Gomez. Se creo en la Fase 13 para poder tener conductor y pasajero en dos
+  aparatos a la vez. No tiene archivo de semilla; si se borra, se crea como los otros.
+- **Esta instalado ffmpeg** (`winget install Gyan.FFmpeg`). Sirve para sacar fotogramas de un
+  video y comparar pixel a pixel, que es como se encontro el temblor de la hoja en la Fase 13.
+  Si el PATH no lo encuentra en una sesion recien abierta, esta en
+  `%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_*\ffmpeg-*-full_build\bin`.
+- **Android pausa la aplicacion cuando su ventana pierde el foco**, y entonces deja de
+  renderizar: dos capturas seguidas salen identicas byte a byte. Antes de concluir que algo
+  no se mueve, comprobar con `dumpsys activity activities` que `topResumedActivity` es
+  `com.motomoto.app/.MainActivity` y no el lanzador del cliente de desarrollo.
+
+### Como abrir la aplicacion, paso a paso
+
+Esto se redescubre cada vez y se pierde media hora. **El orden importa**: sin el paso 2 la
+aplicacion arranca y muestra "Failed to connect to localhost:8081".
+
+**1. Arrancar Metro**, una sola vez, desde `C:\dev\motomoto`. Se queda ocupando la ventana:
+
+```powershell
+npx.cmd expo start --dev-client
+```
+
+**2. Abrir el puente de puertos.** Uno por cada aparato, y **hay que repetirlo cada vez que
+se reconecta el aparato o se reinicia adb**:
+
+```powershell
+adb -s HVA59QB5 reverse tcp:8081 tcp:8081        # tablet
+adb -s emulator-5554 reverse tcp:8081 tcp:8081   # emulador
+```
+
+**3. Abrir la aplicacion.** Siempre con este intent, **no desde el icono del escritorio**: el
+icono abre el lanzador del cliente de desarrollo, no el proyecto, y ademas puede quedarse con
+el codigo anterior.
+
+```powershell
+adb -s HVA59QB5 shell am start -a android.intent.action.VIEW -d "motomoto://expo-development-client/?url=http%3A%2F%2Flocalhost%3A8081" com.motomoto.app
+```
+
+Cambiando `-s HVA59QB5` por `-s emulator-5554` para el emulador. Tarda **entre uno y dos
+minutos** la primera vez, mientras Metro compila.
+
+**Si algo va mal, en este orden:**
+
+- `adb devices` -> si el aparato no sale, reconectar el cable o arrancar el emulador con
+  `& "$env:ANDROID_HOME\emulator\emulator.exe" -avd motomoto_phone -gpu host`
+- "Failed to connect to localhost:8081" -> falta el paso 2, o Metro no esta corriendo
+- La pantalla no refleja un cambio de codigo -> `am force-stop com.motomoto.app` y repetir el
+  paso 3. Comprobarlo ANTES de dudar del codigo
+- En el emulador, el pasajero vera **"No conseguimos tu ubicacion"**: hay que tocar
+  "Continuar sin ubicacion". El emulador no entrega GPS a la aplicacion
+
+**Para probar con los dos a la vez**, que es lo que hace falta desde la Fase 13: la tablet
+lleva la sesion del conductor y el emulador la del pasajero. Ojo con cerrar sesion, porque
+`signOut` la cierra en todos los aparatos de ese mismo usuario.
 - **La tablet tiene la sesion del conductor de prueba**, no la del usuario. El emulador
   tambien. Para usarlas como pasajero hay que volver a entrar.
 - **El emulador no le entrega el GPS a la aplicacion**, ni siquiera con `emu geo fix` y con el
@@ -342,6 +406,16 @@ el sistema.
 | D164 | La disponibilidad al aceptar | Se recalcula en lugar de apagarse. Sigue disponible mientras le queden asientos. **Aceptar puede apagarla, nunca encenderla**: quien apago el interruptor a mano no debe reaparecer disponible por aceptar una oferta que ya tenia viva |
 | D165 | Que parte de la Fase 14 se adelanta | Solo el dibujo del recorrido en la pantalla del conductor. El seguimiento y el marcador en movimiento se quedan en su turno. Sin ver la ruta, D161 le pide al conductor una decision a ciegas |
 | D166 | Que dibuja el mapa de una oferta | Dos rutas y no una: la ofrecida en color de marca y las que ya lleva en el color del texto. La pregunta no es "por donde va este viaje" sino "por donde va respecto de lo que ya tengo". **Si una ruta en curso no se puede dibujar, el mapa lo dice**: un mapa incompleto que no se declara incompleto es peor que no tener mapa |
+
+### Decisiones de la Fase 13
+
+| # | Decision | Valor |
+|---|---|---|
+| D167 | Que ve el pasajero de su conductor | Nombre, telefono, calificacion, numero de unidad y placa, y solo desde que alguien acepta. Es la misma linea de la Fase 12 en el otro sentido: los dos datos aparecen en el mismo instante y por el mismo motivo, que alguien se comprometio. **No hizo falta ninguna politica nueva**: las cuatro tablas ya dejaban pasar a un pasajero con servicio asignado, y `drivers_select_ride_counterpart` estaba escrita desde la Fase 5 sin que la usara nadie |
+| D168 | Que tabla se publica para el pasajero | `ride_requests` y no `rides`. Al pasajero le importan tambien la expiracion, la cancelacion y el fin del viaje, y todo eso vive en la solicitud. Se acepta el coste que la Fase 12 dejo advertido, porque quien se suscribe es el pasajero mientras tiene una solicitud viva, una solicitud cambia de estado cuatro o cinco veces en toda su vida, y la suscripcion filtra por `passenger_id` antes de evaluar las politicas. **Sin `replica identity full`**, a diferencia de `ride_offers`: aqui basta el estado nuevo, y `full` escribe la fila entera en el registro de transacciones en cada actualizacion |
+| D169 | Un solo hook de tiempo real para los dos lados | El pasajero y el conductor escuchan la misma tabla con el mismo hook. **Quien ve que no lo decide el codigo sino las politicas**, que se aplican tambien en tiempo real. Dos hooks casi iguales serian duplicar para acabar dependiendo igualmente de las mismas dos politicas |
+| D170 | Calificacion cero | Un promedio de 0 se traduce a "sin calificaciones" antes de llegar a ninguna pantalla. El servidor guarda 0 cuando no hay ninguna, y una calificacion real nunca puede valer 0 porque el minimo es una estrella. Pintarle un 0,0 a un conductor nuevo le atribuiria un mal servicio que nadie ha dado |
+| D171 | Geometria de las rutas | `overview=full` y no `simplified`. La simplificada trae 4 puntos para 659 metros, o sea tramos rectos de 220 metros que atraviesan tres manzanas y salen de las calles. La completa trae 10, de 73 metros. **La diferencia son 131 bytes por peticion**: el ahorro que justificaba lo otro no existia. Lo vio el usuario mirando la pantalla |
 
 **D160 deja obsoleta a D7.** La asignacion deja de ser "automatica por cercania" y pasa a ser
 del primero que acepte: con todas las ofertas creadas a la vez, gana quien toca antes y no
@@ -1331,6 +1405,25 @@ oscuro. Los tres caminos al destino y las cuatro ramas de la etiqueta, cada una 
 Probado sin conexion: la lista sigue funcionando desde la cache y el buscador dice la verdad.
 Cuatro ataques por la base de datos suplantando a un pasajero, todos rechazados.
 
+### Corregido despues, durante la Fase 13
+
+Dos fallos que llevaban aqui desde esta fase y que **nadie vio en 26 puntos de validacion**.
+Los encontro el usuario usando la aplicacion, no las pruebas, y los dos salen del mismo sitio:
+el origen podia dejar de ser "mi ubicacion" pero no podia volver a serlo.
+
+1. **No habia forma de volver a "Tu ubicacion actual".** El origen empieza en null, que
+   significa "donde estoy" (D137), pero la pantalla de seleccion solo ofrecia los lugares de
+   la empresa y "Elegir en el mapa". En cuanto el pasajero elegia un sitio concreto se
+   quedaba encerrado: ni volviendo atras, ni pidiendo otro viaje. Ahora es la primera fila
+   de la lista, **solo cuando se elige el origen** y solo mientras no se este buscando otra
+   cosa. Para el destino no aparece, porque "voy a donde estoy" no es un viaje.
+2. **El origen se quedaba pegado al viaje siguiente.** El aspa de "Tu viaje" solo borraba el
+   destino. `clear()` existia en el borrador desde el primer dia y **no lo llamaba nadie**.
+   El pasajero pedia un viaje "desde cero" y salia recogiendolo donde estuvo una vez.
+
+Lo segundo no se nota si la aplicacion se cierra entre viaje y viaje, porque el borrador vive
+en memoria. Sale justo cuando se piden dos viajes seguidos sin salir, que es lo normal.
+
 ---
 
 ## 15.9 CANTIDAD DE PASAJEROS (Fase 10)
@@ -1504,6 +1597,29 @@ En dispositivo: tablet a 800 dp y emulador a 411 dp, en claro y oscuro, con el e
 simulando ubicacion dentro de Amalfi para poder probar "Tu ubicacion actual" como origen. Se
 verifico el ciclo entero, la expiracion bajando el parametro del servidor a 30 segundos, la
 restauracion tras matar la aplicacion y la resincronizacion al volver de segundo plano.
+
+### Corregido despues, durante la Fase 13
+
+**"Tu ubicacion actual" viajaba al conductor como nombre del punto de recogida.** Ese texto
+esta escrito desde el punto de vista del pasajero, y era lo que se guardaba en
+`ride_requests.origin_label` cuando el origen era su posicion. El conductor abria su pantalla
+y leia "RECOGER EN: Tu ubicacion actual": ni una direccion, ni una referencia, ni un barrio.
+Lo vio el usuario en la tablet, no las 21 comprobaciones en dispositivo de esta fase.
+
+Ahora se resuelve con `describePoint`, el mismo criterio que ya usaba elegir un punto en el
+mapa (D127): el nombre del lugar si esta encima de uno, "Cerca de X" a media distancia, y la
+direccion de Mapbox en los demas casos. Verificado pidiendo un servicio real: donde antes se
+guardaba "Tu ubicacion actual" ahora se guarda "Cancha sintética".
+
+Cuesta una llamada de red antes de crear la solicitud, y se paga a proposito: el conductor va
+a conducir hasta ese punto. Si la red falla se guarda "Punto compartido por el pasajero", que
+es honesto y lo manda al mapa, que si trae la coordenada exacta.
+
+**Queda un problema mayor sin resolver, y es de la Fase 14.** Cuando el pasajero elige un
+lugar de la lista, se guarda **la coordenada que el dueno marco para ese sitio, no donde esta
+el pasajero**. En sitios como "Alto de la Virgen", que abarca casi tres cuadras, el conductor
+puede acabar a doscientos metros. La navegacion no lo arregla: guiar con precision hacia un
+punto equivocado no sirve de nada.
 
 ---
 
@@ -1786,17 +1902,164 @@ al terminar, que ademas devuelve `offer_response_seconds` a los veinte segundos 
 
 ---
 
+## 15.13 ASIGNACION EN TIEMPO REAL (Fase 13)
+
+### La mitad que faltaba
+
+La Fase 12 adelanto el tiempo real, pero solo para el conductor. Del lado del
+pasajero no habia ni tiempo real ni sondeo: `get_active_request` se llamaba al
+abrir la aplicacion y al volver de segundo plano (D152), y nada mas.
+
+En la practica, el pasajero pedia un servicio, un conductor lo aceptaba a los
+diez segundos, y **el seguia viendo "buscando motorraton" hasta que cerraba la
+aplicacion y la volvia a abrir**. El motorraton podia estar llegando y el sin
+saberlo. Y aunque se hubiera enterado, no habria visto a quien: la funcion no
+devolvia nada del conductor.
+
+Buena parte de la fase ya estaba hecha antes de empezarla, y conviene decirlo:
+la busqueda de conductores, el reparto a todos los disponibles y la prevencion de
+carreras venian de la Fase 12 y de D161.
+
+### Los cinco pasos
+
+1. **`get_active_request` devuelve al conductor asignado** (D167)
+2. **Se publica `ride_requests`** para tiempo real (D168)
+3. **El pasajero escucha** con `useRequestRealtime`
+4. **Su panel muestra al conductor**, con boton de llamada
+5. **Prueba con dos sesiones** en dos aparatos, y de paso se cerraron dos huecos
+   del lado del conductor (D169)
+
+### Los dos huecos del conductor
+
+Salieron mientras se probaba el paso 4, y los dos terminaban con el conductor
+actuando sobre informacion falsa:
+
+- **El pasajero cancela un servicio ya aceptado.** La tarjeta seguia en pantalla
+  con su nombre y su telefono. Podia ir a recoger a alguien que cancelo hace diez
+  minutos
+- **Otro conductor acepta primero.** La oferta se quedaba hasta caducar. La Fase
+  12 lo dejo escrito como limite conocido, a la espera de que se publicara
+  `ride_requests`
+
+Los dos se cerraron con el mismo hook del pasajero, porque quien ve que lo
+deciden las politicas y no el codigo (D169).
+
+### Archivos
+
+```
+supabase/migrations/20260810192332_active_request_includes_driver.sql
+supabase/migrations/20260810195813_publish_ride_requests_realtime.sql
+
+supabase/dev-tools/seed_second_driver.sql   NUEVO. Segundo conductor de prueba
+
+src/features/ride/use-request-realtime.ts   NUEVO. El hook, para los dos lados
+src/features/ride/ride-service.ts           AssignedDriver y su traduccion
+src/features/ride/route-service.ts          overview=full (D171)
+src/app/passenger/index.tsx                 el panel del conductor asignado
+src/app/driver/index.tsx                    se entera de lo que pase a su solicitud
+src/app/driver/profile.tsx                  el motorraton, que era maqueta
+src/features/driver/offer-card.tsx          cifras de ancho fijo
+src/components/ui/bottom-sheet.tsx          tolerancia al medir la altura
+src/features/driver/use-driver-offers.ts    el limite conocido ya no existe
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Una pantalla que nacio con datos escritos a mano se queda asi para siempre
+   si nadie la mira.** El perfil del conductor enseñaba "Motorraton 12, placa
+   ABC12" desde la Fase 4. La Fase 12 conecto la pantalla de inicio y esta se
+   quedo atras, asi que inicio y perfil daban placas distintas del mismo
+   vehiculo, y la de perfil no existia en ninguna parte. La placa es lo que
+   identifica la unidad y lo que un pasajero comprobaria antes de subirse.
+2. **Redondear no estabiliza una medida que oscila.** El bottom sheet redondeaba
+   el alto de su contenido para evitar renders por medio pixel. Pero si la medida
+   cae cerca de un valor y medio, el redondeo alterna entre dos enteros: la hoja
+   cambia un pixel, el contenido se vuelve a medir, y la pantalla tiembla. Hace
+   falta una tolerancia, no un redondeo.
+3. **Un numero que cambia empuja al texto de al lado.** En la tipografia normal
+   cada digito mide distinto, asi que un contador dentro de una fila con `flex: 1`
+   reajusta a su vecino una vez por segundo. Se arregla con
+   `fontVariant: ['tabular-nums']`.
+4. **Optimizar sin medir sale caro.** Se pidio la geometria simplificada de las
+   rutas razonando que en un recuadro pequeño no se notaria y que se ahorrarian
+   datos. Las dos mitades eran falsas: se notaba mucho y el ahorro eran 131 bytes.
+5. **Medir con la aplicacion pausada no mide nada.** Las primeras mediciones del
+   temblor salieron planas porque Android habia pausado la app y no renderizaba:
+   dos capturas seguidas eran identicas byte a byte. Antes de concluir que algo
+   no se mueve, hay que comprobar que esta vivo.
+6. **Comprobar que el codigo llego al dispositivo antes de dudar del codigo.** Al
+   aplicar la primera correccion, la medicion salio igual que antes. No era que
+   la correccion fallara: el bundle no se habia recargado. Sin comprobarlo, el
+   paso siguiente habria sido cambiar otra cosa y no saber cual arreglo que.
+7. **Cerrar sesion cierra todas las sesiones.** `signOut` de Supabase invalida la
+   sesion de ese usuario en todos los aparatos. Al cerrar la del conductor en el
+   emulador, la tablet tambien se salio.
+8. **Un script de limpieza que borra sin avisar puede pisar lo que otro esta
+   probando.** La limpieza de las pruebas borro una solicitud que el usuario
+   estaba usando en ese momento.
+
+### Pruebas
+
+**19 comprobaciones automaticas** del paso 1, **seis de ellas de privacidad
+ejecutadas con el rol `authenticated`**, que es lo unico que hace que las
+politicas se apliquen: una prueba de RLS hecha desde postgres pasa siempre y no
+comprueba nada.
+
+**La RLS en tiempo real se probo con un cliente de verdad**, no con SQL: un
+proceso de Node que inicia sesion y abre un websocket. Dos decisiones de esa
+prueba importan tanto como el resultado. Se suscribio **sin filtro**, para que lo
+unico capaz de separar las solicitudes fuera la politica y no el filtro. Y **la
+solicitud ajena se cambio primero**, ocho segundos antes que la propia, para que
+"no llego" no pudiera confundirse con "llego tarde".
+
+**En dos aparatos a la vez**, tablet como conductor y emulador como pasajero:
+
+- El pasajero se entera de que le asignaron conductor **entre 4,2 y 6,2 segundos**
+  (el guion muestrea cada dos, ese es el margen)
+- El pasajero cancela y **la tarjeta desaparece de la tablet sola**
+- Otro conductor acepta primero y **la oferta desaparece sola**, en 13 segundos
+
+Los temblores se diagnosticaron **comparando pixeles entre instantes**, no a ojo:
+que columnas y que filas se redibujaban. Es lo que distinguio "gira el girador",
+que debe cambiar, de "se mueve el texto", que no.
+
+### Lo que queda comprometido para la Fase 14
+
+Tres cosas, y las tres responden a la misma pregunta: **como llega el conductor
+hasta el pasajero.** Estan escritas aqui porque el usuario las pidio expresamente
+y se le dijo que se harian; no son ideas sueltas ni pendientes menores.
+
+1. **La ruta dibujada en la pantalla del pasajero.** La echo en falta al ver que
+   el conductor si la tiene. Las piezas ya existen: `fetchRouteGeometry` y el
+   mapa con trazados de `Map`.
+2. **Navegacion abriendo Google Maps o Waze** con el punto puesto (D157). El
+   usuario pregunto por construir una navegacion propia con el SDK de Mapbox y
+   **se decidio que no**: cuesta 0,08 dolares por viaje pasando los mil al mes,
+   en una plataforma que no cobra nada (D8), y sobre todo no resuelve el problema
+   de abajo. Un enlace a Waze cuesta cero y el conductor ya sabe usarlo. Idea
+   suya que conviene recoger: ofrecerlo al tocar "voy en camino".
+3. **Una referencia escrita del punto de recogida**, corta y opcional, tipo
+   "frente a la tienda" o "la casa azul". Es lo que la gente dice por telefono
+   hoy, y **es lo unico que salva los casos como "Alto de la Virgen"**, donde el
+   nombre abarca tres cuadras y la coordenada guardada es la del lugar y no la de
+   la persona. Necesita una columna nueva en `ride_requests`, un campo en el
+   resumen del viaje y mostrarlo en la tarjeta del conductor.
+
+**El orden importa: la 3 es la que arregla el problema de verdad.** La 2 sin la 3
+lleva al conductor con mucha precision al sitio equivocado.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 12 completadas y aprobadas, **mas D161 terminado**. Siguiente:
-  Fase 13, asignacion en tiempo real, pendiente de autorizacion y de revisar cuanto queda
-  realmente de ella
-- **Paso actual:** Ninguno en curso. **D161 esta sin confirmar en git**: tres migraciones
-  nuevas, un componente nuevo y siete archivos modificados
-- **Ultimo paso completado:** Cierre de D161, recoger pasajeros en ruta. Un conductor con
-  asientos libres sigue recibiendo solicitudes mientras lleva un servicio, ve la ruta de la
-  oferta dibujada contra las que ya lleva, y el servidor le impide pasarse de capacidad aunque
-  dos ofertas lleguen a la vez
+- **Fase actual:** Fases 0 a 13 completadas y aprobadas, **mas D161**. Siguiente: Fase 14,
+  seguimiento del conductor, pendiente de autorizacion
+- **Paso actual:** Ninguno en curso. **La Fase 13 esta sin confirmar en git**: dos migraciones
+  nuevas, un hook nuevo, la semilla del segundo conductor y siete archivos modificados
+- **Ultimo paso completado:** Cierre de la Fase 13. El pasajero se entera en tiempo real de
+  que le asignaron conductor y ve quien es, con su motorraton, su placa y un boton para
+  llamarlo. El conductor, por su parte, se entera si el pasajero cancela o si otro se le
+  adelanta
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -1807,7 +2070,9 @@ al terminar, que ademas devuelve `offer_response_seconds` a los veinte segundos 
   zona de servicio validada en servidor, distancia y tiempo por carretera, caducidad
   automatica y restauracion del estado al reabrir, y el modulo del conductor completo con
   disponibilidad, envio de posicion, ofertas en tiempo real, aceptacion y rechazo, y **recoger
-  pasajeros en ruta**, con la capacidad controlada por asientos y la ruta dibujada en el mapa
+  pasajeros en ruta**, con la capacidad controlada por asientos y la ruta dibujada en el mapa,
+  y **la asignacion en tiempo real de las dos partes**: el pasajero ve a su conductor en cuanto
+  alguien acepta, y el conductor deja de ver lo que ya no existe
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -1817,10 +2082,13 @@ al terminar, que ademas devuelve `offer_response_seconds` a los veinte segundos 
   15.9, con el maximo verificado cambiandolo en el servidor. Creacion de solicitud 78
   comprobaciones automaticas y 21 en dispositivo, detalladas en 15.10. Modulo del conductor 64
   automaticas y 15 en dispositivo, detalladas en 15.11. D161 41 automaticas, dos carreras con
-  procesos simultaneos y 15 en dispositivo, detalladas en 15.12
+  procesos simultaneos y 15 en dispositivo, detalladas en 15.12. Fase 13, 19 automaticas con
+  seis de privacidad ejecutadas como `authenticated`, la RLS de tiempo real probada con un
+  cliente real, y las pruebas de dos aparatos a la vez, detalladas en 15.13
 - **Errores pendientes:** Ninguno. **Dos cosas sin verificar en D161**, escritas en 15.12: el
   aviso de mapa incompleto no se ha visto en pantalla, y el flujo del pasajero no se probo en
-  dispositivo tras refactorizar `route-service.ts`
+  dispositivo tras refactorizar `route-service.ts`. Lo segundo quedo cubierto de hecho en la
+  Fase 13, donde el pasajero se uso en dispositivo de principio a fin
 - **Errores resueltos hasta ahora:** E1 a E29. Los diecinueve ultimos, todos del asistente.
   **Fase 12, los dos del asistente:** E28 el conductor de prueba **no podia iniciar sesion**,
   porque el archivo de semilla dejaba cuatro columnas de token en nulo y GoTrue no lo admite;

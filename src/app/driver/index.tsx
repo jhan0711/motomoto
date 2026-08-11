@@ -26,6 +26,7 @@ import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
 import { useLocation } from '@/features/map/use-location';
 import { RIDE_ERROR_CODES } from '@/features/ride/errors';
+import { useRequestRealtime } from '@/features/ride/use-request-realtime';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
 /**
@@ -192,6 +193,31 @@ export default function DriverHome() {
     }, 0);
     return () => clearTimeout(id);
   }, [cargar, cargarViajes]);
+
+  /**
+   * Lo que le pase a una solicitud suya, en cuanto pase.
+   *
+   * Cierra dos huecos que quedaron abiertos en la Fase 12, y los dos terminaban
+   * con el conductor actuando sobre informacion falsa:
+   *
+   *   - **Otro conductor acepta primero.** La oferta se quedaba en pantalla hasta
+   *     caducar, y al tocarla recibia "otro motorratón tomó este servicio".
+   *     `use-driver-offers` lo dejo escrito como limite conocido a la espera de
+   *     que se publicara `ride_requests`, que es lo que se hizo en el paso 2
+   *   - **El pasajero cancela un servicio ya aceptado.** Este es el peor: la
+   *     tarjeta seguia en pantalla con su nombre y su telefono, y el conductor
+   *     podia ir a recoger a alguien que cancelo hace diez minutos
+   *
+   * Se releen las tres cosas porque una cancelacion las toca todas: la oferta
+   * desaparece, el viaje desaparece y la disponibilidad vuelve.
+   */
+  const alCambiarUnaSolicitud = useCallback(() => {
+    void cargar();
+    void cargarViajes();
+    ofertas.refresh();
+  }, [cargar, cargarViajes, ofertas]);
+
+  useRequestRealtime(driverId !== null, alCambiarUnaSolicitud, 'conductor-sus-solicitudes');
 
   const cambiarDisponibilidad = useCallback(
     async (valor: boolean) => {

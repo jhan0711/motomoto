@@ -971,6 +971,9 @@ export type Database = {
           destination_label: string;
           destination_lat: number;
           destination_lng: number;
+          driver_name: string;
+          driver_phone: string;
+          driver_rating: number;
           expires_at: string;
           id: string;
           origin_label: string;
@@ -978,8 +981,12 @@ export type Database = {
           origin_lng: number;
           passenger_count: number;
           requested_at: string;
+          ride_id: string;
+          ride_status: Database['public']['Enums']['ride_status'];
           seconds_remaining: number;
           status: Database['public']['Enums']['ride_request_status'];
+          vehicle_plate: string;
+          vehicle_unit_number: number;
         }[];
       };
       get_setting: { Args: { p_default?: Json; p_key: string }; Returns: Json };

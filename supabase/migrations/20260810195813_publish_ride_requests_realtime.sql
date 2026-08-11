@@ -1,0 +1,44 @@
+-- =============================================================================
+-- Fase 13, paso 2: el pasajero se entera sin cerrar la aplicacion
+-- =============================================================================
+--
+-- Hasta hoy el pasajero solo se enteraba de algo al abrir la aplicacion o al
+-- volver de segundo plano (D152). Un conductor podia aceptar su servicio a los
+-- diez segundos y el seguia viendo "buscando motorraton" hasta que cerrara y
+-- volviera a entrar. El motorraton en camino y el sin saberlo.
+--
+-- POR QUE ride_requests Y NO rides. Al pasajero no solo le importa que alguien
+-- acepte: tambien que su solicitud expire, que la cancelen, que el viaje empiece
+-- y que termine. Todo eso vive en `ride_requests.status`. La tabla `rides` solo
+-- sabe de la mitad, asi que habria que escuchar las dos.
+--
+-- EL AVISO DE LA FASE 12, Y POR QUE AQUI SI COMPENSA. Al publicar `ride_offers`
+-- se dejo escrito que publicar las solicitudes "obligaria a filtrar con una
+-- politica que consulta otra tabla, y eso en tiempo real se evalua en cada
+-- evento y para cada suscriptor". Sigue siendo cierto: `ride_requests` tiene
+-- tres politicas de lectura y una de ellas, `ride_requests_select_offered_driver`,
+-- llama a `driver_linked_to_request`.
+--
+-- Se acepta el coste por tres motivos, en este orden:
+--
+--   1. Quien se suscribe a esta tabla es el pasajero, y solo mientras tiene una
+--      solicitud viva. No son suscripciones permanentes ni masivas
+--   2. Una solicitud cambia de estado cuatro o cinco veces en toda su vida, no
+--      cuatro o cinco veces por segundo
+--   3. La suscripcion lleva un filtro por `passenger_id`. Realtime lo aplica
+--      antes de evaluar las politicas, asi que el trabajo caro solo ocurre para
+--      los eventos que ya son de esa persona
+--
+-- Si algun dia la operacion crece hasta que esto pese, la salida no es cambiar
+-- de tabla sino cambiar de mecanismo: emitir por un canal privado desde un
+-- disparador, en lugar de escuchar cambios de tabla. Queda dicho para no
+-- redescubrirlo (Fase 24).
+--
+-- SIN REPLICA IDENTITY FULL, a diferencia de `ride_offers`. Alli hacia falta la
+-- fila anterior para distinguir "esta oferta acaba de pasar a rechazada" de
+-- "acaba de aparecer". Aqui no: al pasajero le basta el estado nuevo para saber
+-- que hacer, y `full` escribe la fila entera en el registro de transacciones en
+-- cada actualizacion. No se paga lo que no se usa.
+-- =============================================================================
+
+alter publication supabase_realtime add table public.ride_requests;

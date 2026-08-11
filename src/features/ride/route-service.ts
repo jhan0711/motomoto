@@ -173,16 +173,29 @@ async function pedirRuta(
  *
  * Dos parametros de la peticion merecen explicacion.
  *
- * `overview=simplified` y no `full`. La ruta se pinta en un recuadro de pocos
- * centimetros dentro de una tarjeta. El trazado completo trae cientos de puntos
- * que ahi no se distinguen de la version simplificada, y se pagan en datos
- * moviles con el telefono del conductor.
+ * `overview=full` Y NO `simplified`, DESPUES DE HABERLO HECHO AL REVES. El
+ * primer intento pidio la version simplificada razonando que en un recuadro de
+ * pocos centimetros no se notaria la diferencia y se ahorrarian datos moviles.
+ * Las dos mitades de ese razonamiento eran falsas, y lo vio el usuario mirando
+ * la pantalla:
+ *
+ *   - No se ahorraba nada. Medido sobre una ruta real de Amalfi de 777 metros,
+ *     la simplificada trae 6 puntos y 167 bytes; la completa, 14 puntos y 342.
+ *     La diferencia son 175 bytes por peticion
+ *   - Y si se notaba. Con 6 puntos, cada tramo recto cubre unos 130 metros, asi
+ *     que la linea corta las esquinas y sale de las calles. En el mapa se veia
+ *     el trazado pasando por donde no hay via
+ *
+ * Lo segundo no es cosmetico. El conductor mira este mapa para decidir si una
+ * solicitud le queda de camino, que es lo que D161 pone en sus manos. Una ruta
+ * que atraviesa manzanas puede hacerle creer que un viaje coincide con el suyo
+ * cuando no, o al reves.
  *
  * `geometries=geojson` y no `polyline6`. La codificada ocupa bastante menos,
  * pero hay que decodificarla, y eso son treinta lineas de manipulacion de bits
- * que habria que escribir y probar. Con GeoJSON las coordenadas vienen listas.
- * Sobre una ruta simplificada la diferencia son unos pocos kilobytes por
- * peticion, y no compensa meter un decodificador propio en el proyecto.
+ * que habria que escribir y probar. Con GeoJSON las coordenadas vienen listas, y
+ * la diferencia de tamano en rutas de pueblo es de cientos de bytes, no de
+ * kilobytes: no compensa meter un decodificador propio en el proyecto.
  *
  * OJO AL ORDEN: GeoJSON da [longitud, latitud], al reves de como los nombra
  * react-native-maps. Invertirlo no da error, solo pone Amalfi en Somalia.
@@ -195,7 +208,7 @@ export async function fetchRouteGeometry(
   origin: Coordinates,
   destination: Coordinates,
 ): Promise<RouteGeometryResult> {
-  const ruta = await pedirRuta(origin, destination, 'overview=simplified&geometries=geojson');
+  const ruta = await pedirRuta(origin, destination, 'overview=full&geometries=geojson');
 
   if (!ruta.ok) {
     return { ok: false, code: ruta.code };

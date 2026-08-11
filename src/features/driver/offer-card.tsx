@@ -89,7 +89,11 @@ export function OfferCard({
             misma suposicion que la Fase 10 enseño a no hacer. */}
         {restantes !== null && (
           <View style={[styles.reloj, { backgroundColor: colors.brandSubtle }]}>
-            <Text variant="title" color="brand">
+            {/* Cifras de ancho fijo. Sin esto la burbuja cambia de tamano en
+                cada segundo, porque los digitos no miden todos igual, y arrastra
+                al texto de al lado. Es el mismo temblor que aparecio en el panel
+                del pasajero. */}
+            <Text variant="title" color="brand" style={styles.cifras}>
               {restantes < 60 ? Math.max(0, restantes) : formatCountdown(restantes)}
             </Text>
           </View>
@@ -181,6 +185,9 @@ const styles = StyleSheet.create({
   cabeceraTextos: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  cifras: {
+    fontVariant: ['tabular-nums'],
   },
   punto: {
     alignItems: 'center',

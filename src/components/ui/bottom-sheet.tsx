@@ -151,10 +151,24 @@ export function BottomSheet({
   const [naturalHeight, setNaturalHeight] = useState(0);
 
   const medir = useCallback((height: number) => {
-    // Redondeado: las medidas llegan con decimales y una diferencia de medio
-    // pixel provocaria un nuevo render en cada pasada, sin fin.
-    const redondeado = Math.round(height);
-    setNaturalHeight((anterior) => (anterior === redondeado ? anterior : redondeado));
+    // Redondear no bastaba, y costo un video del usuario descubrirlo.
+    //
+    // La idea era que una diferencia de medio pixel no provocara un render nuevo.
+    // Pero redondear solo estabiliza una medida estable: si el sistema mide algo
+    // que cae cerca de un valor y medio, por ejemplo 316,49 y 316,51, el redondeo
+    // devuelve 316 y 317 alternativamente. La hoja cambia de alto un pixel, el
+    // contenido se vuelve a medir, y la pantalla TIEMBLA.
+    //
+    // Se ve poco y se nota mucho: el panel del resumen saltaba arriba y abajo
+    // una vez por segundo. Al medirlo entre dos fotogramas del video, todo el
+    // bloque, de y=640 a y=959, se redibujaba desplazado un pixel.
+    //
+    // Con una tolerancia de dos pixeles, una oscilacion asi se ignora y un cambio
+    // de verdad, que al anadir o quitar una fila son decenas de pixeles, sigue
+    // pasando.
+    setNaturalHeight((anterior) =>
+      Math.abs(anterior - height) < 2 ? anterior : Math.round(height),
+    );
   }, []);
 
   /** Cada punto de anclaje resuelto a pixeles, de menor a mayor. */

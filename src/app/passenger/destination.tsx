@@ -1,5 +1,5 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { MapPin, Map as MapIcon, Search, Star } from 'lucide-react-native';
+import { LocateFixed, MapPin, Map as MapIcon, Search, Star } from 'lucide-react-native';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
 
@@ -33,6 +33,7 @@ const TYPING_PAUSE_MS = 400;
 const MIN_QUERY = 3;
 
 type Row =
+  | { kind: 'current' }
   | { kind: 'map' }
   | { kind: 'place'; place: Place }
   | { kind: 'suggestion'; suggestion: Suggestion };
@@ -179,11 +180,21 @@ export default function DestinationScreen() {
 
   const filas = useMemo<Row[]>(
     () => [
+      // VOLVER A "MI UBICACION" SOLO EXISTE PARA EL ORIGEN, y solo mientras no
+      // se este buscando otra cosa.
+      //
+      // Faltaba, y dejaba al pasajero encerrado: el origen empieza en null, que
+      // significa "donde estoy" (D137), pero en cuanto elegia un sitio concreto
+      // no habia ninguna forma de deshacerlo. Ni siquiera pidiendo otro viaje,
+      // porque el borrador conserva lo elegido. Lo reporto el usuario.
+      //
+      // No aparece para el destino: "voy a donde estoy" no es un viaje.
+      ...(paraOrigen && query.trim().length === 0 ? [{ kind: 'current' } as Row] : []),
       { kind: 'map' },
       ...placesFiltrados.map((place): Row => ({ kind: 'place', place })),
       ...suggestions.map((suggestion): Row => ({ kind: 'suggestion', suggestion })),
     ],
-    [placesFiltrados, suggestions],
+    [paraOrigen, query, placesFiltrados, suggestions],
   );
 
   // "No encontramos ese sitio" solo cuando de verdad no hay nada. Si el
@@ -226,13 +237,12 @@ export default function DestinationScreen() {
       ) : (
         <FlatList
           data={filas}
-          keyExtractor={(fila) =>
-            fila.kind === 'map'
-              ? 'map'
-              : fila.kind === 'place'
-                ? `place:${fila.place.id}`
-                : `sug:${fila.suggestion.id}`
-          }
+          keyExtractor={(fila) => {
+            if (fila.kind === 'current') return 'current';
+            if (fila.kind === 'map') return 'map';
+            if (fila.kind === 'place') return `place:${fila.place.id}`;
+            return `sug:${fila.suggestion.id}`;
+          }}
           contentContainerStyle={styles.lista}
           // 'always' y no 'handled'. Con 'handled', el primer toque sobre un
           // resultado se gasta en cerrar el teclado y no elige nada: el pasajero
@@ -266,6 +276,26 @@ export default function DestinationScreen() {
             ) : null
           }
           renderItem={({ item }) => {
+            if (item.kind === 'current') {
+              return (
+                <Fila
+                  icon={LocateFixed}
+                  destacado
+                  titulo="Tu ubicación actual"
+                  subtitulo="Te recogemos donde estás ahora"
+                  onPress={() => {
+                    // Null es exactamente lo que significa "mi ubicacion" en el
+                    // borrador, asi que volver al valor inicial es toda la
+                    // operacion. La pantalla de inicio resuelve la coordenada
+                    // cuando hace falta, con la posicion de ese momento y no con
+                    // la de ahora.
+                    setOrigin(null);
+                    router.back();
+                  }}
+                />
+              );
+            }
+
             if (item.kind === 'map') {
               return (
                 <Fila

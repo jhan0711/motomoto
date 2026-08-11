@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import {
   ArrowRight,
+  Bike as BikeIcon,
   Circle,
   Clock,
   History,
   LocateFixed,
   MapPin,
+  Phone,
   RotateCw,
   Route as RouteIcon,
   Search,
@@ -14,7 +16,7 @@ import {
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Pressable, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
 import type MapView from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,6 +26,7 @@ import { Card } from '@/components/ui/card';
 import { FormError } from '@/components/ui/form-error';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
+import { describePoint } from '@/features/destination/describe-point';
 import type { ChosenPoint, Place } from '@/features/destination/types';
 import { usePlaces } from '@/features/destination/use-places';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
@@ -37,6 +40,7 @@ import {
   createRequest,
   fetchActiveRequest,
   type ActiveRequest,
+  type AssignedDriver,
 } from '@/features/ride/ride-service';
 import {
   fetchRouteEstimate,
@@ -46,6 +50,7 @@ import {
 } from '@/features/ride/route-service';
 import { useMaxPassengers } from '@/features/ride/settings';
 import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
+import { useRequestRealtime } from '@/features/ride/use-request-realtime';
 import {
   MIN_TOUCH_TARGET,
   iconSize,
@@ -79,7 +84,14 @@ export default function PassengerHome() {
   const location = useLocation();
   const mapRef = useRef<MapView>(null);
 
-  const { origin, destination, passengerCount, setDestination, setPassengerCount } = useRideDraft();
+  const {
+    origin,
+    destination,
+    passengerCount,
+    setDestination,
+    setPassengerCount,
+    clear: limpiarBorrador,
+  } = useRideDraft();
   const { places } = usePlaces();
   const maxPasajeros = useMaxPassengers();
 
@@ -271,7 +283,33 @@ export default function PassengerHome() {
     setEnviando(true);
     setErrorSolicitud(null);
 
-    const origenLabel = origin?.label ?? 'Tu ubicación actual';
+    /**
+     * "Tu ubicacion actual" NO puede viajar al conductor.
+     *
+     * Ese texto esta escrito desde el punto de vista del pasajero, y era lo que
+     * se guardaba como nombre del punto de recogida. El conductor abria su
+     * pantalla y leia "RECOGER EN: Tu ubicacion actual", que no le dice nada:
+     * ni una direccion, ni una referencia, ni un barrio. Lo vio el usuario en la
+     * tablet.
+     *
+     * Se resuelve con `describePoint`, el mismo criterio que usa elegir un punto
+     * en el mapa (D127): el nombre del lugar si esta encima de uno, "Cerca de X"
+     * si esta a media distancia, y la direccion de Mapbox en los demas casos.
+     *
+     * Cuesta una llamada de red antes de crear la solicitud, y se paga a
+     * proposito: el conductor va a conducir hasta ese punto. Si la red falla se
+     * envia un texto que al menos es honesto y lo manda al mapa, que si trae la
+     * coordenada exacta.
+     */
+    let origenLabel = origin?.label ?? null;
+
+    if (origenLabel === null) {
+      const descripcion = await describePoint(
+        { latitude: origenLat, longitude: origenLng },
+        places,
+      );
+      origenLabel = descripcion.label ?? 'Punto compartido por el pasajero';
+    }
 
     const creada = await createRequest({
       origin: {
@@ -314,8 +352,10 @@ export default function PassengerHome() {
       destinoLabel: destination.label,
       pasajeros: passengerCount,
       segundosRestantes: null,
+      // Acaba de crearse, asi que por fuerza no hay conductor todavia.
+      conductor: null,
     });
-  }, [destination, origin, origenLat, origenLng, passengerCount]);
+  }, [destination, origin, origenLat, origenLng, passengerCount, places]);
 
   /**
    * Cancela la solicitud enviada.
@@ -389,6 +429,15 @@ export default function PassengerHome() {
       sincronizacion.current += 1;
     };
   }, [sincronizarSolicitud]);
+
+  /**
+   * Y ademas, en cuanto el servidor tenga algo que contar.
+   *
+   * Solo se escucha mientras hay una solicitud viva: sin ella no hay nada que
+   * pueda cambiar, y un canal abierto de mas es una conexion abierta de mas en el
+   * telefono de alguien.
+   */
+  useRequestRealtime(solicitud !== null, sincronizarSolicitud, 'pasajero-su-solicitud');
 
   /** Deja el viaje elegido y vuelve al resumen, sin pedir nada. */
   const descartarSolicitud = useCallback(() => {
@@ -520,13 +569,24 @@ export default function PassengerHome() {
           modo === 'destino' || modo === 'cargando' ? (
             <Text variant="subheading">Hola, {user?.fullName ?? 'pasajero'}</Text>
           ) : modo === 'resumen' ? (
-            <CabeceraDelViaje onCancelar={() => setDestination(null)} />
+            // Descartar el viaje lo descarta ENTERO, origen incluido. Antes solo
+            // borraba el destino, asi que un origen elegido a mano se quedaba
+            // pegado al siguiente viaje y al siguiente: el pasajero pedia "desde
+            // cero" y salia recogiendolo donde estuvo una vez.
+            <CabeceraDelViaje onCancelar={limpiarBorrador} />
           ) : (
             // Sin aspa aqui. Descartar un viaje elegido y cancelar uno ya
             // solicitado no son la misma accion, y la segunda no puede quedar a
             // un toque descuidado: tiene su propio boton, con su nombre escrito.
+            // El titulo tiene que contar lo mismo que la tarjeta de abajo. Con
+            // un conductor ya asignado, "Buscando motorratón" contradecia a
+            // "Tu motorratón va en camino" a dos centimetros de distancia.
             <Text variant="subheading">
-              {expirada ? 'Nadie tomó tu servicio' : 'Buscando motorratón'}
+              {solicitud?.conductor != null
+                ? 'Servicio confirmado'
+                : expirada
+                  ? 'Nadie tomó tu servicio'
+                  : 'Buscando motorratón'}
             </Text>
           )
         }
@@ -601,6 +661,8 @@ interface SolicitudEnCurso {
   pasajeros: number;
   /** Nulo cuando no se pudo leer del servidor: entonces no se pinta cuenta atras. */
   segundosRestantes: number | null;
+  /** Quien viene a recogerlo. Nulo mientras nadie ha aceptado. */
+  conductor: AssignedDriver | null;
 }
 
 /** Traduce lo que devuelve el servidor a lo que pinta el panel. */
@@ -611,6 +673,7 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
     destinoLabel: activa.destination.label,
     pasajeros: activa.passengerCount,
     segundosRestantes: activa.secondsRemaining,
+    conductor: activa.driver,
   };
 }
 
@@ -859,7 +922,8 @@ interface BuscandoConductorProps {
 }
 
 /**
- * La solicitud ya esta enviada: se busca quien la tome, o se acabo el tiempo.
+ * La solicitud ya esta enviada: se busca quien la tome, ya viene alguien, o se
+ * acabo el tiempo.
  *
  * Es el primer estado de la aplicacion en el que existe algo en el servidor, asi
  * que la salida no puede ser un aspa discreta: cancelar aqui deshace un servicio
@@ -869,8 +933,11 @@ interface BuscandoConductorProps {
  * icono y los botones. Dejar el mismo panel con un "0:00" seria pedirle al
  * pasajero que dedujera el, de un numero, que ya no va a venir nadie.
  *
- * Que un conductor acepte todavia no se entera aqui. Eso llega con el tiempo
- * real de la Fase 13.
+ * DESDE LA FASE 13 HAY UN TERCER ESTADO, y llega solo por tiempo real: alguien
+ * acepto. Se distingue tanto como la expiracion, porque es la noticia que el
+ * pasajero esta esperando desde que pidio el servicio. Antes de esto la pantalla
+ * seguia diciendo "avisando a los motorratones cercanos" con el motorraton ya en
+ * camino.
  */
 function BuscandoConductor({
   solicitud,
@@ -884,37 +951,85 @@ function BuscandoConductor({
   onCambiarViaje,
 }: BuscandoConductorProps) {
   const { colors } = useTheme();
+  const conductor = solicitud.conductor;
 
   return (
     <>
-      <Card variant="outlined" padding="md">
+      <Card
+        variant="outlined"
+        padding="md"
+        style={conductor === null ? undefined : { borderColor: colors.brand, borderWidth: 1 }}
+      >
         <View style={styles.filaBuscando}>
-          {expirada ? (
+          {conductor !== null ? (
+            <BikeIcon size={iconSize.md} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          ) : expirada ? (
             <Clock size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
           ) : (
             <ActivityIndicator color={colors.brand} />
           )}
           <View style={styles.filaLugarTextos}>
             <Text variant="bodyStrong">
-              {expirada
-                ? 'Ningún motorratón tomó el servicio'
-                : 'Avisando a los motorratones cercanos'}
+              {conductor !== null
+                ? 'Tu motorratón va en camino'
+                : expirada
+                  ? 'Ningún motorratón tomó el servicio'
+                  : 'Avisando a los motorratones cercanos'}
             </Text>
             <Text variant="caption" color="textSecondary">
-              {expirada
-                ? 'Puedes volver a pedirlo o cambiar el viaje.'
-                : 'Te avisamos en cuanto uno acepte.'}
+              {conductor !== null
+                ? `Motorratón ${conductor.vehicle.unitNumber} · Placa ${conductor.vehicle.plate}`
+                : expirada
+                  ? 'Puedes volver a pedirlo o cambiar el viaje.'
+                  : 'Te avisamos en cuanto uno acepte.'}
             </Text>
           </View>
           {/* El tiempo solo se ensena mientras corre y solo si el servidor lo
               dijo. Sin dato no se pinta nada: un contador inventado sobre el
-              reloj del telefono seria peor que no tener contador. */}
-          {!expirada && segundosRestantes !== null && (
-            <Text variant="bodyStrong" color="textSecondary">
+              reloj del telefono seria peor que no tener contador. Con conductor
+              asignado deja de tener sentido: ya no hay nada que esperar. */}
+          {conductor === null && !expirada && segundosRestantes !== null && (
+            <Text variant="bodyStrong" color="textSecondary" style={styles.numeroQueCambia}>
               {formatCountdown(segundosRestantes)}
             </Text>
           )}
         </View>
+
+        {conductor !== null && (
+          <>
+            <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+            <View style={styles.filaBuscando}>
+              <View style={styles.filaLugarTextos}>
+                <Text variant="subheading">{conductor.name}</Text>
+                <View style={styles.notaConductor}>
+                  <Star size={iconSize.sm} color={colors.warning} strokeWidth={iconStrokeWidth} />
+                  {/* Un conductor sin calificaciones no tiene un cero, tiene una
+                      hoja en blanco. Pintarle un 0,0 al pasajero le atribuiria
+                      un mal servicio que nadie ha dado. */}
+                  <Text variant="caption" color="textSecondary">
+                    {conductor.rating === null
+                      ? 'Sin calificaciones todavía'
+                      : conductor.rating.toFixed(1).replace('.', ',')}
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Boton y no texto, por lo mismo que en la tarjeta del conductor:
+                se usa con una mano, a veces en la calle, y copiar diez digitos a
+                mano es la friccion que hace que la gente termine llamando por
+                otro lado. */}
+            <Button
+              label="Llamar al conductor"
+              variant="secondary"
+              icon={Phone}
+              fullWidth
+              style={styles.llamarConductor}
+              onPress={() => void Linking.openURL(`tel:${conductor.phone}`)}
+            />
+          </>
+        )}
 
         <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
 
@@ -1089,6 +1204,30 @@ const styles = StyleSheet.create({
   puntoViajeTextos: {
     flex: 1,
     gap: spacing.xxs,
+  },
+  llamarConductor: {
+    marginTop: spacing.sm,
+  },
+  notaConductor: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs,
+  },
+  /**
+   * Cifras de ancho fijo para lo que cambia solo.
+   *
+   * En la tipografia normal cada digito mide distinto, asi que "26:53" y "26:52"
+   * no ocupan lo mismo. El contador vive en una fila junto a un bloque con
+   * `flex: 1`, de modo que al encoger un pixel el texto de al lado se reajusta:
+   * el resultado era un panel que temblaba UNA VEZ POR SEGUNDO. Lo reporto el
+   * usuario, y se confirmo midiendo que columnas se redibujaban entre dos
+   * instantes: cambiaba la anchura entera del texto, no solo la del numero.
+   *
+   * `tabular-nums` hace que todas las cifras midan igual, asi que el ancho deja
+   * de depender de que numero toque.
+   */
+  numeroQueCambia: {
+    fontVariant: ['tabular-nums'],
   },
   separadorViaje: {
     height: StyleSheet.hairlineWidth,

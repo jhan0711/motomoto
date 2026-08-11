@@ -42,6 +42,30 @@ export interface RequestPoint {
  * Es lo que devuelve get_active_request, traducido a los nombres que usa el
  * resto de la aplicacion y con el tipo de secondsRemaining corregido.
  */
+/**
+ * El conductor que ya tomo el servicio.
+ *
+ * Nulo mientras nadie lo ha aceptado, y esa es la diferencia que la pantalla
+ * necesita: "buscando" y "ya viene" son dos cosas distintas, y hasta la Fase 13
+ * el pasajero no tenia forma de distinguirlas.
+ */
+export interface AssignedDriver {
+  rideId: string;
+  name: string;
+  /** Congelado al pedir el servicio, no leido del perfil. */
+  phone: string;
+  /**
+   * Promedio de estrellas, o null si todavia no tiene ninguna.
+   *
+   * El servidor guarda un 0 cuando no hay calificaciones, y una calificacion
+   * real nunca puede ser 0 porque el minimo es una estrella. Asi que ese cero
+   * significa "sin calificar" y no "malisimo", y se traduce aqui para que
+   * ninguna pantalla lo pinte como una nota.
+   */
+  rating: number | null;
+  vehicle: { unitNumber: number; plate: string };
+}
+
 export interface ActiveRequest {
   id: string;
   status: RideRequestStatus;
@@ -50,6 +74,8 @@ export interface ActiveRequest {
   destination: RequestPoint;
   requestedAt: string;
   expiresAt: string;
+  /** Quien viene a recogerlo, cuando ya hay alguien. */
+  driver: AssignedDriver | null;
   /**
    * Segundos que le quedan a la busqueda, contados por el servidor.
    *
@@ -189,5 +215,47 @@ export async function fetchActiveRequest(): Promise<Result<ActiveRequest | null>
       typeof row.seconds_remaining === 'number' && Number.isFinite(row.seconds_remaining)
         ? row.seconds_remaining
         : null,
+    driver: aConductorAsignado(row),
   });
+}
+
+/**
+ * Arma el conductor a partir de las columnas sueltas que devuelve la funcion.
+ *
+ * Basta con mirar `ride_id`: o vienen todas las columnas del conductor o no
+ * viene ninguna, porque salen del mismo LEFT JOIN. Aun asi se comprueba cada
+ * campo antes de darlo por bueno, porque el generador de tipos de Supabase
+ * declara como no nulos varios retornos que si lo admiten, y es la cuarta vez
+ * que pasa en este proyecto.
+ */
+function aConductorAsignado(row: {
+  ride_id: string | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  driver_rating: number | null;
+  vehicle_unit_number: number | null;
+  vehicle_plate: string | null;
+}): AssignedDriver | null {
+  if (
+    row.ride_id === null ||
+    row.driver_name === null ||
+    row.driver_phone === null ||
+    row.vehicle_unit_number === null ||
+    row.vehicle_plate === null
+  ) {
+    return null;
+  }
+
+  const promedio =
+    typeof row.driver_rating === 'number' && Number.isFinite(row.driver_rating)
+      ? row.driver_rating
+      : 0;
+
+  return {
+    rideId: row.ride_id,
+    name: row.driver_name,
+    phone: row.driver_phone,
+    rating: promedio > 0 ? promedio : null,
+    vehicle: { unitNumber: row.vehicle_unit_number, plate: row.vehicle_plate },
+  };
 }

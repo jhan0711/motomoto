@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { Bike, ChevronRight, LogOut, Mail, Phone, ShieldCheck, Star } from 'lucide-react-native';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
+import { fetchDriverState, type DriverState } from '@/features/driver/driver-service';
 import { ProfileAvatar } from '@/features/profile/profile-avatar';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
@@ -19,12 +20,39 @@ import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
  * Drivers can see far less than passengers can edit. Their vehicle, their unit
  * number and their approval status are set by the company from the web panel,
  * per the Phase 0 rules, so those fields are read-only here by design.
+ *
+ * EL MOTORRATON Y LA CALIFICACION ERAN MAQUETA HASTA LA FASE 13. Esta pantalla
+ * nacio en la Fase 4 con datos escritos a mano, "Motorraton 12, placa ABC12", y
+ * cuando la Fase 12 conecto la pantalla de inicio al servidor esta se quedo
+ * atras. El resultado era que inicio y perfil ensenaban placas distintas del
+ * mismo vehiculo, y la de aqui no existia en ninguna parte.
+ *
+ * No era un detalle cosmetico: la placa es lo que identifica la unidad y lo que
+ * un pasajero comprobaria antes de subirse. Ademas el aviso del pie invita a
+ * avisar a la empresa si algo no cuadra, asi que un dato falso aqui parecia un
+ * error de la empresa y no nuestro.
  */
 export default function DriverProfile() {
   const { colors } = useTheme();
   const router = useRouter();
   const { user, signOut } = useSession();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+
+  const driverId = user?.id ?? null;
+  const [estado, setEstado] = useState<DriverState | null>(null);
+
+  const cargar = useCallback(async () => {
+    if (driverId === null) return;
+
+    const resultado = await fetchDriverState(driverId);
+    if (resultado.ok) setEstado(resultado.data);
+  }, [driverId]);
+
+  useEffect(() => {
+    // Diferido fuera del cuerpo del efecto, como en el resto del proyecto.
+    const id = setTimeout(() => void cargar(), 0);
+    return () => clearTimeout(id);
+  }, [cargar]);
 
   return (
     <Screen scroll header={<Header title="Mi perfil" />}>
@@ -37,8 +65,18 @@ export default function DriverProfile() {
         <Text variant="heading">{user?.fullName ?? 'Conductor'}</Text>
         <View style={styles.rating}>
           <Star size={iconSize.sm} color={colors.warning} strokeWidth={iconStrokeWidth} />
+          {/* Mientras no haya ninguna calificacion se dice tal cual, en lugar de
+              pintar un cero: un conductor nuevo no tiene un cero, tiene una
+              hoja en blanco, y ensenarle un cero le atribuye un mal servicio
+              que nadie ha dado. */}
           <Text variant="caption" color="textSecondary">
-            Sin calificaciones todavía
+            {estado === null || estado.ratingCount === 0
+              ? 'Sin calificaciones todavía'
+              : `${estado.ratingAverage.toFixed(1).replace('.', ',')} · ${
+                  estado.ratingCount === 1
+                    ? 'una calificación'
+                    : `${estado.ratingCount} calificaciones`
+                }`}
           </Text>
         </View>
       </View>
@@ -47,10 +85,21 @@ export default function DriverProfile() {
         <Text variant="caption" color="textTertiary">
           MOTORRATÓN ASIGNADO
         </Text>
-        <Text variant="title">Motorratón 12</Text>
-        <Text variant="caption" color="textSecondary">
-          Placa ABC12 · Capacidad 3 pasajeros
-        </Text>
+        {estado?.vehicle == null ? (
+          <>
+            <Text variant="title">Sin asignar</Text>
+            <Text variant="caption" color="textSecondary">
+              La empresa todavía no te asignó un motorratón.
+            </Text>
+          </>
+        ) : (
+          <>
+            <Text variant="title">Motorratón {estado.vehicle.unitNumber}</Text>
+            <Text variant="caption" color="textSecondary">
+              Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
+            </Text>
+          </>
+        )}
       </Card>
 
       <Card variant="outlined" padding="md">

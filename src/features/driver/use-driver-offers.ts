@@ -18,11 +18,12 @@ import { fetchOffers, type DriverOffer } from './driver-service';
  * vuelve a pedir la lista completa. Una llamada de mas cada vez que suena, a
  * cambio de que la tarjeta tenga todo lo que el conductor necesita para decidir.
  *
- * LIMITE CONOCIDO DE ESTA FASE: si otro conductor acepta primero, esta lista no
- * se entera. La oferta se queda en pantalla hasta que caduca, y si el conductor
- * la toca recibe "otro motorratón tomó este servicio", que es un mensaje claro y
- * no un error. Enterarse en el momento exige publicar tambien `ride_requests`, y
- * eso es de la Fase 13.
+ * AQUEL LIMITE YA NO EXISTE. Hasta la Fase 13, si otro conductor aceptaba
+ * primero, esta lista no se enteraba: la oferta se quedaba en pantalla hasta
+ * caducar y quien la tocaba recibia "otro motorratón tomó este servicio". Se
+ * dejo escrito que hacia falta publicar tambien `ride_requests`, y eso se hizo.
+ * Quien recarga esta lista en ese caso no es este hook, sino `useRequestRealtime`
+ * desde la pantalla del conductor, que escucha la solicitud y llama a `refresh`.
  */
 
 export interface UseDriverOffersResult {
