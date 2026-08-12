@@ -28,12 +28,21 @@ export interface RideDraft {
    * deberia tener que tocar nada.
    */
   passengerCount: number;
+  /**
+   * Como encontrar al pasajero en el punto de recogida. Vacio casi siempre.
+   *
+   * Cadena y no `string | null` porque es lo que un campo de texto tiene dentro,
+   * y el vacio ya significa "no escribio nada". Traducirlo a nulo es cosa del
+   * servicio, que es quien habla con el servidor.
+   */
+  pickupReference: string;
 }
 
 interface RideDraftValue extends RideDraft {
   setOrigin: (point: ChosenPoint | null) => void;
   setDestination: (point: ChosenPoint | null) => void;
   setPassengerCount: (count: number) => void;
+  setPickupReference: (reference: string) => void;
   clear: () => void;
   /** Hay lo suficiente para pasar al siguiente paso. */
   isReady: boolean;
@@ -45,11 +54,17 @@ export function RideDraftProvider({ children }: { children: ReactNode }) {
   const [origin, setOrigin] = useState<ChosenPoint | null>(null);
   const [destination, setDestination] = useState<ChosenPoint | null>(null);
   const [passengerCount, setPassengerCount] = useState(1);
+  const [pickupReference, setPickupReference] = useState('');
 
   const clear = useCallback(() => {
     setOrigin(null);
     setDestination(null);
     setPassengerCount(1);
+    // Se borra con el resto. Una referencia sirve para un punto concreto: si
+    // sobreviviera al viaje descartado, el siguiente saldria con un "frente a la
+    // tienda" que ya no corresponde a donde esta el pasajero. Es el mismo fallo
+    // que tuvo el origen antes de que descartar el viaje lo limpiara entero.
+    setPickupReference('');
   }, []);
 
   const value = useMemo<RideDraftValue>(
@@ -57,16 +72,18 @@ export function RideDraftProvider({ children }: { children: ReactNode }) {
       origin,
       destination,
       passengerCount,
+      pickupReference,
       setOrigin,
       setDestination,
       setPassengerCount,
+      setPickupReference,
       clear,
       // Solo el destino. El origen en null es valido y significa la ubicacion
       // actual, que es justo lo que quiere la mayoria. La cantidad siempre tiene
       // un valor valido, asi que tampoco condiciona nada.
       isReady: destination !== null,
     }),
-    [origin, destination, passengerCount, clear],
+    [origin, destination, passengerCount, pickupReference, clear],
   );
 
   return <RideDraftContext.Provider value={value}>{children}</RideDraftContext.Provider>;

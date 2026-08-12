@@ -1,3 +1,4 @@
+import { Bike } from 'lucide-react-native';
 import { useEffect, useState, type Ref } from 'react';
 import { StyleSheet, View } from 'react-native';
 import MapView, { Marker, Polyline, PROVIDER_GOOGLE, type Region } from 'react-native-maps';
@@ -30,6 +31,30 @@ export interface MapMarker {
   filled: boolean;
 }
 
+/**
+ * El motorraton, moviendose por el mapa.
+ *
+ * Va aparte de `markers` y no como una variante suya porque no es lo mismo: los
+ * marcadores senalan sitios que no se mueven, y este es un vehiculo que avanza.
+ * Mezclarlos obligaria a la lista entera a reconstruirse cada diez segundos,
+ * cuando lo unico que cambia es este.
+ *
+ * Se dibuja como un disco de marca con el icono del vehiculo dentro, y no como
+ * el punto de una ruta: el pasajero tiene que distinguir de un vistazo lo que se
+ * mueve de lo que esta fijo.
+ */
+export interface MapVehicle {
+  coordinate: Coordinates;
+  /**
+   * Atenuado cuando la posicion ya no es de fiar.
+   *
+   * Un motorraton quieto porque el conductor perdio cobertura no puede pintarse
+   * igual que uno que de verdad esta ahi. El texto de la hoja lo explica; esto
+   * es lo que se ve sin leer.
+   */
+  stale?: boolean;
+}
+
 export interface MapProps {
   ref?: Ref<MapView>;
   /** Where the camera starts. Changing it later has no effect, by design. */
@@ -40,6 +65,8 @@ export interface MapProps {
   routes?: MapRoute[];
   /** Puntos senalados, como la recogida y el destino. */
   markers?: MapMarker[];
+  /** El motorraton asignado, cuando ya viene uno. */
+  vehicle?: MapVehicle | null;
   /**
    * A false, el mapa se mira pero no se toca.
    *
@@ -84,6 +111,7 @@ export function Map({
   userCoords,
   routes,
   markers,
+  vehicle,
   interactive = true,
   onReady,
   onRegionSettled,
@@ -139,6 +167,23 @@ export function Map({
         </Marker>
       ))}
 
+      {vehicle != null && (
+        <Marker
+          coordinate={vehicle.coordinate}
+          anchor={{ x: 0.5, y: 0.5 }}
+          // Sin seguimiento de cambios. La vista del marcador no cambia nunca,
+          // solo su coordenada, y en Android redibujarla en cada movimiento
+          // cuesta bateria sin cambiar un pixel. Lo unico que la altera es que la
+          // posicion caduque, y para eso esta la clave de abajo.
+          tracksViewChanges={false}
+          key={vehicle.stale === true ? 'vehiculo-sin-senal' : 'vehiculo'}
+          // Por encima de los extremos de la ruta: es lo que el pasajero busca.
+          zIndex={2}
+        >
+          <VehicleDot stale={vehicle.stale === true} />
+        </Marker>
+      )}
+
       {showUser && userCoords !== null && (
         <Marker
           coordinate={userCoords}
@@ -173,6 +218,34 @@ function RoutePoint({ color, filled }: { color: string; filled: boolean }) {
         },
       ]}
     />
+  );
+}
+
+/**
+ * El motorraton en el mapa del pasajero.
+ *
+ * Disco de marca con el icono del vehiculo y un aro blanco alrededor, que es lo
+ * que lo mantiene visible tanto sobre asfalto oscuro como sobre un parque. El
+ * mismo aro que lleva el punto del pasajero, por la misma razon.
+ *
+ * Atenuado cuando la posicion esta caducada. No se oculta: desaparecer daria a
+ * entender que el servicio se cancelo, cuando lo que pasa es que el conductor
+ * perdio cobertura y sigue viniendo.
+ */
+function VehicleDot({ stale }: { stale: boolean }) {
+  const { colors } = useTheme();
+
+  return (
+    <View style={[styles.vehicleRing, shadows.sm, { backgroundColor: colors.surface }]}>
+      <View
+        style={[
+          styles.vehicleCore,
+          { backgroundColor: stale ? colors.textTertiary : colors.brand },
+        ]}
+      >
+        <Bike size={16} color={colors.surface} strokeWidth={2.5} />
+      </View>
+    </View>
   );
 }
 
@@ -230,5 +303,19 @@ const styles = StyleSheet.create({
     borderWidth: 3,
     height: 14,
     width: 14,
+  },
+  vehicleCore: {
+    alignItems: 'center',
+    borderRadius: radius.full,
+    height: 28,
+    justifyContent: 'center',
+    width: 28,
+  },
+  vehicleRing: {
+    alignItems: 'center',
+    borderRadius: radius.full,
+    height: 36,
+    justifyContent: 'center',
+    width: 36,
   },
 });

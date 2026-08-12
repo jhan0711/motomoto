@@ -37,6 +37,11 @@ const MESSAGES: Record<string, string> = {
   ORIGIN_OUT_OF_AREA: 'El punto de recogida está fuera de la zona de servicio.',
   DESTINATION_OUT_OF_AREA: 'El destino está fuera de la zona de servicio.',
   PASSENGER_COUNT_OUT_OF_RANGE: 'Esa cantidad de pasajeros no está permitida.',
+  // No deberia llegar nunca: el campo corta a 80 caracteres. Se traduce igual,
+  // porque el limite del campo es comodidad y el del servidor es la regla, y el
+  // dia que alguien llame a la API sin pasar por la pantalla este es el aviso
+  // que recibe.
+  PICKUP_REFERENCE_TOO_LONG: 'La referencia del punto de recogida es demasiado larga.',
   PHONE_REQUIRED: 'Necesitas registrar un teléfono antes de pedir un servicio.',
 
   // Situaciones normales de la operación. No son fallos de nadie, y por eso el

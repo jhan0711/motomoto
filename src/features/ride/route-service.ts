@@ -12,16 +12,18 @@ import type { Coordinates } from '@/features/map/region';
  * Mapbox antes de decidir. Es una llamada por viaje confirmado, doscientas veces
  * mas holgado que el cupo del buscador, que si hay que vigilar.
  *
- * `fetchRouteEstimate` pide `overview=false` a proposito: al pasajero solo le
- * hacen falta los dos numeros y no el dibujo de la ruta. Descargar la geometria
- * en cada confirmacion seria pagar datos moviles por algo que nadie mira.
+ * UNA SOLA FUNCION, DESPUES DE HABER TENIDO DOS. Durante las fases 11 y D161
+ * hubo una que pedia solo los numeros con `overview=false`, para el pasajero, y
+ * otra que pedia ademas el trazado, para el conductor. La division tenia sentido
+ * mientras el pasajero no veia ninguna ruta: descargar un dibujo que nadie le iba
+ * a ensenar era pagar datos por nada.
  *
- * Ese "todavia" se acabo con D161. `fetchRouteGeometry`, mas abajo, si pide el
- * trazado, y lo hace para el conductor: sin ver por donde va cada viaje no puede
- * juzgar si una solicitud nueva le queda de camino, que es la decision que D161
- * pone en sus manos. Son dos funciones y no una porque son dos usos distintos
- * con costes distintos, y mezclarlos obligaria al pasajero a descargar un dibujo
- * que nadie le va a ensenar.
+ * La Fase 14 dibuja la ruta tambien en su pantalla, asi que ese motivo
+ * desaparecio. Y mantener las dos habria sido peor que juntarlas: el resumen
+ * necesita los numeros Y el trazado del mismo viaje, o sea DOS peticiones a
+ * Mapbox donde antes habia una, cada vez que se cambia de destino. El trazado
+ * completo cuesta unos cientos de bytes sobre la misma respuesta (D171), que es
+ * mucho menos que una peticion entera.
  *
  * AVISO SOBRE EL TIEMPO: el perfil `driving` calcula para un coche. Un
  * motorraton va mas despacio, asi que el tiempo saldra optimista. No se le
@@ -52,46 +54,14 @@ export interface RouteEstimate {
   seconds: number;
 }
 
-export type RouteResult =
-  | { ok: true; estimate: RouteEstimate | null }
-  | { ok: false; code: 'MAPBOX_TOKEN_MISSING' | 'NETWORK' | 'TIMEOUT' | 'MAPBOX_ERROR' };
-
-/**
- * Estimacion del viaje, o null si Mapbox responde que no hay ruta.
- *
- * La diferencia entre `{ ok: true, estimate: null }` y `{ ok: false }` importa y
- * no es cosmetica. El primero significa "pregunte y no hay camino"; el segundo,
- * "no pude preguntar". Confundirlos es exactamente el error E19 de la Fase 9,
- * cuando un fallo de red se le mostraba al pasajero como si el sitio no
- * existiera. La pantalla puede acabar ocultando la estimacion en los dos casos,
- * pero el registro y las pruebas necesitan saber cual fue.
- */
-export async function fetchRouteEstimate(
-  origin: Coordinates,
-  destination: Coordinates,
-): Promise<RouteResult> {
-  const ruta = await pedirRuta(origin, destination, 'overview=false');
-
-  if (!ruta.ok) {
-    return { ok: false, code: ruta.code };
-  }
-
-  if (ruta.route === null) {
-    return { ok: true, estimate: null };
-  }
-
-  const distancia = 'distance' in ruta.route ? ruta.route.distance : null;
-  const duracion = 'duration' in ruta.route ? ruta.route.duration : null;
-
-  if (typeof distancia !== 'number' || typeof duracion !== 'number') {
-    return { ok: false, code: 'MAPBOX_ERROR' };
-  }
-
-  return {
-    ok: true,
-    estimate: { meters: Math.round(distancia), seconds: Math.round(duracion) },
-  };
+/** El viaje completo: cuanto mide, cuanto dura y por donde va. */
+export interface Route extends RouteEstimate {
+  coordinates: Coordinates[];
 }
+
+export type RouteResult =
+  | { ok: true; route: Route | null }
+  | { ok: false; code: 'MAPBOX_TOKEN_MISSING' | 'NETWORK' | 'TIMEOUT' | 'MAPBOX_ERROR' };
 
 type RutaCruda =
   | { ok: true; route: object | null }
@@ -200,14 +170,20 @@ async function pedirRuta(
  * OJO AL ORDEN: GeoJSON da [longitud, latitud], al reves de como los nombra
  * react-native-maps. Invertirlo no da error, solo pone Amalfi en Somalia.
  */
-export type RouteGeometryResult =
-  | { ok: true; coordinates: Coordinates[] | null }
-  | { ok: false; code: 'MAPBOX_TOKEN_MISSING' | 'NETWORK' | 'TIMEOUT' | 'MAPBOX_ERROR' };
-
-export async function fetchRouteGeometry(
+/**
+ * El viaje entre dos puntos, o null si Mapbox responde que no hay camino.
+ *
+ * La diferencia entre `{ ok: true, route: null }` y `{ ok: false }` importa y no
+ * es cosmetica. El primero significa "pregunte y no hay camino"; el segundo, "no
+ * pude preguntar". Confundirlos es exactamente el error E19 de la Fase 9, cuando
+ * un fallo de red se le mostraba al pasajero como si el sitio no existiera. La
+ * pantalla puede acabar ocultando la ruta en los dos casos, pero el registro y
+ * las pruebas necesitan saber cual fue.
+ */
+export async function fetchRoute(
   origin: Coordinates,
   destination: Coordinates,
-): Promise<RouteGeometryResult> {
+): Promise<RouteResult> {
   const ruta = await pedirRuta(origin, destination, 'overview=full&geometries=geojson');
 
   if (!ruta.ok) {
@@ -215,10 +191,16 @@ export async function fetchRouteGeometry(
   }
 
   if (ruta.route === null) {
-    return { ok: true, coordinates: null };
+    return { ok: true, route: null };
   }
 
+  const distancia = 'distance' in ruta.route ? ruta.route.distance : null;
+  const duracion = 'duration' in ruta.route ? ruta.route.duration : null;
   const geometria = 'geometry' in ruta.route ? ruta.route.geometry : null;
+
+  if (typeof distancia !== 'number' || typeof duracion !== 'number') {
+    return { ok: false, code: 'MAPBOX_ERROR' };
+  }
 
   if (typeof geometria !== 'object' || geometria === null || !('coordinates' in geometria)) {
     return { ok: false, code: 'MAPBOX_ERROR' };
@@ -229,7 +211,7 @@ export async function fetchRouteGeometry(
   if (!Array.isArray(puntos) || puntos.length < 2) {
     // Una linea de un punto no es una ruta. Se trata como "no hay camino" en
     // lugar de devolver algo que el mapa no sabe dibujar.
-    return { ok: true, coordinates: null };
+    return { ok: true, route: null };
   }
 
   const coordenadas: Coordinates[] = [];
@@ -249,7 +231,14 @@ export async function fetchRouteGeometry(
     coordenadas.push({ latitude: lat, longitude: lng });
   }
 
-  return { ok: true, coordinates: coordenadas };
+  return {
+    ok: true,
+    route: {
+      meters: Math.round(distancia),
+      seconds: Math.round(duracion),
+      coordinates: coordenadas,
+    },
+  };
 }
 
 /**

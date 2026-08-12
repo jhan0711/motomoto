@@ -51,6 +51,14 @@ export interface RequestPoint {
  */
 export interface AssignedDriver {
   rideId: string;
+  /**
+   * Su identificador, para suscribirse solo a su posicion.
+   *
+   * No es informacion nueva del conductor: el pasajero ya recibe su nombre y su
+   * telefono desde la Fase 13. Es lo que permite que la suscripcion de tiempo
+   * real lleve filtro en vez de escuchar los movimientos de toda la flota.
+   */
+  id: string;
   name: string;
   /** Congelado al pedir el servicio, no leido del perfil. */
   phone: string;
@@ -72,6 +80,8 @@ export interface ActiveRequest {
   passengerCount: number;
   origin: RequestPoint;
   destination: RequestPoint;
+  /** Lo que el pasajero escribio para que lo encuentren, o null si no escribio nada. */
+  pickupReference: string | null;
   requestedAt: string;
   expiresAt: string;
   /** Quien viene a recogerlo, cuando ya hay alguien. */
@@ -113,6 +123,14 @@ export interface CreateRequestInput {
   origin: CreateRequestPoint;
   destination: CreateRequestPoint;
   passengerCount: number;
+  /**
+   * Como encontrar al pasajero, en sus palabras. Opcional.
+   *
+   * Se envia tal cual y el servidor la recorta y la valida. Recortarla tambien
+   * aqui pareceria mas prolijo y seria enganoso: dejaria dos sitios decidiendo
+   * lo mismo, y el dia que uno cambiara el otro seguiria con la regla vieja.
+   */
+  pickupReference?: string | null;
 }
 
 /**
@@ -139,6 +157,11 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
     ...(input.destination.placeId != null
       ? { p_destination_place_id: input.destination.placeId }
       : {}),
+    // Solo viaja cuando hay algo escrito. El parametro tiene valor por defecto
+    // en el servidor, asi que omitirlo es exactamente lo mismo que enviar nulo.
+    ...(input.pickupReference != null && input.pickupReference.trim() !== ''
+      ? { p_pickup_reference: input.pickupReference }
+      : {}),
   });
 
   if (error) {
@@ -153,6 +176,54 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
   }
 
   return ok(data);
+}
+
+/**
+ * Donde esta el conductor ahora mismo, y de cuando es ese dato.
+ *
+ * La antiguedad viaja siempre con la posicion y no es un extra. Un marcador
+ * quieto puede significar que el motorraton esta parado en un semaforo o que el
+ * conductor se quedo sin cobertura, y son cosas muy distintas para quien espera
+ * en la calle. Sin este numero la pantalla no puede distinguirlas, y ensenaria
+ * una posicion vieja como si fuera de ahora.
+ */
+export interface DriverLocation {
+  latitude: number;
+  longitude: number;
+  /** Rumbo en grados, si el GPS lo dio. */
+  heading: number | null;
+  /** Segundos transcurridos desde el envio, contados por el servidor. */
+  ageSeconds: number;
+}
+
+/**
+ * Lee la posicion del conductor asignado.
+ *
+ * Devolver null no es un error: significa que ese conductor no tiene posicion
+ * registrada, o que quien pregunta no tiene derecho a verla. Las dos cosas se
+ * tratan igual en la pantalla, que simplemente no pinta el motorraton.
+ */
+export async function fetchDriverLocation(
+  driverId: string,
+): Promise<Result<DriverLocation | null>> {
+  const { data, error } = await supabase.rpc('get_driver_location', { p_driver_id: driverId });
+
+  if (error) {
+    return fail(error);
+  }
+
+  const row = (data ?? [])[0];
+  if (row === undefined) {
+    return ok(null);
+  }
+
+  return ok({
+    latitude: row.latitude,
+    longitude: row.longitude,
+    // El generador declara numeric como number, pero la columna admite nulo.
+    heading: row.heading,
+    ageSeconds: row.age_seconds,
+  });
 }
 
 /**
@@ -208,6 +279,7 @@ export async function fetchActiveRequest(): Promise<Result<ActiveRequest | null>
       longitude: row.destination_lng,
       label: row.destination_label,
     },
+    pickupReference: row.pickup_reference,
     requestedAt: row.requested_at,
     expiresAt: row.expires_at,
     // Aqui se corrige el tipo generado. Ver el comentario de ActiveRequest.
@@ -230,6 +302,7 @@ export async function fetchActiveRequest(): Promise<Result<ActiveRequest | null>
  */
 function aConductorAsignado(row: {
   ride_id: string | null;
+  driver_id: string | null;
   driver_name: string | null;
   driver_phone: string | null;
   driver_rating: number | null;
@@ -238,6 +311,7 @@ function aConductorAsignado(row: {
 }): AssignedDriver | null {
   if (
     row.ride_id === null ||
+    row.driver_id === null ||
     row.driver_name === null ||
     row.driver_phone === null ||
     row.vehicle_unit_number === null ||
@@ -253,6 +327,7 @@ function aConductorAsignado(row: {
 
   return {
     rideId: row.ride_id,
+    id: row.driver_id,
     name: row.driver_name,
     phone: row.driver_phone,
     rating: promedio > 0 ? promedio : null,

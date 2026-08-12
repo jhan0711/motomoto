@@ -7,16 +7,26 @@ import {
   History,
   LocateFixed,
   MapPin,
+  Navigation,
   Phone,
   RotateCw,
   Route as RouteIcon,
   Search,
   Star,
   UserRound,
+  WifiOff,
   X,
 } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, AppState, Linking, Pressable, StyleSheet, View } from 'react-native';
+import {
+  ActivityIndicator,
+  AppState,
+  Linking,
+  Pressable,
+  StyleSheet,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import type MapView from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -24,13 +34,14 @@ import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormError } from '@/components/ui/form-error';
+import { Input } from '@/components/ui/input';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
 import { describePoint } from '@/features/destination/describe-point';
 import type { ChosenPoint, Place } from '@/features/destination/types';
 import { usePlaces } from '@/features/destination/use-places';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
-import { Map } from '@/features/map/map';
+import { Map, type MapMarker, type MapRoute } from '@/features/map/map';
 import { AMALFI_REGION, regionAround } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
 import { PassengerCount } from '@/features/ride/passenger-count';
@@ -43,12 +54,14 @@ import {
   type AssignedDriver,
 } from '@/features/ride/ride-service';
 import {
-  fetchRouteEstimate,
+  fetchRoute,
   formatDistance,
   formatDuration,
+  type Route,
   type RouteEstimate,
 } from '@/features/ride/route-service';
-import { useMaxPassengers } from '@/features/ride/settings';
+import { useDriverLocation } from '@/features/ride/use-driver-location';
+import { useMaxPassengers, useNumericSetting } from '@/features/ride/settings';
 import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
 import { useRequestRealtime } from '@/features/ride/use-request-realtime';
 import {
@@ -75,6 +88,7 @@ export default function PassengerHome() {
   const router = useRouter();
   const { user } = useSession();
   const insets = useSafeAreaInsets();
+  const { height: screenHeight } = useWindowDimensions();
 
   /**
    * Arranca en 1 y no en 0 porque el 0 es ahora la hoja bajada del todo. Es un
@@ -88,8 +102,10 @@ export default function PassengerHome() {
     origin,
     destination,
     passengerCount,
+    pickupReference,
     setDestination,
     setPassengerCount,
+    setPickupReference,
     clear: limpiarBorrador,
   } = useRideDraft();
   const { places } = usePlaces();
@@ -189,7 +205,7 @@ export default function PassengerHome() {
   const destinoLat = destination?.latitude ?? null;
   const destinoLng = destination?.longitude ?? null;
 
-  const [estimacion, setEstimacion] = useState<RouteEstimate | null>(null);
+  const [ruta, setRuta] = useState<Route | null>(null);
   const [estimando, setEstimando] = useState(false);
 
   /**
@@ -200,12 +216,26 @@ export default function PassengerHome() {
    * bajo el destino nuevo, que es de las cosas que nadie reporta y todo el mundo
    * ve.
    */
-  const claveRuta = `${origenLat},${origenLng},${destinoLat},${destinoLng}`;
+  /**
+   * Los cuatro numeros del viaje que hay que dibujar y medir.
+   *
+   * La solicitud enviada manda sobre el borrador, y no al reves. El borrador
+   * vive en memoria (D137), asi que quien reabre la aplicacion con un servicio
+   * en curso lo tiene vacio: si la ruta dependiera de el, el mapa se quedaria
+   * sin dibujar justo cuando el pasajero esta esperando a que lo recojan, que es
+   * cuando mas mira la pantalla.
+   */
+  const viajeOrigenLat = solicitud?.origen.latitude ?? origenLat;
+  const viajeOrigenLng = solicitud?.origen.longitude ?? origenLng;
+  const viajeDestinoLat = solicitud?.destino.latitude ?? destinoLat;
+  const viajeDestinoLng = solicitud?.destino.longitude ?? destinoLng;
+
+  const claveRuta = `${viajeOrigenLat},${viajeOrigenLng},${viajeDestinoLat},${viajeDestinoLng}`;
   const [claveRutaAnterior, setClaveRutaAnterior] = useState(claveRuta);
 
   if (claveRuta !== claveRutaAnterior) {
     setClaveRutaAnterior(claveRuta);
-    setEstimacion(null);
+    setRuta(null);
   }
 
   /**
@@ -229,7 +259,12 @@ export default function PassengerHome() {
   }
 
   useEffect(() => {
-    if (origenLat === null || origenLng === null || destinoLat === null || destinoLng === null) {
+    if (
+      viajeOrigenLat === null ||
+      viajeOrigenLng === null ||
+      viajeDestinoLat === null ||
+      viajeDestinoLng === null
+    ) {
       return;
     }
 
@@ -244,14 +279,16 @@ export default function PassengerHome() {
     const id = setTimeout(() => {
       void (async () => {
         setEstimando(true);
-        const resultado = await fetchRouteEstimate(
-          { latitude: origenLat, longitude: origenLng },
-          { latitude: destinoLat, longitude: destinoLng },
+        const resultado = await fetchRoute(
+          { latitude: viajeOrigenLat, longitude: viajeOrigenLng },
+          { latitude: viajeDestinoLat, longitude: viajeDestinoLng },
         );
         if (!vigente) return;
-        // Un fallo deja la estimacion en null y la fila no se pinta (D149).
-        // Inventar una distancia seria peor que no dar ninguna.
-        setEstimacion(resultado.ok ? resultado.estimate : null);
+        // Un fallo deja la ruta en null: ni se pinta la fila de la distancia
+        // (D149) ni se dibuja nada en el mapa. Inventar una distancia seria peor
+        // que no dar ninguna, y una linea recta entre los dos puntos seria peor
+        // todavia, porque en Amalfi no se parece a ninguna carretera.
+        setRuta(resultado.ok ? resultado.route : null);
         setEstimando(false);
       })();
     }, 0);
@@ -260,7 +297,7 @@ export default function PassengerHome() {
       vigente = false;
       clearTimeout(id);
     };
-  }, [origenLat, origenLng, destinoLat, destinoLng]);
+  }, [viajeOrigenLat, viajeOrigenLng, viajeDestinoLat, viajeDestinoLng]);
 
   /**
    * Envia la solicitud.
@@ -325,6 +362,7 @@ export default function PassengerHome() {
         placeId: destination.placeId,
       },
       passengerCount,
+      pickupReference,
     });
 
     if (!creada.ok) {
@@ -349,13 +387,18 @@ export default function PassengerHome() {
     setSolicitud({
       id: creada.data,
       origenLabel,
+      // La que se acaba de enviar. El servidor la habria devuelto ya recortada,
+      // pero esta rama existe justo porque no se pudo preguntar.
+      referencia: pickupReference.trim() === '' ? null : pickupReference.trim(),
+      origen: { latitude: origenLat, longitude: origenLng },
+      destino: { latitude: destination.latitude, longitude: destination.longitude },
       destinoLabel: destination.label,
       pasajeros: passengerCount,
       segundosRestantes: null,
       // Acaba de crearse, asi que por fuerza no hay conductor todavia.
       conductor: null,
     });
-  }, [destination, origin, origenLat, origenLng, passengerCount, places]);
+  }, [destination, origin, origenLat, origenLng, passengerCount, pickupReference, places]);
 
   /**
    * Cancela la solicitud enviada.
@@ -439,6 +482,111 @@ export default function PassengerHome() {
    */
   useRequestRealtime(solicitud !== null, sincronizarSolicitud, 'pasajero-su-solicitud');
 
+  /**
+   * Donde esta su motorraton, mientras haya uno asignado.
+   *
+   * Antes de que alguien acepte no hay a quien seguir, y el hook se queda quieto:
+   * un canal abierto de mas es una conexion abierta de mas en el telefono de
+   * alguien, con el mismo criterio que se aplico al de la solicitud.
+   */
+  const posicionConductor = useDriverLocation(solicitud?.conductor?.id ?? null);
+
+  /**
+   * A partir de cuantos segundos una posicion deja de ser de fiar.
+   *
+   * Es el mismo parametro con el que el servidor descarta a un conductor sin
+   * cobertura (R10). Si la empresa lo cambia, las dos cosas se mueven juntas, que
+   * es justo lo que evita que la pantalla diga que un motorraton viene mientras
+   * el buscador ya lo da por desconectado.
+   */
+  const segundosParaCaducar = useNumericSetting('driver_location_stale_seconds', 120);
+  const posicionCaducada =
+    posicionConductor !== null && posicionConductor.ageSeconds > segundosParaCaducar;
+
+  /**
+   * Cuanto falta para que llegue a recogerlo.
+   *
+   * No se recalcula en cada posicion recibida. El conductor manda una cada diez
+   * segundos (R9), asi que serian seis peticiones a Mapbox por minuto y por
+   * servicio para afinar un numero que se ensena redondeado a minutos. Se
+   * recalcula como mucho cada medio minuto, y entre medias el numero se queda
+   * quieto: preferimos un minuto que se sostiene dos ciclos a una cifra que
+   * parpadea y que nadie ha pedido.
+   */
+  const [llegada, setLlegada] = useState<RouteEstimate | null>(null);
+
+  /**
+   * Cuando se calculo por ultima vez, y para que conductor.
+   *
+   * Lleva el conductor dentro y no solo la hora porque si no la espera de medio
+   * minuto se heredaria: al pasajero al que le acaban de asignar otro motorraton
+   * le tocaria esperar a que venciera el turno del anterior para ver su primer
+   * tiempo de llegada.
+   */
+  const ultimoCalculoLlegada = useRef<{ conductor: string | null; cuando: number }>({
+    conductor: null,
+    cuando: 0,
+  });
+
+  const conductorLat = posicionConductor?.latitude ?? null;
+  const conductorLng = posicionConductor?.longitude ?? null;
+  const recogidaLat = solicitud?.origen.latitude ?? null;
+  const recogidaLng = solicitud?.origen.longitude ?? null;
+
+  /**
+   * Cambiar de conductor caduca el tiempo de llegada del anterior.
+   *
+   * Se ajusta en el render, con el mismo patron que la ruta y el modo de la
+   * hoja: es la forma que React documenta para corregir estado cuando cambia una
+   * entrada, y la unica que no deja un fotograma diciendo cuanto tarda un
+   * motorraton que ya no viene.
+   */
+  const claveLlegada = solicitud?.conductor?.id ?? null;
+  const [claveLlegadaAnterior, setClaveLlegadaAnterior] = useState(claveLlegada);
+
+  if (claveLlegada !== claveLlegadaAnterior) {
+    setClaveLlegadaAnterior(claveLlegada);
+    setLlegada(null);
+  }
+
+  useEffect(() => {
+    if (
+      conductorLat === null ||
+      conductorLng === null ||
+      recogidaLat === null ||
+      recogidaLng === null
+    ) {
+      return;
+    }
+
+    const ahora = Date.now();
+    const previo = ultimoCalculoLlegada.current;
+
+    if (previo.conductor === claveLlegada && ahora - previo.cuando < ESPERA_ENTRE_LLEGADAS_MS) {
+      return;
+    }
+
+    ultimoCalculoLlegada.current = { conductor: claveLlegada, cuando: ahora };
+
+    let vigente = true;
+
+    const id = setTimeout(() => {
+      void (async () => {
+        const resultado = await fetchRoute(
+          { latitude: conductorLat, longitude: conductorLng },
+          { latitude: recogidaLat, longitude: recogidaLng },
+        );
+        if (!vigente) return;
+        setLlegada(resultado.ok && resultado.route !== null ? resultado.route : null);
+      })();
+    }, 0);
+
+    return () => {
+      vigente = false;
+      clearTimeout(id);
+    };
+  }, [claveLlegada, conductorLat, conductorLng, recogidaLat, recogidaLng]);
+
   /** Deja el viaje elegido y vuelve al resumen, sin pedir nada. */
   const descartarSolicitud = useCallback(() => {
     setSolicitud(null);
@@ -486,6 +634,39 @@ export default function PassengerHome() {
     map.animateToRegion(regionAround(coords), 900);
   }, [isMapReady, coords]);
 
+  /**
+   * Encuadra la ruta entera en cuanto se puede dibujar.
+   *
+   * Sin esto, el mapa se queda donde estaba y el viaje puede quedar entero fuera
+   * de pantalla: dibujar una ruta que no se ve es lo mismo que no dibujarla.
+   *
+   * El margen inferior es medio alto de pantalla y no un numero fijo, porque lo
+   * que hay ahi abajo es la hoja, y la hoja mide distinto en cada teléfono.
+   * Encuadrar contra la pantalla completa dejaria media ruta debajo del panel.
+   *
+   * Marca la camara como ya movida a proposito. El centrado en la ubicacion del
+   * pasajero ocurre una sola vez y puede llegar tarde, cuando el GPS por fin
+   * responde: sin esta marca, aparecia el viaje encuadrado y un segundo despues
+   * la camara saltaba sola al punto azul.
+   */
+  useEffect(() => {
+    if (!isMapReady || ruta === null) return;
+    const map = mapRef.current;
+    if (map === null) return;
+
+    hasCentered.current = true;
+
+    map.fitToCoordinates(ruta.coordinates, {
+      edgePadding: {
+        top: insets.top + spacing.xxl,
+        right: spacing.xxl,
+        bottom: Math.round(screenHeight * 0.5),
+        left: spacing.xxl,
+      },
+      animated: true,
+    });
+  }, [isMapReady, ruta, insets.top, screenHeight]);
+
   const recenter = useCallback(() => {
     if (coords === null) return;
     mapRef.current?.animateToRegion(regionAround(coords), 500);
@@ -516,12 +697,54 @@ export default function PassengerHome() {
     );
   }
 
+  /**
+   * El viaje, dibujado.
+   *
+   * Lo pidio el usuario durante la Fase 13, al ver que el conductor si tenia su
+   * ruta y el no. Es el mismo trazado y el mismo color de marca que ve el
+   * conductor, para que los dos esten mirando lo mismo.
+   *
+   * Los extremos se toman de la propia ruta y no de las coordenadas pedidas, que
+   * es lo que hace la pantalla del conductor. Mapbox devuelve la ruta pegada a
+   * la via, asi que su primer punto es donde el motorraton puede parar de
+   * verdad; la coordenada cruda puede caer dentro de una manzana.
+   */
+  const trazado: MapRoute[] =
+    ruta === null ? [] : [{ coordinates: ruta.coordinates, color: colors.brand, width: 5 }];
+
+  const marcas: MapMarker[] = [];
+
+  if (ruta !== null) {
+    const primero = ruta.coordinates[0];
+    const ultimo = ruta.coordinates[ruta.coordinates.length - 1];
+
+    if (primero !== undefined) {
+      marcas.push({ coordinate: primero, color: colors.brand, filled: false });
+    }
+    if (ultimo !== undefined) {
+      marcas.push({ coordinate: ultimo, color: colors.brand, filled: true });
+    }
+  }
+
   return (
     <View style={[styles.root, { backgroundColor: colors.surfaceSubtle }]}>
       <Map
         ref={mapRef}
         initialRegion={AMALFI_REGION}
         userCoords={coords}
+        routes={trazado}
+        markers={marcas}
+        vehicle={
+          posicionConductor === null
+            ? null
+            : {
+                coordinate: {
+                  latitude: posicionConductor.latitude,
+                  longitude: posicionConductor.longitude,
+                },
+                stale: posicionCaducada,
+              }
+        }
         onReady={() => setIsMapReady(true)}
       />
 
@@ -610,10 +833,12 @@ export default function PassengerHome() {
             destino={destination}
             pasajeros={passengerCount}
             maxPasajeros={maxPasajeros}
-            estimacion={estimacion}
+            referencia={pickupReference}
+            ruta={ruta}
             estimando={estimando}
             enviando={enviando}
             error={errorSolicitud}
+            onCambiarReferencia={setPickupReference}
             onCambiarPasajeros={setPassengerCount}
             onEditarOrigen={() =>
               router.push({ pathname: '/passenger/destination', params: { for: 'origin' } })
@@ -630,6 +855,9 @@ export default function PassengerHome() {
             expirada={expirada}
             cancelando={cancelando}
             reintentando={enviando}
+            llegada={llegada}
+            posicionCaducada={posicionCaducada}
+            sinPosicion={solicitud.conductor !== null && posicionConductor === null}
             error={errorSolicitud}
             onCancelar={() => void cancelar()}
             onReintentar={() => void confirmar()}
@@ -657,6 +885,17 @@ type ModoHoja = 'cargando' | 'destino' | 'resumen' | 'buscando';
 interface SolicitudEnCurso {
   id: string;
   origenLabel: string;
+  /** Lo que escribio para que lo encuentren. Nulo si no escribio nada. */
+  referencia: string | null;
+  /**
+   * Las coordenadas de los dos extremos, ademas de sus nombres.
+   *
+   * Hacen falta para dibujar la ruta. Se guardan aqui y no se leen del borrador
+   * porque el borrador esta vacio al reabrir la aplicacion (D137), que es
+   * justamente cuando esta pantalla tiene que reconstruirse sola.
+   */
+  origen: { latitude: number; longitude: number };
+  destino: { latitude: number; longitude: number };
   destinoLabel: string;
   pasajeros: number;
   /** Nulo cuando no se pudo leer del servidor: entonces no se pinta cuenta atras. */
@@ -670,6 +909,9 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
   return {
     id: activa.id,
     origenLabel: activa.origin.label,
+    referencia: activa.pickupReference,
+    origen: { latitude: activa.origin.latitude, longitude: activa.origin.longitude },
+    destino: { latitude: activa.destination.latitude, longitude: activa.destination.longitude },
     destinoLabel: activa.destination.label,
     pasajeros: activa.passengerCount,
     segundosRestantes: activa.secondsRemaining,
@@ -679,6 +921,14 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
 
 /** Cuantos lugares caben en la hoja sin obligar a desplegarla. */
 const ATAJOS_VISIBLES = 4;
+
+/**
+ * Cada cuanto se vuelve a preguntar cuanto falta para que llegue.
+ *
+ * Medio minuto. El tiempo se ensena en minutos, asi que recalcularlo mas seguido
+ * gasta peticiones para cambiar un numero que casi nunca cambia.
+ */
+const ESPERA_ENTRE_LLEGADAS_MS = 30_000;
 
 /**
  * La hoja bajada del todo: solo el asa y un dedo de superficie.
@@ -804,10 +1054,12 @@ interface ResumenDelViajeProps {
   destino: ChosenPoint;
   pasajeros: number;
   maxPasajeros: number;
-  estimacion: RouteEstimate | null;
+  referencia: string;
+  ruta: Route | null;
   estimando: boolean;
   enviando: boolean;
   error: string | null;
+  onCambiarReferencia: (valor: string) => void;
   onCambiarPasajeros: (valor: number) => void;
   onEditarOrigen: () => void;
   onEditarDestino: () => void;
@@ -826,10 +1078,12 @@ function ResumenDelViaje({
   destino,
   pasajeros,
   maxPasajeros,
-  estimacion,
+  referencia,
+  ruta,
   estimando,
   enviando,
   error,
+  onCambiarReferencia,
   onCambiarPasajeros,
   onEditarOrigen,
   onEditarDestino,
@@ -853,6 +1107,32 @@ function ResumenDelViaje({
           accesible="Cambiar el punto de recogida"
         />
 
+        {/* Va pegado al punto de recogida, sin linea que los separe, porque es
+            parte de el: el punto dice el sitio y esto dice donde esperar dentro
+            del sitio.
+
+            Sin etiqueta encima. El texto de ejemplo ya explica que se espera, y
+            una etiqueta anadiria una linea a una hoja donde cada pixel se le
+            quita al mapa. Que sea opcional se dice ahi mismo, no en una linea de
+            ayuda aparte. */}
+        <Input
+          value={referencia}
+          onChangeText={onCambiarReferencia}
+          placeholder="Referencia para encontrarte (opcional)"
+          // El servidor rechaza mas de 80 (PICKUP_REFERENCE_TOO_LONG). Cortar
+          // aqui evita que alguien escriba un parrafo y lo pierda al confirmar,
+          // pero la regla sigue siendo la del servidor: esto es comodidad, no
+          // validacion.
+          maxLength={80}
+          // Una referencia es una frase corta, no un nombre propio ni un
+          // correo. Sin mayuscula automatica al empezar y sin corrector, que en
+          // nombres de tiendas y apodos locales acierta poco.
+          autoCapitalize="sentences"
+          autoCorrect={false}
+          returnKeyType="done"
+          style={styles.campoReferencia}
+        />
+
         <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
 
         <PuntoDelViaje
@@ -870,7 +1150,7 @@ function ResumenDelViaje({
 
         {/* La estimacion solo ocupa sitio cuando existe. Si Mapbox no responde
             no se pinta nada, en lugar de ensenar un numero fabricado (D149). */}
-        {(estimando || estimacion !== null) && (
+        {(estimando || ruta !== null) && (
           <>
             <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
             <View style={styles.filaEstimacion}>
@@ -879,10 +1159,9 @@ function ResumenDelViaje({
                 color={colors.textTertiary}
                 strokeWidth={iconStrokeWidth}
               />
-              {estimacion !== null ? (
+              {ruta !== null ? (
                 <Text variant="caption" color="textSecondary">
-                  {formatDistance(estimacion.meters)} · {formatDuration(estimacion.seconds)}{' '}
-                  aproximadamente
+                  {formatDistance(ruta.meters)} · {formatDuration(ruta.seconds)} aproximadamente
                 </Text>
               ) : (
                 <Text variant="caption" color="textTertiary">
@@ -915,6 +1194,12 @@ interface BuscandoConductorProps {
   expirada: boolean;
   cancelando: boolean;
   reintentando: boolean;
+  /** Cuanto falta para que llegue a recogerlo. Nulo si no se pudo calcular. */
+  llegada: RouteEstimate | null;
+  /** Su ultima posicion es demasiado vieja para fiarse. */
+  posicionCaducada: boolean;
+  /** Hay conductor pero todavia no ha llegado ninguna posicion suya. */
+  sinPosicion: boolean;
   error: string | null;
   onCancelar: () => void;
   onReintentar: () => void;
@@ -945,6 +1230,9 @@ function BuscandoConductor({
   expirada,
   cancelando,
   reintentando,
+  llegada,
+  posicionCaducada,
+  sinPosicion,
   error,
   onCancelar,
   onReintentar,
@@ -1016,6 +1304,42 @@ function BuscandoConductor({
               </View>
             </View>
 
+            {/* Cuanto falta, y de cuando es ese dato.
+
+                Los cuatro casos se distinguen a proposito. "Sin senal" y "llega
+                en cuatro minutos" no se parecen en nada para quien espera en la
+                calle: en el primero el motorraton del mapa puede llevar dos
+                minutos donde ya no esta, y callarlo seria ensenarle una posicion
+                falsa sin decirselo. Y "en camino" sin numero es honesto cuando
+                la posicion es buena pero no se pudo calcular la ruta, que es el
+                mismo criterio de D149 aplicado aqui. */}
+            <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+            <View style={styles.filaEstimacion}>
+              {posicionCaducada ? (
+                <WifiOff
+                  size={iconSize.sm}
+                  color={colors.textSecondary}
+                  strokeWidth={iconStrokeWidth}
+                />
+              ) : (
+                <Navigation
+                  size={iconSize.sm}
+                  color={colors.textTertiary}
+                  strokeWidth={iconStrokeWidth}
+                />
+              )}
+              <Text variant="caption" color={posicionCaducada ? 'textSecondary' : 'textSecondary'}>
+                {posicionCaducada
+                  ? 'Perdimos su señal. El motorratón sigue en camino.'
+                  : sinPosicion
+                    ? 'Ubicando su motorratón'
+                    : llegada !== null
+                      ? `Llega en ${formatDuration(llegada.seconds)} aproximadamente`
+                      : 'Va en camino hacia ti'}
+              </Text>
+            </View>
+
             {/* Boton y no texto, por lo mismo que en la tarjeta del conductor:
                 se usa con una mano, a veces en la calle, y copiar diez digitos a
                 mano es la friccion que hace que la gente termine llamando por
@@ -1039,6 +1363,16 @@ function BuscandoConductor({
             <Text variant="body" numberOfLines={1}>
               {solicitud.origenLabel}
             </Text>
+            {/* Se le devuelve lo que escribio, ya pasado por el servidor. No es
+                informacion nueva para el, pero es la unica forma de que
+                compruebe que la referencia que dio es la que le llego al
+                conductor, y de que la recuerde al reabrir la aplicacion sobre un
+                servicio en curso. */}
+            {solicitud.referencia !== null && (
+              <Text variant="caption" color="textSecondary" numberOfLines={2}>
+                {solicitud.referencia}
+              </Text>
+            )}
           </View>
         </View>
 
@@ -1159,6 +1493,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  campoReferencia: {
+    marginBottom: spacing.xs,
+    // Alineado con el texto de las filas de arriba, no con el borde de la
+    // tarjeta: asi queda debajo del punto de recogida y no debajo de su icono.
+    marginLeft: spacing.xl,
   },
   campoFalso: {
     alignItems: 'center',

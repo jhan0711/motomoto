@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 
 import { Map, type MapMarker, type MapRoute } from '@/features/map/map';
 import { regionContaining, type Coordinates } from '@/features/map/region';
-import { fetchRouteGeometry } from '@/features/ride/route-service';
+import { fetchRoute } from '@/features/ride/route-service';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { radius, spacing, useTheme } from '@/theme';
@@ -90,8 +90,8 @@ export function RoutePreview({ route, context = [], height = 160 }: RoutePreview
       setEstado({ kind: 'cargando' });
 
       const [principal, ...resto] = await Promise.all([
-        fetchRouteGeometry(route.origin, route.destination),
-        ...context.map((c) => fetchRouteGeometry(c.origin, c.destination)),
+        fetchRoute(route.origin, route.destination),
+        ...context.map((c) => fetchRoute(c.origin, c.destination)),
       ]);
 
       if (!vigente || principal === undefined) return;
@@ -101,7 +101,7 @@ export function RoutePreview({ route, context = [], height = 160 }: RoutePreview
         return;
       }
 
-      if (principal.coordinates === null) {
+      if (principal.route === null) {
         setEstado({ kind: 'sin-ruta' });
         return;
       }
@@ -112,8 +112,8 @@ export function RoutePreview({ route, context = [], height = 160 }: RoutePreview
       let perdidas = 0;
 
       for (const r of resto) {
-        if (r.ok && r.coordinates !== null) {
-          contexto.push(r.coordinates);
+        if (r.ok && r.route !== null) {
+          contexto.push(r.route.coordinates);
         } else {
           perdidas += 1;
         }
@@ -121,7 +121,7 @@ export function RoutePreview({ route, context = [], height = 160 }: RoutePreview
 
       setEstado({
         kind: 'listo',
-        principal: principal.coordinates,
+        principal: principal.route.coordinates,
         contexto,
         contextoPerdido: perdidas,
       });

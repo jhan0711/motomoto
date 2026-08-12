@@ -67,7 +67,24 @@ export default function DriverHome() {
 
   const disponible = estado?.isAvailable ?? false;
 
-  const envio = useLocationReporting({ driverId, coords, active: disponible });
+  /**
+   * Los servicios que ya lleva encima.
+   *
+   * Desde D161 pueden ser varios a la vez: si al conductor le sobran asientos y
+   * la solicitud le queda de camino, la recoge. Quien juzga si le queda de camino
+   * es el, mirando la ruta, y no el servidor calculando desvios.
+   */
+  const [viajes, setViajes] = useState<DriverRide[]>([]);
+
+  const envio = useLocationReporting({
+    driverId,
+    coords,
+    available: disponible,
+    // Con un servicio encima se envia siempre y mas seguido (R9), tenga el
+    // interruptor como lo tenga: puede estar apagado porque el motorraton se
+    // lleno, que es justo cuando hay pasajeros esperando verlo llegar.
+    riding: viajes.length > 0,
+  });
 
   const sinVehiculoAun = estado !== null && estado.vehicle === null;
   const ofertas = useDriverOffers(disponible && !sinVehiculoAun);
@@ -88,15 +105,6 @@ export default function DriverHome() {
 
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [rechazando, setRechazando] = useState<string | null>(null);
-
-  /**
-   * Los servicios que ya lleva encima.
-   *
-   * Desde D161 pueden ser varios a la vez: si al conductor le sobran asientos y
-   * la solicitud le queda de camino, la recoge. Quien juzga si le queda de camino
-   * es el, mirando la ruta, y no el servidor calculando desvios.
-   */
-  const [viajes, setViajes] = useState<DriverRide[]>([]);
 
   const cargarViajes = useCallback(async () => {
     const resultado = await fetchActiveRides();

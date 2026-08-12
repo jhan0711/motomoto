@@ -673,6 +673,7 @@ export type Database = {
           origin_place_id: string | null;
           passenger_count: number;
           passenger_id: string;
+          pickup_reference: string | null;
           requested_at: string;
           started_at: string | null;
           status: Database['public']['Enums']['ride_request_status'];
@@ -696,6 +697,7 @@ export type Database = {
           origin_place_id?: string | null;
           passenger_count: number;
           passenger_id: string;
+          pickup_reference?: string | null;
           requested_at?: string;
           started_at?: string | null;
           status?: Database['public']['Enums']['ride_request_status'];
@@ -719,6 +721,7 @@ export type Database = {
           origin_place_id?: string | null;
           passenger_count?: number;
           passenger_id?: string;
+          pickup_reference?: string | null;
           requested_at?: string;
           started_at?: string | null;
           status?: Database['public']['Enums']['ride_request_status'];
@@ -971,6 +974,7 @@ export type Database = {
           destination_label: string;
           destination_lat: number;
           destination_lng: number;
+          driver_id: string;
           driver_name: string;
           driver_phone: string;
           driver_rating: number;
@@ -980,6 +984,7 @@ export type Database = {
           origin_lat: number;
           origin_lng: number;
           passenger_count: number;
+          pickup_reference: string;
           requested_at: string;
           ride_id: string;
           ride_status: Database['public']['Enums']['ride_status'];
@@ -987,6 +992,16 @@ export type Database = {
           status: Database['public']['Enums']['ride_request_status'];
           vehicle_plate: string;
           vehicle_unit_number: number;
+        }[];
+      };
+      get_driver_location: {
+        Args: { p_driver_id: string };
+        Returns: {
+          age_seconds: number;
+          heading: number;
+          latitude: number;
+          longitude: number;
+          updated_at: string;
         }[];
       };
       get_setting: { Args: { p_default?: Json; p_key: string }; Returns: Json };
@@ -1016,6 +1031,7 @@ export type Database = {
           passenger_count: number;
           passenger_name: string;
           passenger_phone: string;
+          pickup_reference: string;
           request_id: string;
           ride_id: string;
           status: Database['public']['Enums']['ride_status'];
@@ -1072,6 +1088,7 @@ export type Database = {
           p_origin_lng: number;
           p_origin_place_id?: string;
           p_passenger_count: number;
+          p_pickup_reference?: string;
         };
         Returns: string;
       };

@@ -243,6 +243,14 @@ export interface DriverRide {
   passengerCount: number;
   origin: { latitude: number; longitude: number; label: string };
   destination: { latitude: number; longitude: number; label: string };
+  /**
+   * Como encontrar al pasajero, escrito por el. Null cuando no escribio nada.
+   *
+   * Llega aqui y no en la oferta a proposito (D172): es del mismo lado de la
+   * linea que el nombre y el telefono, y aparece cuando el conductor se
+   * compromete a recoger a alguien concreto.
+   */
+  pickupReference: string | null;
   passengerName: string;
   /** Congelado al pedir el servicio, no leido del perfil. */
   passengerPhone: string;
@@ -281,6 +289,7 @@ export async function fetchActiveRides(): Promise<Result<DriverRide[]>> {
         longitude: fila.destination_lng,
         label: fila.destination_label,
       },
+      pickupReference: fila.pickup_reference,
       passengerName: fila.passenger_name,
       passengerPhone: fila.passenger_phone,
       acceptedAt: fila.accepted_at,

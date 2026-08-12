@@ -1,19 +1,43 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
+import { distanceInMeters } from '@/features/destination/geo';
 import type { Coordinates } from '@/features/map/region';
 import { useNumericSetting } from '@/features/ride/settings';
 
 import { reportLocation } from './driver-service';
 
 /**
- * El conductor dice donde esta mientras esta disponible (D159, regla R9).
+ * El conductor dice donde esta (D159, regla R9).
  *
  * Por que esto existe y no se dejo para la Fase 14. `find_available_drivers`
  * descarta a cualquier conductor cuya ubicacion tenga mas de dos minutos, asi
  * que sin este envio un conductor real no aparece nunca en una busqueda por muy
- * bien que funcione todo lo demas. La Fase 14 es otra cosa: el seguimiento fino
- * durante el viaje, que el pasajero ve moverse.
+ * bien que funcione todo lo demas.
+ *
+ * LA FASE 14 LE ANADIO LAS DOS MITADES QUE LE FALTABAN.
+ *
+ * La primera es la cadencia. La regla R9 pide dos ritmos y no uno: treinta
+ * segundos mientras solo esta disponible, y diez segundos o cincuenta metros
+ * mientras lleva a alguien. La diferencia no es capricho: en el primer caso la
+ * posicion sirve para decidir a quien se le ofrece un viaje, y treinta segundos
+ * de desfase no cambian esa decision; en el segundo hay un pasajero mirando el
+ * mapa para saber si el motorraton ya viene, y ahi treinta segundos son una
+ * eternidad. Los dos valores viven en `app_settings`, no aqui.
+ *
+ * "Diez segundos O cincuenta metros" es literal: manda el que llegue antes. El
+ * temporizador sostiene la marca de tiempo aunque el motorraton este parado en
+ * un semaforo, que es lo que evita que caduque su posicion y desaparezca de las
+ * busquedas; y el desplazamiento adelanta el envio cuando avanza deprisa, que es
+ * cuando el marcador del pasajero se quedaria mas atras.
+ *
+ * La segunda es CUANDO se envia, y era un fallo de verdad. Antes solo se enviaba
+ * con el interruptor encendido. Pero desde D164 aceptar una oferta puede apagar
+ * la disponibilidad, porque el motorraton se lleno: el conductor se quedaba sin
+ * enviar posicion justo mientras iba a recoger a tres personas, y el pasajero
+ * habria visto su motorraton congelado en el sitio donde estaba al aceptar. Un
+ * conductor con un servicio encima envia siempre, tenga el interruptor como lo
+ * tenga.
  *
  * SOLO EN PRIMER PLANO, por D116. Cuando la aplicacion pasa a segundo plano se
  * deja de enviar a proposito, y esa decision merece explicarse: lo comodo seria
@@ -26,8 +50,10 @@ import { reportLocation } from './driver-service';
  * siga diciendo "disponible".
  */
 
-/** Valor de reserva si no se puede leer el parametro. Es el de la regla R9. */
-const INTERVALO_RESERVA = 30;
+/** Valores de reserva si no se puede leer el parametro. Son los de la regla R9. */
+const INTERVALO_DISPONIBLE = 30;
+const INTERVALO_EN_VIAJE = 10;
+const DISTANCIA_MINIMA_M = 50;
 
 export interface LocationReporting {
   /** Momento del ultimo envio correcto, o null si todavia no hubo ninguno. */
@@ -40,19 +66,33 @@ export interface UseLocationReportingParams {
   driverId: string | null;
   /** La ultima posicion conocida. Null mientras no haya ninguna. */
   coords: Coordinates | null;
-  /** Solo se envia cuando esta disponible. */
-  active: boolean;
+  /** El interruptor de disponible. */
+  available: boolean;
+  /**
+   * Lleva al menos un servicio encima.
+   *
+   * Va aparte del interruptor y no mezclado con el, porque las dos cosas pueden
+   * ser distintas: un motorraton lleno esta ocupado y no disponible, y es
+   * exactamente cuando mas falta hace que se le vea moverse.
+   */
+  riding: boolean;
 }
 
 export function useLocationReporting({
   driverId,
   coords,
-  active,
+  available,
+  riding,
 }: UseLocationReportingParams): LocationReporting {
-  const intervaloSegundos = useNumericSetting(
+  const intervaloDisponible = useNumericSetting(
     'location_interval_available_seconds',
-    INTERVALO_RESERVA,
+    INTERVALO_DISPONIBLE,
   );
+  const intervaloEnViaje = useNumericSetting(
+    'location_interval_in_ride_seconds',
+    INTERVALO_EN_VIAJE,
+  );
+  const distanciaMinima = useNumericSetting('location_min_distance_m', DISTANCIA_MINIMA_M);
 
   const [lastSentAt, setLastSentAt] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,41 +106,81 @@ export function useLocationReporting({
    */
   const coordsRef = useRef<Coordinates | null>(coords);
 
+  /** La ultima posicion que se llego a enviar, para medir cuanto se ha movido. */
+  const ultimaEnviadaRef = useRef<Coordinates | null>(null);
+
+  /** Si la aplicacion esta a la vista. Fuera de ella no se envia (D116). */
+  const enPrimerPlanoRef = useRef(AppState.currentState === 'active');
+
+  const activo = (available || riding) && driverId !== null;
+  const intervaloSegundos = riding ? intervaloEnViaje : intervaloDisponible;
+
+  const enviar = useCallback(async () => {
+    if (driverId === null || !enPrimerPlanoRef.current) return;
+
+    const posicion = coordsRef.current;
+    if (posicion === null) return;
+
+    const resultado = await reportLocation(driverId, posicion);
+
+    if (resultado.ok) {
+      // Se apunta lo que de verdad salio, no lo ultimo que dijo el GPS: si el
+      // envio fallo, la distancia hay que medirla desde el ultimo punto que el
+      // servidor conoce, no desde uno que nunca llego.
+      ultimaEnviadaRef.current = posicion;
+      setLastSentAt(Date.now());
+      setError(null);
+    } else {
+      setError(resultado.failure.message);
+    }
+  }, [driverId]);
+
   useEffect(() => {
     coordsRef.current = coords;
   }, [coords]);
 
+  /**
+   * La mitad de los cincuenta metros.
+   *
+   * Solo durante un viaje. Mientras el conductor unicamente esta disponible, su
+   * posicion sirve para elegir a quien ofrecerle un servicio, y adelantar envios
+   * por cada calle que recorre seria gastar bateria y datos en afinar una
+   * decision que no cambia.
+   */
   useEffect(() => {
-    if (!active || driverId === null) {
+    if (!activo || !riding || coords === null) return;
+
+    const ultima = ultimaEnviadaRef.current;
+
+    // Sin un punto anterior no hay distancia que medir. Del primer envio ya se
+    // encarga el temporizador, que arranca sin esperar.
+    if (ultima === null) return;
+    if (distanceInMeters(ultima, coords) < distanciaMinima) return;
+
+    // Diferido, como en el resto del proyecto: el compilador de React rechaza un
+    // setState alcanzable desde el cuerpo de un efecto.
+    const id = setTimeout(() => void enviar(), 0);
+    return () => clearTimeout(id);
+  }, [activo, riding, coords, distanciaMinima, enviar]);
+
+  useEffect(() => {
+    if (!activo) {
       return;
     }
 
     let vigente = true;
-    let enPrimerPlano = AppState.currentState === 'active';
 
-    const enviar = async () => {
-      if (!vigente || !enPrimerPlano) return;
-
-      const posicion = coordsRef.current;
-      if (posicion === null) return;
-
-      const resultado = await reportLocation(driverId, posicion);
+    const enviarSiVigente = () => {
       if (!vigente) return;
-
-      if (resultado.ok) {
-        setLastSentAt(Date.now());
-        setError(null);
-      } else {
-        setError(resultado.failure.message);
-      }
+      void enviar();
     };
 
     const listener = AppState.addEventListener('change', (siguiente) => {
-      enPrimerPlano = siguiente === 'active';
+      enPrimerPlanoRef.current = siguiente === 'active';
       // Al volver de segundo plano se manda enseguida, sin esperar al siguiente
       // turno: el conductor lleva un rato invisible y lo que quiere es volver a
       // estar disponible ya.
-      if (enPrimerPlano) void enviar();
+      if (enPrimerPlanoRef.current) enviarSiVigente();
     });
 
     // El primer envio no espera al intervalo. Encender el interruptor y tardar
@@ -111,8 +191,8 @@ export function useLocationReporting({
     // Diferido con un temporizador de cero, como en el resto del proyecto: el
     // compilador de React rechaza un setState alcanzable desde el cuerpo de un
     // efecto.
-    const primero = setTimeout(() => void enviar(), 0);
-    const repeticion = setInterval(() => void enviar(), intervaloSegundos * 1000);
+    const primero = setTimeout(enviarSiVigente, 0);
+    const repeticion = setInterval(enviarSiVigente, intervaloSegundos * 1000);
 
     return () => {
       vigente = false;
@@ -120,7 +200,7 @@ export function useLocationReporting({
       clearInterval(repeticion);
       listener.remove();
     };
-  }, [active, driverId, intervaloSegundos]);
+  }, [activo, intervaloSegundos, enviar]);
 
   return { lastSentAt, error };
 }
