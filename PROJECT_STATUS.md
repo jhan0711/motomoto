@@ -9,7 +9,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
-  11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real
+  11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
+  14 seguimiento del conductor
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 14 terminada:** el pasajero ve la ruta de su viaje y su motorraton moviendose por el
@@ -814,7 +815,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 11 | Creacion de solicitud | COMPLETADA Y APROBADA |
 | 12 | Modulo del conductor | COMPLETADA Y APROBADA |
 | 13 | Asignacion en tiempo real | COMPLETADA Y APROBADA |
-| 14 | Seguimiento del conductor | COMPLETADA |
+| 14 | Seguimiento del conductor | COMPLETADA Y APROBADA |
 | 15 | Ciclo completo del servicio | Pendiente |
 | 16 | Historial | Pendiente |
 | 17 | Calificaciones | Pendiente |
@@ -2295,8 +2296,8 @@ Y en dispositivo, con un servicio aceptado:
 
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 14 completadas, **mas D161**. La 14 esta terminada y pendiente de
-  tu aprobacion. Siguiente: Fase 15, ciclo completo del servicio, pendiente de autorizacion
+- **Fase actual:** Fases 0 a 14 completadas y aprobadas, **mas D161**. Siguiente: Fase 15,
+  ciclo completo del servicio, pendiente de autorizacion
 - **Paso actual:** Ninguno en curso. **La Fase 14 esta sin confirmar en git**: tres migraciones
   nuevas, dos archivos nuevos y doce modificados, mas este documento
 - **Ultimo paso completado:** Cierre de la Fase 14. El pasajero ve la ruta de su viaje y su
