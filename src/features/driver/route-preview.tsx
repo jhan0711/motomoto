@@ -209,6 +209,9 @@ export function RoutePreview({ route, context = [], height = 160 }: RoutePreview
           userCoords={null}
           showUser={false}
           interactive={false}
+          // Recuadro de 160 dp: el logo va abajo a la izquierda y pegado, que es
+          // el unico sitio donde cabe sin taparse con el trazado.
+          logoOffset={{ bottom: 4, left: 4 }}
           routes={rutas}
           markers={marcas}
         />

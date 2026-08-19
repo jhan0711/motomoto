@@ -1,8 +1,28 @@
-import type { Region } from 'react-native-maps';
-
 export interface Coordinates {
   latitude: number;
   longitude: number;
+}
+
+/**
+ * Un area visible del mapa: su centro y cuanto abarca, en grados.
+ *
+ * **El tipo es nuestro desde el cambio a Mapbox.** Antes venia de
+ * `react-native-maps`, y era la ultima atadura con esa libreria fuera de
+ * `map.tsx`: tres archivos la importaban solo para nombrar este tipo. Al
+ * definirlo aqui, cambiar de proveedor de mapas deja de tocar nada mas que el
+ * componente.
+ *
+ * Se conserva la forma de "centro mas deltas" en lugar de pasarse a los limites
+ * o al nivel de zoom que usa Mapbox por dentro. No es nostalgia: es lo que
+ * entienden `regionAround` y `regionContaining`, que calculan encuadres sin
+ * hablar con el mapa, y lo que permitio que este cambio no tocara ninguna
+ * pantalla. La traduccion a lo que Mapbox quiere ocurre en un solo sitio.
+ */
+export interface Region extends Coordinates {
+  /** Alto del area visible, en grados de latitud. Menor es mas cerca. */
+  latitudeDelta: number;
+  /** Ancho del area visible, en grados de longitud. */
+  longitudeDelta: number;
 }
 
 /**

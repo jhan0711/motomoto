@@ -28,7 +28,6 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
-import type MapView from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomSheet } from '@/components/ui/bottom-sheet';
@@ -42,7 +41,7 @@ import { describePoint } from '@/features/destination/describe-point';
 import type { ChosenPoint, Place } from '@/features/destination/types';
 import { usePlaces } from '@/features/destination/use-places';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
-import { Map, type MapMarker, type MapRoute } from '@/features/map/map';
+import { Map, type MapHandle, type MapMarker, type MapRoute } from '@/features/map/map';
 import { AMALFI_REGION, regionAround } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
 import { PassengerCount } from '@/features/ride/passenger-count';
@@ -101,7 +100,7 @@ export default function PassengerHome() {
    */
   const [sheetIndex, setSheetIndex] = useState(1);
   const location = useLocation();
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapHandle>(null);
 
   const {
     origin,

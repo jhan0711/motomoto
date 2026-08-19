@@ -24,6 +24,33 @@ if (!googleMapsApiKey) {
   );
 }
 
+/**
+ * Token SECRETO de descarga de Mapbox, distinto del público.
+ *
+ * El público (`EXPO_PUBLIC_MAPBOX_SEARCH_TOKEN`) viaja dentro de la aplicación y
+ * sirve para buscar direcciones y calcular rutas. Este otro no viaja a ninguna
+ * parte: lo usa Gradle **al compilar**, para bajar el SDK nativo de Mapbox de un
+ * repositorio privado. Por eso empieza por `sk.` y por eso no lleva el prefijo
+ * `EXPO_PUBLIC_`, que es lo que marca a las variables que sí se incrustan.
+ *
+ * Sin él, la compilación falla con un 401 de Maven que no menciona a Mapbox por
+ * ninguna parte. De ahí el aviso explícito.
+ *
+ * AQUÍ SOLO SE COMPRUEBA QUE EXISTA, NO SE LE PASA AL PLUGIN. El plugin admitía
+ * recibirlo como opción, y esa vía está desaconsejada por dos motivos: escribe el
+ * token en `android/gradle.properties`, y cualquier volcado de la configuración
+ * —`expo config`, un registro de compilación— lo imprime entero. Leyéndolo el
+ * plugin del entorno, el valor no aparece en ningún archivo del proyecto ni en
+ * ninguna salida. El nombre de la variable lo fija el plugin, no nosotros.
+ */
+const mapboxDownloadToken = process.env.RNMAPBOX_MAPS_DOWNLOAD_TOKEN;
+
+if (!mapboxDownloadToken) {
+  console.warn(
+    '[app.config] Falta RNMAPBOX_MAPS_DOWNLOAD_TOKEN en .env. La compilación nativa fallará al bajar el SDK de Mapbox.',
+  );
+}
+
 const config: ExpoConfig = {
   name: 'motomoto',
   slug: 'motomoto',
@@ -63,6 +90,9 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-dev-client',
+    // Sin opciones: el token de descarga lo lee el plugin del entorno, y el
+    // público lo registra el código al arrancar. Ver el comentario de arriba.
+    '@rnmapbox/maps',
     [
       'expo-image-picker',
       {

@@ -2,8 +2,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MapPin } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
-import type MapView from 'react-native-maps';
-import type { Region } from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/ui/button';
@@ -14,8 +12,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { describePoint, type PointDescription } from '@/features/destination/describe-point';
 import { usePlaces } from '@/features/destination/use-places';
-import { Map } from '@/features/map/map';
-import { AMALFI_REGION, regionAround, type Coordinates } from '@/features/map/region';
+import { Map, type MapHandle } from '@/features/map/map';
+import { AMALFI_REGION, regionAround, type Coordinates, type Region } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
 import { useRideDraft } from '@/features/ride/ride-draft';
 import { iconSize, iconStrokeWidth, radius, shadows, spacing, useTheme } from '@/theme';
@@ -104,7 +102,7 @@ export default function PickOnMapScreen() {
    * pasajero segun quien ganara la carrera, sin forma de predecirlo. Misma
    * correccion que en la pantalla de inicio, y por la misma razon.
    */
-  const mapRef = useRef<MapView>(null);
+  const mapRef = useRef<MapHandle>(null);
   const [mapaListo, setMapaListo] = useState(false);
   const yaCentrado = useRef(false);
 
@@ -129,6 +127,9 @@ export default function PickOnMapScreen() {
         showUser={false}
         onReady={() => setMapaListo(true)}
         onRegionSettled={alMover}
+        // Aqui la cabecera flotante tapa la esquina de arriba, asi que el logo
+        // baja. La hoja de abajo es corta y deja sitio de sobra.
+        logoOffset={{ bottom: 12, left: 12 }}
       />
 
       {/* La chincheta, clavada en el centro. Sin capturar toques: todo gesto

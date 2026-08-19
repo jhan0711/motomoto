@@ -4,25 +4,25 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-12
+- **Ultima actualizacion:** 2026-08-13
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
-  14 seguimiento del conductor
+  14 seguimiento del conductor, 15 ciclo completo del servicio
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
   conductor, el pasajero ve en cual va y se despide al terminar, y el recorrido queda
   registrado. Detalle en la seccion 15.15
-- **Trabajo siguiente:** **cambiar el mapa a Mapbox**, ya aprobado por el usuario para justo
-  despues de la Fase 15. NO es la Fase 16. El motivo esta en el hallazgo H18: la ruta se
-  calcula con Mapbox y se dibuja sobre un mapa de Google, y en Amalfi los dos no coinciden.
-  Toca codigo nativo y obliga a recompilar el cliente de desarrollo
-- **Ultimo commit:** 1c2e465 feat: track the driver on the passenger's map.
-  **La Fase 15 esta hecha y probada pero SIN CONFIRMAR:** seis migraciones nuevas, tres
-  archivos nuevos y siete modificados esperan commit, mas este documento
+- **El mapa ya es Mapbox.** Se cambio justo despues de la Fase 15, fuera del plan de fases,
+  para cerrar el hallazgo H18. Detalle en la seccion 15.16
+- **Trabajo siguiente:** **Fase 16, historial**
+- **Ultimo commit:** 8920cf7 feat: complete the ride lifecycle end to end.
+  **El cambio a Mapbox esta hecho y probado pero SIN CONFIRMAR:** `app.config.ts`,
+  `map.tsx`, `region.ts`, `pick-on-map.tsx`, `passenger/index.tsx`, `route-preview.tsx`,
+  `package.json` y `package-lock.json`, mas este documento
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -72,23 +72,22 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue: CAMBIAR EL MAPA A MAPBOX, y no es la Fase 16.** El usuario lo aprobo
-expresamente al cerrar la Fase 15, con estas palabras: "termina la fase 15 y despues cambiamos
-el mapa a Mapbox".
+**Por donde se sigue: la Fase 16, historial.**
 
-El motivo es el hallazgo **H18**, y esta demostrado con evidencia: **la ruta se calcula con
-Mapbox y se dibuja sobre un mapa de Google**, y en Amalfi los dos no coinciden. El usuario vio
-la linea cruzando manzanas vacias; se rendero la MISMA ruta, con las MISMAS coordenadas, sobre
-el mapa de Mapbox y cada tramo caia sobre una calle. La ruta esta bien; el mapa de debajo es el
-que le falta informacion.
+Antes de ella se hizo un trabajo fuera del plan de fases: **el mapa paso de Google a Mapbox**,
+para cerrar el hallazgo H18. Esta terminado y verificado, con su registro en la seccion 15.16.
+Lo que hay que saber al retomar:
 
-Lo que implica el cambio: una libreria nativa (`@rnmapbox/maps`), **recompilar el cliente de
-desarrollo** y reescribir `src/features/map/map.tsx`, que es un solo archivo justamente porque
-D117 se escribio pensando en este dia. De paso cierra el pendiente de los terminos de Mapbox
-sobre mapa ajeno.
+- **Ya no se usa `react-native-maps`.** El mapa es `@rnmapbox/maps`, y sigue viviendo entero en
+  `src/features/map/map.tsx` (D117). Ninguna pantalla importa la libreria
+- **Mapbox trabaja en [longitud, latitud]**, al reves que el resto del proyecto. La traduccion
+  ocurre solo dentro de `map.tsx`
+- **Hay un token secreto mas en el `.env`**, `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`, que solo se usa al
+  compilar
+- **Si se toca algo del mapa, hay que reiniciar la aplicacion en frio.** La recarga en caliente
+  no aplico ninguno de los cambios del mapa en toda la sesion, tres veces seguidas
 
-**La Fase 15 esta terminada**, con su registro en la seccion 15.15. Alli estan las dos cosas
-que quedaron sin verificar y por que.
+**La Fase 15 esta terminada y aprobada**, con su registro en la seccion 15.15.
 
 **Cosas del entorno que conviene no redescubrir:**
 
@@ -456,6 +455,9 @@ el sistema.
 | D189 | El rastro se graba cada 50 metros, no cada diez segundos | La posicion actual ya va cada diez (R9) y con eso el pasajero ve moverse el motorraton. El rastro es otra cosa: es el registro del viaje, y un punto cada diez segundos llenaria la tabla de puntos identicos con el conductor parado en un semaforo. Es el "filtro de distancia minima" que D14 dejo escrito |
 | D190 | La navegacion sigue al estado | Con el pasajero fuera lleva al punto de recogida; con el a bordo, al destino. Y la etiqueta dice a donde va, "Ir a la recogida" o "Ir al destino", en vez de un "Cómo llegar" que obliga a deducir el destino del estado de la tarjeta mientras se conduce. Cierra lo que D179 dejo pendiente: hasta que existieron los estados, la aplicacion no sabia quien iba dentro |
 | D191 | Las paradas no se reordenan | Aparecen en el orden en que el conductor las acepto, que es el unico que no nos hemos inventado. Ordenarlas por cercania seria facil y seria mentir: la mas cercana en linea recta puede estar al otro lado de una quebrada, y quien sabe si algo le queda de camino es el conductor. Es D161 aplicado |
+| D193 | El mapa lo dibuja Mapbox, no Google | **Sustituye a D110.** La ruta se calculaba con Mapbox y se dibujaba sobre un mapa de Google, y en Amalfi los dos no coinciden: la linea cruzaba manzanas vacias. Se demostro renderizando la MISMA ruta con las MISMAS coordenadas sobre el mapa de Mapbox, donde cada tramo cae sobre una calle. Encaja con la Fase 8: de 39 sitios reales, Mapbox acerto 22 y Google 13. Cambia el modelo de costo —el mapa de Google era gratis e ilimitado dentro de la app; Mapbox cobra por usuarios activos al mes, con franja gratuita muy por encima de un piloto municipal— y **cierra el pendiente de los terminos de Mapbox sobre mapa ajeno** |
+| D194 | Donde van el logo y la atribucion | Lo decide cada pantalla con `logoOffset`, no el componente. Son obligatorios por los terminos de Mapbox, y su sitio por defecto queda tapado por el bottom sheet; arriba lo tapa la cabecera de "Marca el punto". Cada pantalla tapa un sitio distinto, asi que no hay una posicion buena para todas |
+| D195 | La referencia del mapa conserva su forma | `animateToRegion` y `fitToCoordinates` siguen existiendo con la misma firma, traducidas por dentro a la camara de Mapbox. **Es lo que permitio que el cambio de proveedor no tocara ninguna pantalla**, que es justo para lo que se escribio D117 |
 | D192 | Una parada por vez, sin ruta multiparada | Cada parada se navega por separado. Una ruta con paradas intermedias obliga a Google Maps, porque **Waze no las admite desde un enlace**, y eso dejaria sin efecto el selector de aplicaciones de D178 |
 
 ### Decisiones de la Fase 14
@@ -838,7 +840,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 12 | Modulo del conductor | COMPLETADA Y APROBADA |
 | 13 | Asignacion en tiempo real | COMPLETADA Y APROBADA |
 | 14 | Seguimiento del conductor | COMPLETADA Y APROBADA |
-| 15 | Ciclo completo del servicio | COMPLETADA |
+| 15 | Ciclo completo del servicio | COMPLETADA Y APROBADA |
 | 16 | Historial | Pendiente |
 | 17 | Calificaciones | Pendiente |
 | 18 | Cancelaciones y errores operativos | Pendiente |
@@ -2442,16 +2444,134 @@ volver entera.
 
 ---
 
+## 15.16 EL MAPA PASO A MAPBOX (fuera del plan de fases)
+
+### Por que se hizo
+
+**Lo encontro el usuario mirando la pantalla.** Vio que la ruta dibujada cruzaba manzanas
+vacias y que los puntos no caian donde debian, y lo dijo antes de dejarnos seguir con la
+fase.
+
+El diagnostico separo dos cosas:
+
+1. **El destino equivocado era un dato de prueba del asistente**, escrito a mano en un
+   script, a 426 m del hospital real. Segunda vez en dos dias.
+2. **La ruta cruzando solares era real, y no era culpa de la ruta.** Se calculaba con Mapbox
+   y se dibujaba sobre un mapa de Google. Se rendero **la misma ruta, con las mismas
+   coordenadas, sobre el mapa de Mapbox**: cada tramo caia sobre una calle. Mapbox decia
+   pasar por Calle 17, Carrera 23 y 168 m de una via sin nombre; Google dibujaba esa zona
+   casi vacia. Se comprobo ademas que no era nuestro estilo, que solo apaga puntos de
+   interes.
+
+Encaja con lo que ya sabiamos desde la Fase 8: de 39 sitios reales de Amalfi, **Mapbox
+acerto 22 y Google 13**. El municipio esta mal cubierto por Google, y eso alcanza tambien a
+sus calles.
+
+### Que costo, y que no
+
+**D117 se gano su sueldo.** Se escribio en la Fase 8 con una sola idea: que ninguna pantalla
+importara la libreria de mapas, para que el proveedor viviera en un archivo. Funciono:
+`map.tsx` paso de Google a Mapbox y **ninguna pantalla cambio**. Solo tres archivos tocaban
+la libreria vieja, y era unicamente para nombrar tipos.
+
+Dos decisiones sostuvieron eso:
+
+- **La referencia del mapa conserva `animateToRegion` y `fitToCoordinates` con la misma
+  firma.** Por dentro se traducen a la camara de Mapbox, que piensa en limites y no en
+  deltas. Sin esto habria habido que reescribir las tres pantallas que mueven la camara
+- **El tipo `Region` es ahora nuestro**, en `region.ts`. Era la ultima atadura fuera del
+  componente
+
+### El problema de cumplimiento que salio por el camino
+
+**El logo y la atribucion de Mapbox son obligatorios por sus terminos, y por defecto quedan
+tapados.** Van abajo a la izquierda, que es justo donde esta el bottom sheet en el mapa del
+pasajero. Al subirlos arriba, los tapaba la cabecera de "Marca el punto". No es un detalle
+estetico: tapado es incumplir.
+
+Se resolvio con una propiedad `logoOffset`: **cada pantalla decide donde caben**, porque cada
+una tapa un sitio distinto. Comprobado en pantalla en las dos.
+
+### El token de descarga, y un error del asistente
+
+El SDK nativo se baja de un repositorio privado que pedia un token secreto (`sk.`) con
+alcance `DOWNLOADS:READ`. Dos cosas que conviene dejar escritas:
+
+- **El asistente volco la configuracion entera con `expo config --type introspect` y el token
+  quedo impreso en la conversacion.** Se pidio rotarlo. La exposicion no llego al
+  repositorio porque `/android` esta ignorado desde la Fase 2
+- **Se dejo de pasar el token como opcion del plugin.** Esa via, ademas de estar
+  desaconsejada, **lo escribe en `android/gradle.properties`** y hace que aparezca en
+  cualquier volcado. Ahora el plugin lo lee del entorno como
+  `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`, y **no aparece en ningun archivo del proyecto**:
+  comprobado, cero ocurrencias en `gradle.properties`
+- **Y probablemente no hacia falta.** El propio codigo que genera la libreria dice que Mapbox
+  ya no exige el token y lo mantiene por compatibilidad. Se dejo puesto porque no estorba
+
+### Archivos
+
+```
+app.config.ts                        el plugin, sin pasarle el token
+package.json                         @rnmapbox/maps 10.3.5, sin react-native-maps
+src/features/map/map.tsx             reescrito entero sobre Mapbox
+src/features/map/region.ts           el tipo Region pasa a ser nuestro
+src/app/passenger/index.tsx          usa MapHandle en vez del tipo de la libreria
+src/app/passenger/pick-on-map.tsx    idem, y coloca el logo abajo
+src/features/driver/route-preview.tsx  coloca el logo dentro del recuadro
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **La recarga en caliente no aplica los cambios del mapa.** Paso TRES veces en la misma
+   sesion: las tres parecia que el codigo estaba mal y solo hacia falta reiniciar en frio.
+   Ante cualquier cambio en `map.tsx`, `am force-stop` y volver a abrir ANTES de dudar.
+2. **No volcar la configuracion entera cuando hay secretos.** `expo config --type introspect`
+   imprime todo, tokens incluidos. Para comprobar que una variable existe basta con
+   `awk -F= '/^NOMBRE/ {print length($2)}' .env`, que no ensena el valor.
+3. **Un dato de prueba escrito a mano parece un fallo del producto.** Tercera vez. Los
+   scripts de prueba deberian tomar las coordenadas de la tabla `places`, no escribirlas.
+4. **Mapbox trabaja en [longitud, latitud].** Invertirlas no da error: pone Amalfi en Somalia.
+
+### Pruebas
+
+Todo en el emulador, en claro y en oscuro:
+
+- **La compilacion nativa**: `BUILD SUCCESSFUL` en 6 min 42 s
+- **El mapa del pasajero carga**, y aparecen sitios que Google no tenia: el Politecnico Jaime
+  Isaza Cadavid, Mercados J.J., la E.S.E Hospital El Carmen, el Hotel Riachon
+- **LA RUTA VA POR LAS CALLES.** Era el motivo del cambio y quedo resuelto
+- **Elegir punto en el mapa**: la direccion se actualiza al soltar el dedo, y al caer en un
+  punto sin nombre pide referencia y bloquea el boton (D127)
+- **Modo oscuro**: estilo oscuro de Mapbox, chincheta legible
+- **Logo y atribucion visibles** en las dos pantallas
+
+### Lo que quedo sin verificar
+
+**La vista previa de rutas del conductor**, el recuadro de 160 dp dentro de la tarjeta de
+oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El riesgo es bajo
+—es el mismo componente con `interactive={false}`— pero no se vio.
+
+### Lo que queda pendiente de este cambio
+
+- **Decidir si se retira la clave de Google Maps** de `app.config.ts`. Ya no la usa nadie
+- **Mirar si los puntos de interes estorban.** D125 los apagaba en Google con dos motivos: que
+  competian con nuestros marcadores y que en Amalfi eran incorrectos. El segundo desaparecio.
+  Si el primero molesta, se hace un estilo propio en Mapbox Studio
+- **El costo cambio de modelo.** El mapa de Google era gratis e ilimitado dentro de la app; el
+  SDK de Mapbox se cobra por usuarios activos al mes, con una franja gratuita que un piloto
+  municipal no roza. A esta escala no se nota, pero ya no es "gratis para siempre"
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 14 completadas y aprobadas, **mas D161**. **Fase 15 terminada y
-  pendiente de aprobacion.** Siguiente: **cambiar el mapa a Mapbox**, ya aprobado, y despues la
+- **Fase actual:** Fases 0 a 15 completadas y aprobadas, **mas D161 y el cambio del mapa a
+  Mapbox**. Siguiente: **cambiar el mapa a Mapbox**, ya aprobado, y despues la
   Fase 16
-- **Paso actual:** Ninguno en curso. **La Fase 15 esta sin confirmar en git**: seis migraciones
-  nuevas, tres archivos nuevos y siete modificados, mas este documento
-- **Ultimo paso completado:** Cierre de la Fase 15. El conductor mueve el servicio por sus
-  cinco estados, el pasajero ve en cual va y recibe un resumen al terminar, el recorrido queda
-  registrado, y con dos o tres servicios encima ve la lista de sus paradas
+- **Paso actual:** Ninguno en curso. **El cambio a Mapbox esta sin confirmar en git**: ocho
+  archivos modificados, mas este documento
+- **Ultimo paso completado:** El cambio del mapa a Mapbox, con la ruta cayendo por fin sobre
+  las calles. Antes, el cierre de la Fase 15
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -2583,8 +2703,8 @@ volver entera.
   pantalla durante las pruebas. En la Fase 5 se decidio asi razonando que "Amalfi cabe
   holgadamente en el radio que habriamos puesto", dando por hecho que todos los conductores
   estan dentro del municipio. Conviene decidir si eso debe seguir siendo cierto.
-  **H18** **la ruta se calcula con Mapbox y se dibuja sobre un mapa de Google, y en Amalfi los
-  dos no coinciden.** Lo vio el usuario: la linea cruzaba manzanas vacias y los puntos no caian
+  **H18 RESUELTO** con el cambio a Mapbox (seccion 15.16). Decia: **la ruta se calcula con
+  Mapbox y se dibuja sobre un mapa de Google, y en Amalfi los dos no coinciden.** Lo vio el usuario: la linea cruzaba manzanas vacias y los puntos no caian
   donde debian. Se comprobo renderizando la MISMA ruta con las MISMAS coordenadas sobre el mapa
   de Mapbox: cada tramo cae sobre una calle. Mapbox dice que pasa por Calle 17, Carrera 23 y
   168 m de una via sin nombre; Google dibuja esa zona casi vacia. No es el estilo propio, que
@@ -2623,8 +2743,8 @@ volver entera.
   `fase11.auth@motomoto-qa.co`, creada para poder cerrar sesion en el emulador sin pedirle la
   contrasena al usuario. **Al cerrar la Fase 14 no quedo nada mas**: los servicios de prueba se
   cancelaron por la funcion real y los parametros volvieron a 30, 10 y 20
-- **Proximo paso autorizado:** **Cambiar el mapa a Mapbox**, aprobado por el usuario al cerrar
-  la Fase 15. La Fase 16 va despues
+- **Proximo paso autorizado:** Ninguno. **La Fase 16, historial, esta pendiente de
+  autorizacion**
 
 ### Estado del equipo ahora mismo
 
