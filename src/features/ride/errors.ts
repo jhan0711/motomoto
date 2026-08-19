@@ -118,8 +118,26 @@ const UNKNOWN_MESSAGE = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
  * que queda es el mensaje del error de red. React Native dice "Network request
  * failed" y los navegadores "Failed to fetch"; el segundo hace falta porque la
  * aplicacion tambien se ejecuta en web durante el desarrollo.
+ *
+ * LAS DOS ULTIMAS SE ANADIERON EN LA FASE 16, y merecen explicacion porque esta
+ * lista parecia completa. Se apago la red del emulador y el historial no dijo
+ * "no hay conexion", dijo "ocurrio un error inesperado". El mensaje real era
+ * `fetch failed: java.net.UnknownHostException: Unable to resolve host ...`:
+ * "fetch failed" y no "failed to fetch", que es lo mismo escrito al reves y no
+ * casaba con ninguna. Sin DNS el aparato ni siquiera intenta conectarse, que es
+ * justo lo que pasa cuando alguien se queda sin datos en la carretera.
+ *
+ * Afecta a toda la aplicacion, no solo al historial: cualquier pantalla que
+ * fallara sin conexion daba el mensaje generico.
  */
-const NETWORK_HINTS = ['network request failed', 'failed to fetch', 'network error'];
+const NETWORK_HINTS = [
+  'network request failed',
+  'failed to fetch',
+  'fetch failed',
+  'network error',
+  'unable to resolve host',
+  'unknownhostexception',
+];
 
 /**
  * Convierte cualquier error en algo que se pueda mostrar y comparar.

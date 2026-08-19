@@ -75,6 +75,10 @@ export default function DriverLayout() {
           ),
         }}
       />
+      {/* El detalle de un servicio vive dentro de esta zona pero no es una
+          pestana: se llega tocando una fila del historial. Sin href: null,
+          expo-router le pondria su propio boton en la barra. */}
+      <Tabs.Screen name="job/[id]" options={{ href: null }} />
       <Tabs.Screen
         name="profile"
         options={{

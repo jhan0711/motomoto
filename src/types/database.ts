@@ -994,6 +994,34 @@ export type Database = {
           vehicle_unit_number: number;
         }[];
       };
+      get_driver_job: {
+        Args: { p_offer_id: string };
+        Returns: {
+          accepted_at: string;
+          cancellation_reason: string;
+          cancelled_at: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          completed_at: string;
+          destination_label: string;
+          distance_m: number;
+          driver_arrived_at: string;
+          duration_s: number;
+          offer_expires_at: string;
+          offer_id: string;
+          offered_at: string;
+          origin_label: string;
+          outcome: string;
+          passenger_count: number;
+          passenger_name: string;
+          pickup_distance_m: number;
+          pickup_reference: string;
+          request_id: string;
+          requested_at: string;
+          responded_at: string;
+          ride_id: string;
+          started_at: string;
+        }[];
+      };
       get_driver_location: {
         Args: { p_driver_id: string };
         Returns: {
@@ -1015,6 +1043,33 @@ export type Database = {
           id: string;
           origin_label: string;
           passenger_count: number;
+          vehicle_unit_number: number;
+        }[];
+      };
+      get_passenger_trip: {
+        Args: { p_request_id: string };
+        Returns: {
+          accepted_at: string;
+          cancellation_reason: string;
+          cancelled_at: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          completed_at: string;
+          destination_label: string;
+          distance_m: number;
+          driver_arrived_at: string;
+          driver_name: string;
+          duration_s: number;
+          expires_at: string;
+          origin_label: string;
+          passenger_count: number;
+          pickup_reference: string;
+          request_id: string;
+          requested_at: string;
+          ride_id: string;
+          ride_status: Database['public']['Enums']['ride_status'];
+          started_at: string;
+          status: Database['public']['Enums']['ride_request_status'];
+          vehicle_plate: string;
           vehicle_unit_number: number;
         }[];
       };
@@ -1051,6 +1106,26 @@ export type Database = {
           status: Database['public']['Enums']['ride_status'];
         }[];
       };
+      list_driver_history: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: {
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          destination_label: string;
+          distance_m: number;
+          duration_s: number;
+          finished_at: string;
+          offer_id: string;
+          offered_at: string;
+          origin_label: string;
+          outcome: string;
+          passenger_count: number;
+          passenger_name: string;
+          pickup_distance_m: number;
+          request_id: string;
+          responded_at: string;
+          ride_id: string;
+        }[];
+      };
       list_driver_offers: {
         Args: never;
         Returns: {
@@ -1067,6 +1142,26 @@ export type Database = {
           request_id: string;
           requested_at: string;
           seconds_remaining: number;
+        }[];
+      };
+      list_passenger_history: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: {
+          cancellation_reason: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          destination_label: string;
+          distance_m: number;
+          driver_name: string;
+          duration_s: number;
+          finished_at: string;
+          origin_label: string;
+          passenger_count: number;
+          request_id: string;
+          requested_at: string;
+          ride_id: string;
+          status: Database['public']['Enums']['ride_request_status'];
+          vehicle_plate: string;
+          vehicle_unit_number: number;
         }[];
       };
       list_places: {
@@ -1103,6 +1198,14 @@ export type Database = {
           p_origin_place_id?: string;
           p_passenger_count: number;
           p_pickup_reference?: string;
+        };
+        Returns: string;
+      };
+      ride_offer_outcome: {
+        Args: {
+          p_request_status: Database['public']['Enums']['ride_request_status'];
+          p_response: Database['public']['Enums']['ride_offer_response'];
+          p_ride_status: Database['public']['Enums']['ride_status'];
         };
         Returns: string;
       };

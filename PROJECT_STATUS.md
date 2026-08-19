@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-13
+- **Ultima actualizacion:** 2026-08-19
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -18,11 +18,15 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   registrado. Detalle en la seccion 15.15
 - **El mapa ya es Mapbox.** Se cambio justo despues de la Fase 15, fuera del plan de fases,
   para cerrar el hallazgo H18. Detalle en la seccion 15.16
-- **Trabajo siguiente:** **Fase 16, historial**
-- **Ultimo commit:** 8920cf7 feat: complete the ride lifecycle end to end.
-  **El cambio a Mapbox esta hecho y probado pero SIN CONFIRMAR:** `app.config.ts`,
-  `map.tsx`, `region.ts`, `pick-on-map.tsx`, `passenger/index.tsx`, `route-preview.tsx`,
-  `package.json` y `package-lock.json`, mas este documento
+- **Fase 16 terminada, pendiente de aprobacion:** las dos partes tienen historial. El
+  pasajero ve sus servicios terminados, cancelados y caducados; el conductor ve sus ofertas
+  con su desenlace, **incluidas las que rechazo**. Detalle en la seccion 15.17
+- **Trabajo siguiente:** **Fase 17, calificaciones**
+- **Ultimo commit:** b84c4d6 feat: draw the map with Mapbox instead of Google.
+  **Toda la Fase 16 esta hecha y probada pero SIN CONFIRMAR:** tres migraciones, dos scripts
+  de prueba en `supabase/dev-tools/`, seis archivos nuevos en `src/features/history/`, las
+  cuatro pantallas del historial, `driver/_layout.tsx`, `features/ride/errors.ts`,
+  `features/auth/errors.ts` y `src/types/database.ts`, mas este documento
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -72,7 +76,13 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue: la Fase 16, historial.**
+**Por donde se sigue: la Fase 17, calificaciones.**
+
+La Fase 16 esta terminada y pendiente de tu aprobacion, con su registro en la seccion 15.17.
+Dos cosas de ella que conviene saber antes de tocar nada: **el historial del conductor sale
+de `ride_offers`, no de `rides`**, porque las ofertas que rechazo tienen que estar; y **el
+nombre del pasajero y la referencia del punto de recogida solo viajan si acepto**, y eso se
+aplica dentro de las funciones, no en la pantalla.
 
 Antes de ella se hizo un trabajo fuera del plan de fases: **el mapa paso de Google a Mapbox**,
 para cerrar el hallazgo H18. Esta terminado y verificado, con su registro en la seccion 15.16.
@@ -439,6 +449,19 @@ el sistema.
 | D169 | Un solo hook de tiempo real para los dos lados | El pasajero y el conductor escuchan la misma tabla con el mismo hook. **Quien ve que no lo decide el codigo sino las politicas**, que se aplican tambien en tiempo real. Dos hooks casi iguales serian duplicar para acabar dependiendo igualmente de las mismas dos politicas |
 | D170 | Calificacion cero | Un promedio de 0 se traduce a "sin calificaciones" antes de llegar a ninguna pantalla. El servidor guarda 0 cuando no hay ninguna, y una calificacion real nunca puede valer 0 porque el minimo es una estrella. Pintarle un 0,0 a un conductor nuevo le atribuiria un mal servicio que nadie ha dado |
 | D171 | Geometria de las rutas | `overview=full` y no `simplified`. La simplificada trae 4 puntos para 659 metros, o sea tramos rectos de 220 metros que atraviesan tres manzanas y salen de las calles. La completa trae 10, de 73 metros. **La diferencia son 131 bytes por peticion**: el ahorro que justificaba lo otro no existia. Lo vio el usuario mirando la pantalla |
+
+### Decisiones de la Fase 16
+
+| # | Decision | Valor |
+|---|---|---|
+| D196 | De donde sale cada historial | El del pasajero de `ride_requests`; el del conductor de `ride_offers`. No son la misma lista: el pasajero tiene solicitudes y el conductor tiene ofertas. Una que el rechazo no existe en el historial del pasajero, porque desde su lado no paso nada, su solicitud siguio buscando |
+| D197 | Cuantos desenlaces ve el conductor | Cinco, no cuatro. `taken_by_other` esta separado de `expired` porque cuando otro acepta primero la base de datos marca caducadas las ofertas pendientes (Fase 5), y sin distinguirlo la pantalla le diria "se agoto el tiempo" a quien no dejo pasar nada. **Es justo la cuenta que la empresa va a mirar en la Fase 20** |
+| D198 | Quien ve el nombre del pasajero en el historial | Solo el conductor que acepto, y lo aplica la funcion, no la pantalla. Lo mismo con la referencia del punto de recogida (D172). La primera version lo dejaba en manos de la politica `profiles_select_ride_counterpart` y **la prueba lo tumbo**: esa politica mira a la persona, no al viaje, asi que el nombre salia tambien en las ofertas rechazadas de alguien a quien ya habia llevado |
+| D199 | Como se pagina | Limite y desplazamiento, veinte por tanda, con tope de 50 en el servidor. No hay cursor: un historial es dato pasado y casi no cambia mientras se mira. El tope no es desconfianza del cliente, es que por la API cualquiera puede pedir sin techo |
+| D200 | Como se abre el detalle | Por identificador, pidiendo la fila otra vez, y no pasando la fila ya cargada por parametro. Cuesta una consulta y a cambio la pantalla funciona igual desde un enlace directo, al reabrir la aplicacion encima de ella y el dia que haya notificaciones (Fase 19). **Comprobado por enlace directo con un identificador ajeno**: responde "no encontramos ese servicio" |
+| D201 | Como se escriben las fechas | A mano, con los doce nombres de mes, sin `Intl`. Hermes trae Intl en Android pero el formato depende del idioma del aparato: un telefono en ingles pintaria "August 14, 3:40 PM" dentro de una pantalla en espanol. Doce horas y "a. m." / "p. m.", que es como se dice la hora en Colombia |
+| D202 | Donde vive el color del estado | En el icono, nunca en el texto, y cada desenlace con su propia forma. Es H14 aplicado: los pares de color de estado no llegan al contraste minimo, asi que un "Terminado" en verde seria dificil de leer. Ademas el color nunca es la unica senal |
+| D203 | Que se hace con H15 | Se cierra en la **Fase 22**, no ahora, y el plan queda escrito en la migracion `20260819223000_h15_comment_tells_the_truth.sql`. Hoy la base de datos deja de mentir sobre si misma: el comentario de la politica dice que el acceso al perfil de la contraparte **no caduca**. Arreglarlo de verdad obliga a que el telefono deje de ser una columna legible, y eso toca los caminos vivos de las fases 12 a 14, que no se pueden volver a verificar con un solo emulador y sin movimiento |
 
 ### Decisiones de la Fase 15
 
@@ -841,7 +864,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 13 | Asignacion en tiempo real | COMPLETADA Y APROBADA |
 | 14 | Seguimiento del conductor | COMPLETADA Y APROBADA |
 | 15 | Ciclo completo del servicio | COMPLETADA Y APROBADA |
-| 16 | Historial | Pendiente |
+| 16 | Historial | COMPLETADA, pendiente de aprobacion |
 | 17 | Calificaciones | Pendiente |
 | 18 | Cancelaciones y errores operativos | Pendiente |
 | 19 | Notificaciones | Pendiente |
@@ -2563,15 +2586,153 @@ oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El r
 
 ---
 
+## 15.17 HISTORIAL (Fase 16)
+
+### Que se hizo
+
+Las dos pantallas existian desde la Fase 4, vacias y con un comentario que decia "se
+construye de verdad en la Fase 16". Esta fase las lleno, y de paso encontro tres cosas rotas
+que solo se ven cuando algo las usa.
+
+**Las dos listas no son la misma lista, y esa es la decision de fondo (D196).** El pasajero
+tiene solicitudes; el conductor tiene ofertas. Por eso la del conductor sale de
+`ride_offers` y salen tambien las que rechazo: la pregunta que la empresa se va a hacer en
+la Fase 20 —cuantas se estan rechazando— solo se puede responder si estan.
+
+### Los cinco pasos
+
+1. **Las consultas en servidor**, una por rol, con su script que intenta leer lo ajeno
+2. **"Mis viajes" del pasajero**, con sus estados de carga, vacio y error
+3. **"Servicios realizados" del conductor**, con los cinco desenlaces
+4. **El detalle de un servicio**, con la linea de tiempo, para las dos partes
+5. **La decision sobre H15** y el checklist de validacion
+
+### Los tres fallos que encontro
+
+**El primero, de privacidad, y lo encontro la prueba y no la revision.** La funcion del
+conductor daba el nombre del pasajero en cualquier oferta, tambien en las rechazadas. La
+causa es exacta: se confio en la politica `profiles_select_ride_counterpart`, que **mira a
+la persona y no al viaje**. Un conductor que llevo a alguien una vez pasa su comprobacion
+para siempre, asi que en una oferta rechazada de esa misma pasajera el nombre salia igual. Y
+quien es el pasajero es justo lo que no ve hasta aceptar, desde la Fase 12. Se corrigio
+dentro de la funcion (D198).
+
+**El segundo, en pantalla: la fila se cortaba por donde no debia.** La linea de abajo iba
+toda seguida y con un nombre de conductor normal lo primero que desaparecia era el dato del
+viaje: "Conductor de prueba · Unidad 99 · 11 m...". Se partio en dos lineas, el recorrido
+arriba.
+
+**El tercero, y afecta a toda la aplicacion: sin conexion, ninguna pantalla decia "sin
+conexion".** Se apago la red del emulador y el historial dijo "ocurrio un error inesperado".
+El mensaje real era `fetch failed: java.net.UnknownHostException: Unable to resolve host`, y
+la lista de textos de red buscaba `failed to fetch`, que es **lo mismo escrito al reves**.
+Sin DNS el aparato ni siquiera intenta conectarse, que es lo que pasa cuando alguien se
+queda sin datos en la carretera. Corregido en `features/ride/errors.ts` y en
+`features/auth/errors.ts`, y ahora la pantalla usa la variante `offline` del sistema de
+diseno: "Sin conexion", con su icono, en vez de "Algo salio mal". Es el hallazgo H19.
+
+### H15, decidido
+
+**Se cierra en la Fase 22, con el plan escrito dentro de la migracion.** Hoy la base de
+datos deja de mentir sobre si misma: los comentarios de `shares_ride_with`,
+`driver_linked_to_request` y de la propia politica dicen que el acceso al perfil de la
+contraparte **no caduca**. El detalle esta en D203 y el plan completo, en cuatro pasos, en
+`20260819223000_h15_comment_tells_the_truth.sql`.
+
+### Archivos
+
+```
+supabase/migrations/20260819144500_ride_history.sql                    NUEVO
+supabase/migrations/20260819210500_ride_history_detail.sql             NUEVO
+supabase/migrations/20260819223000_h15_comment_tells_the_truth.sql     NUEVO
+supabase/dev-tools/prueba_historial.sql                                NUEVO
+supabase/dev-tools/prueba_detalle_historial.sql                        NUEVO
+
+src/features/history/history-service.ts   NUEVO. Las cuatro consultas
+src/features/history/use-history.ts       NUEVO. La lista paginada, sin saber de que es
+src/features/history/use-detail.ts        NUEVO. El detalle, con su "no encontrado"
+src/features/history/format-when.ts       NUEVO. Fecha y hora en espanol, sin Intl
+src/features/history/timeline.tsx         NUEVO. La linea de tiempo
+
+src/app/passenger/history.tsx     la lista del pasajero, antes vacia
+src/app/driver/history.tsx        la lista del conductor, antes vacia
+src/app/passenger/trip/[id].tsx   NUEVO. El detalle del pasajero
+src/app/driver/job/[id].tsx       NUEVO. El detalle del conductor
+src/app/driver/_layout.tsx        el detalle no es una pestana (href: null)
+src/features/ride/errors.ts       los textos de red que faltaban (H19)
+src/features/auth/errors.ts       los mismos, por el mismo motivo
+src/types/database.ts             regenerado
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Una politica que mira a la persona no sirve para proteger un momento.**
+   `shares_ride_with` responde "comparten viaje" y se leyo como "estan de viaje". Cuando lo
+   que hay que proteger es un instante, el filtro va donde se sabe el instante.
+2. **La lista de textos de red estaba incompleta desde la Fase 6 y nadie lo vio**, porque
+   hasta hoy nadie habia apagado la red y mirado la pantalla. Un caso degradado que no se
+   provoca a proposito no esta probado, esta supuesto.
+3. **Una comprobacion que no puede ver lo que busca siempre sale bien.** Las pruebas de fuga
+   se hacen desde fuera de la sesion suplantada: dentro, RLS esconde justo la fila que
+   delataria el fallo.
+4. **Una prueba que espera un numero fijo de filas se rompe sola.** Las cuentas de prueba ya
+   tienen historial de verdad. Las comprobaciones miran las filas que la propia prueba creo,
+   y de quien es cada fila devuelta, no cuantas hay.
+5. **Fast Refresh estaba apagado en el emulador.** La pantalla del conductor siguio
+   ensenando el texto viejo de la Fase 4 despues de escribirla entera. Es la misma leccion
+   del mapa, ahora sin tocar el mapa: ante una pantalla que no refleja el codigo,
+   `am force-stop` y volver a abrir ANTES de dudar.
+
+### Pruebas
+
+**50 comprobaciones automaticas**, todas en verde y dentro de transacciones que se deshacen.
+
+| Script | Comprobaciones | Que protege |
+|---|---|---|
+| `prueba_historial.sql` | 32 | Las dos listas: que salga lo que es de cada quien, el orden, el limite, y **cuatro intentos de leer lo ajeno** |
+| `prueba_detalle_historial.sql` | 18 | El detalle: la linea de tiempo, la privacidad del nombre y de la referencia, y que un identificador ajeno devuelva cero filas |
+
+**En dispositivo**, con las dos cuentas:
+
+- Los tres finales del pasajero en pantalla, contrastados fila por fila contra la tabla
+- Los cinco desenlaces del conductor, incluidos `rejected` y `taken_by_other`
+- **El mismo servicio visto por los dos**, con las mismas cinco horas
+- El detalle abierto **por enlace directo con un identificador ajeno**: "no encontramos ese
+  servicio", ni error ni datos de otro
+- La paginacion, bajando la tanda a 3 temporalmente: cuatro paginas, sin repetir filas
+- **Sin conexion**: "Sin conexion" con su icono, y "Reintentar" recupera la lista
+- Modo claro y oscuro en las cuatro pantallas
+
+### Lo que quedo sin verificar
+
+1. **El estado vacio de las dos listas.** Las cuentas de prueba ya tienen historial, y
+   vaciarlo no se deshace. Se vera con la primera cuenta nueva.
+2. **La paginacion con datos reales de mas de veinte filas.** Se probo bajando la tanda a 3;
+   con veinte hara falta un historial que hoy no existe.
+
+### Lo que queda comprometido para despues
+
+- **H15 en la Fase 22**, con su plan escrito (D203)
+- **H16 se ve ahora en pantalla.** El historial del conductor ensena "A 86,8 km de la
+  recogida" en una oferta real de la Fase 13. No lo causa esta fase, pero ya no es un
+  hallazgo teorico: un conductor lo lee
+- **El mapa del recorrido en el detalle.** Se dejo fuera a proposito: el rastro de
+  `ride_locations` esta vacio porque el emulador no produce movimiento, y un mapa vacio es
+  peor que ninguno
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 15 completadas y aprobadas, **mas D161 y el cambio del mapa a
-  Mapbox**. Siguiente: **cambiar el mapa a Mapbox**, ya aprobado, y despues la
-  Fase 16
-- **Paso actual:** Ninguno en curso. **El cambio a Mapbox esta sin confirmar en git**: ocho
-  archivos modificados, mas este documento
-- **Ultimo paso completado:** El cambio del mapa a Mapbox, con la ruta cayendo por fin sobre
-  las calles. Antes, el cierre de la Fase 15
+  Mapbox**. La **Fase 16, historial, esta terminada y pendiente de tu aprobacion**.
+  Siguiente: **Fase 17, calificaciones**
+- **Paso actual:** Ninguno en curso. **Nada de la Fase 16 esta confirmado en git**: tres
+  migraciones, dos scripts de prueba, seis archivos de `src/features/history/`, las cuatro
+  pantallas del historial, `driver/_layout.tsx`, los dos archivos de errores y los tipos
+  regenerados, mas este documento
+- **Ultimo paso completado:** La Fase 16 entera, con su checklist de validacion. Antes, el
+  cambio del mapa a Mapbox
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -2590,7 +2751,10 @@ oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El r
   su tiempo de llegada y su estado de conexion, y la navegacion hacia el punto de recogida, y
   **el ciclo completo del servicio**: las cuatro transiciones desde la pantalla del conductor,
   los cinco estados reflejados en la del pasajero, el resumen al terminar, el recorrido
-  historico con su distancia, y la lista de paradas cuando lleva varios servicios
+  historico con su distancia, y la lista de paradas cuando lleva varios servicios, y **el
+  historial de las dos partes**: el pasajero ve sus servicios terminados, cancelados y
+  caducados; el conductor ve sus ofertas con su desenlace, incluidas las que rechazo y las que
+  se llevo otro, y las dos partes pueden abrir el detalle con la linea de tiempo completa
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -2606,7 +2770,9 @@ oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El r
   automaticas y 17 en dispositivo, detalladas en 15.14, con cinco de privacidad de la posicion
   del conductor y tres de regresion de E30. Fase 15, 35 automaticas repartidas en cuatro
   scripts y el ciclo completo en dispositivo, detalladas en 15.15, con la prueba del ciclo
-  comprobando **las dos vistas en cada paso**
+  comprobando **las dos vistas en cada paso**. Fase 16, 50 automaticas en dos scripts y las
+  cuatro pantallas en dispositivo con las dos cuentas, detalladas en 15.17, incluidos cinco
+  intentos de leer lo ajeno y **el mismo servicio contrastado desde los dos lados**
 - **Errores pendientes:** Ninguno. **Sin verificar, todo por la misma causa —el equipo actual
   no puede producir movimiento—:** la regla de los 50 metros de R9, que la aplicacion grabe el
   rastro moviendose, y el aviso de mapa incompleto de D161. Ademas, **la restauracion del lado
@@ -2691,13 +2857,21 @@ oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El r
 - **Hallazgos abiertos:** H10 el indice unico de `places` normaliza mayusculas y espacios de
   los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
   lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
-  **H15** la politica `profiles_select_ride_counterpart` dice en su comentario "solo durante el
-  servicio", y la segunda mitad se cumple pero la primera no: `shares_ride_with` no filtra por
-  estado, asi que **una vez que un conductor lleva a alguien puede leer su nombre y su telefono
-  para siempre**. No esta claro que la intencion escrita sea la correcta, porque en la Fase 16
-  el conductor tendra un historial y ahi querra ver a quien llevo. Puede que sobre el
-  comentario y no el comportamiento, o que la respuesta sea "el nombre si, el telefono no".
-  Decidir en la Fase 16.
+  **H15 DECIDIDO, se cierra en la Fase 22.** `shares_ride_with` no filtra por estado, asi que
+  **una vez que un conductor lleva a alguien puede leer su nombre y su telefono para siempre**,
+  y `driver_linked_to_request` deja igual de expuesto `contact_phone` de cualquier solicitud
+  que se le llegara a ofrecer. En la Fase 16 se decidio no tocarlo todavia (D203): arreglarlo
+  bien obliga a que el telefono deje de ser una columna legible y pase a viajar solo por
+  funciones que comprueban el estado, y eso toca los caminos vivos de las fases 12 a 14, que
+  no se pueden volver a verificar con un solo emulador y sin movimiento. **Lo que si esta
+  hecho:** los comentarios de las dos funciones y de la politica ya dicen la verdad, y ninguna
+  pantalla del historial ensena el telefono ni el nombre de quien no llevo. El plan de cierre,
+  en cuatro pasos, esta escrito en `20260819223000_h15_comment_tells_the_truth.sql`.
+  **H19 RESUELTO** en la Fase 16: **sin conexion, ninguna pantalla decia "sin conexion"**. La
+  lista de textos de red buscaba `failed to fetch` y el mensaje real de Android es
+  `fetch failed: java.net.UnknownHostException`, que es lo mismo escrito al reves. Afectaba a
+  toda la aplicacion desde la Fase 6, y no se vio antes porque nadie habia apagado la red y
+  mirado la pantalla. Corregido en `features/ride/errors.ts` y `features/auth/errors.ts`.
   **H16** `find_available_drivers` **no tiene radio de corte**: la distancia solo se usa para
   ordenar. Un conductor en Medellin es candidato para un viaje en Amalfi, a 130 km, y se vio en
   pantalla durante las pruebas. En la Fase 5 se decidio asi razonando que "Amalfi cabe
@@ -2743,8 +2917,8 @@ oferta. Necesita montar una oferta viva con sus veinte segundos de ventana. El r
   `fase11.auth@motomoto-qa.co`, creada para poder cerrar sesion en el emulador sin pedirle la
   contrasena al usuario. **Al cerrar la Fase 14 no quedo nada mas**: los servicios de prueba se
   cancelaron por la funcion real y los parametros volvieron a 30, 10 y 20
-- **Proximo paso autorizado:** Ninguno. **La Fase 16, historial, esta pendiente de
-  autorizacion**
+- **Proximo paso autorizado:** Ninguno. **La Fase 16 esta terminada y pendiente de tu
+  aprobacion**; la Fase 17, calificaciones, esta pendiente de autorizacion
 
 ### Estado del equipo ahora mismo
 

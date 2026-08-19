@@ -53,6 +53,16 @@ const NETWORK_MESSAGE = 'No hay conexión con el servidor. Revisa tu internet e 
 const UNKNOWN_CODE = 'unknown_error';
 const UNKNOWN_MESSAGE = 'Ocurrió un error inesperado. Inténtalo de nuevo.';
 
+/** Ver el comentario gemelo en features/ride/errors.ts. */
+const NETWORK_HINTS = [
+  'network request failed',
+  'failed to fetch',
+  'fetch failed',
+  'network error',
+  'unable to resolve host',
+  'unknownhostexception',
+];
+
 /**
  * Convierte cualquier error en algo que se pueda mostrar y comparar.
  *
@@ -78,6 +88,15 @@ export function toAuthFailure(error: unknown): AuthFailure {
   // detecta por el nombre del error, que si es estable.
   const name = 'name' in error && typeof error.name === 'string' ? error.name : '';
   if (name === 'AuthRetryableFetchError' || name === 'TypeError') {
+    return { code: NETWORK_CODE, message: NETWORK_MESSAGE };
+  }
+
+  // Y tambien por el texto, porque el nombre no siempre llega. En la Fase 16 se
+  // vio que sin DNS el mensaje es `fetch failed: java.net.UnknownHostException`
+  // dentro de un objeto corriente, sin `name` que valga. Misma lista que en
+  // features/ride/errors.ts y por el mismo motivo.
+  const message = 'message' in error && typeof error.message === 'string' ? error.message : '';
+  if (NETWORK_HINTS.some((pista) => message.toLowerCase().includes(pista))) {
     return { code: NETWORK_CODE, message: NETWORK_MESSAGE };
   }
 
