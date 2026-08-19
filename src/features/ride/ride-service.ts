@@ -29,6 +29,16 @@ function fail<T = never>(error: unknown): Result<T> {
 
 export type RideRequestStatus = Database['public']['Enums']['ride_request_status'];
 
+/**
+ * El estado del viaje concreto, que es mas fino que el de la solicitud.
+ *
+ * La solicitud solo distingue "asignada" de "en curso". El viaje distingue si el
+ * conductor todavia no ha salido, si va de camino, si ya llego a esperar o si el
+ * pasajero va dentro, y esas cuatro cosas son las que el pasajero quiere saber
+ * cuando mira el telefono.
+ */
+export type RideStatus = Database['public']['Enums']['ride_status'];
+
 /** Un punto ya resuelto, tal y como lo entiende una persona y el backend. */
 export interface RequestPoint {
   latitude: number;
@@ -51,6 +61,8 @@ export interface RequestPoint {
  */
 export interface AssignedDriver {
   rideId: string;
+  /** En que va el viaje: si salio, si llego, si el pasajero ya va dentro. */
+  rideStatus: RideStatus;
   /**
    * Su identificador, para suscribirse solo a su posicion.
    *
@@ -179,6 +191,60 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
 }
 
 /**
+ * El servicio que acaba de terminar, para poder despedirse.
+ *
+ * Todo lo del viaje puede venir nulo, y hay que tratarlo como algo normal y no
+ * como un fallo: la distancia se queda sin calcular cuando el conductor no tuvo
+ * cobertura durante el recorrido, y el servidor prefiere no darla antes que dar
+ * una inventada.
+ */
+export interface FinishedRequest {
+  id: string;
+  originLabel: string;
+  destinationLabel: string;
+  passengerCount: number;
+  completedAt: string;
+  meters: number | null;
+  seconds: number | null;
+  driverName: string | null;
+  unitNumber: number | null;
+}
+
+/**
+ * El ultimo servicio terminado del pasajero, si fue hace poco.
+ *
+ * Devolver null es el caso normal: significa que no hay nada de que despedirse.
+ * Solo se pregunta cuando no hay servicio activo, que es cuando la respuesta
+ * puede cambiar algo en pantalla.
+ */
+export async function fetchFinishedRequest(): Promise<Result<FinishedRequest | null>> {
+  const { data, error } = await supabase.rpc('get_finished_request');
+
+  if (error) {
+    return fail(error);
+  }
+
+  const row = (data ?? [])[0];
+  if (row === undefined) {
+    return ok(null);
+  }
+
+  return ok({
+    id: row.id,
+    originLabel: row.origin_label,
+    destinationLabel: row.destination_label,
+    passengerCount: row.passenger_count,
+    completedAt: row.completed_at,
+    // El generador vuelve a declarar como no nulos tres retornos que si lo
+    // admiten. Es la quinta vez, asi que se comprueban en lugar de confiar.
+    meters: typeof row.distance_m === 'number' ? row.distance_m : null,
+    seconds: typeof row.duration_s === 'number' ? row.duration_s : null,
+    driverName: row.driver_name,
+    unitNumber: typeof row.vehicle_unit_number === 'number' ? row.vehicle_unit_number : null,
+  });
+}
+
+/**
  * Donde esta el conductor ahora mismo, y de cuando es ese dato.
  *
  * La antiguedad viaja siempre con la posicion y no es un extra. Un marcador
@@ -302,6 +368,7 @@ export async function fetchActiveRequest(): Promise<Result<ActiveRequest | null>
  */
 function aConductorAsignado(row: {
   ride_id: string | null;
+  ride_status: RideStatus | null;
   driver_id: string | null;
   driver_name: string | null;
   driver_phone: string | null;
@@ -311,6 +378,7 @@ function aConductorAsignado(row: {
 }): AssignedDriver | null {
   if (
     row.ride_id === null ||
+    row.ride_status === null ||
     row.driver_id === null ||
     row.driver_name === null ||
     row.driver_phone === null ||
@@ -327,6 +395,7 @@ function aConductorAsignado(row: {
 
   return {
     rideId: row.ride_id,
+    rideStatus: row.ride_status,
     id: row.driver_id,
     name: row.driver_name,
     phone: row.driver_phone,

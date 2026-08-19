@@ -1004,6 +1004,20 @@ export type Database = {
           updated_at: string;
         }[];
       };
+      get_finished_request: {
+        Args: never;
+        Returns: {
+          completed_at: string;
+          destination_label: string;
+          distance_m: number;
+          driver_name: string;
+          duration_s: number;
+          id: string;
+          origin_label: string;
+          passenger_count: number;
+          vehicle_unit_number: number;
+        }[];
+      };
       get_setting: { Args: { p_default?: Json; p_key: string }; Returns: Json };
       has_active_ride_with_driver: {
         Args: { p_driver_id: string };

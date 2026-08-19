@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-11
+- **Ultima actualizacion:** 2026-08-12
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -13,16 +13,16 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   14 seguimiento del conductor
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
-- **Fase 14 terminada:** el pasajero ve la ruta de su viaje y su motorraton moviendose por el
-  mapa, el conductor recibe una referencia escrita del punto de recogida y puede abrir la
-  navegacion. Detalle en la seccion 15.14
-- **Trabajo siguiente:** **Fase 15, ciclo completo del servicio.** Llega con dos encargos
-  escritos, los dos de la Fase 14: la **navegacion al destino** junto a "iniciar recorrido", y
-  la **lista de paradas** cuando el conductor lleva dos o tres servicios. Los dos dependen de
-  los estados que crea esta fase; detalle en la seccion 15.14
-- **Ultimo commit:** 1f16df6 feat: assign drivers in realtime for both sides.
-  **La Fase 14 esta hecha y probada pero SIN CONFIRMAR:** tres migraciones nuevas, dos
-  archivos nuevos y doce modificados esperan commit, mas este documento
+- **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
+  conductor, el pasajero ve en cual va y se despide al terminar, y el recorrido queda
+  registrado. Detalle en la seccion 15.15
+- **Trabajo siguiente:** **cambiar el mapa a Mapbox**, ya aprobado por el usuario para justo
+  despues de la Fase 15. NO es la Fase 16. El motivo esta en el hallazgo H18: la ruta se
+  calcula con Mapbox y se dibuja sobre un mapa de Google, y en Amalfi los dos no coinciden.
+  Toca codigo nativo y obliga a recompilar el cliente de desarrollo
+- **Ultimo commit:** 1c2e465 feat: track the driver on the passenger's map.
+  **La Fase 15 esta hecha y probada pero SIN CONFIRMAR:** seis migraciones nuevas, tres
+  archivos nuevos y siete modificados esperan commit, mas este documento
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -72,18 +72,23 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue:** **la Fase 15, ciclo completo del servicio.** Llega con dos encargos ya
-comprometidos, los dos de la Fase 14 y los dos bloqueados por lo mismo: hasta que existan los
-estados del viaje, la aplicacion no sabe **quien va ya a bordo**.
+**Por donde se sigue: CAMBIAR EL MAPA A MAPBOX, y no es la Fase 16.** El usuario lo aprobo
+expresamente al cerrar la Fase 15, con estas palabras: "termina la fase 15 y despues cambiamos
+el mapa a Mapbox".
 
-1. **Navegacion al destino**, junto al boton "iniciar recorrido". Hoy solo se navega al punto
-   de recogida
-2. **Lista de paradas cuando lleva dos o tres servicios**, que el usuario pregunto al cerrar la
-   Fase 14. La respuesta razonada esta en la seccion 15.14 e incluye un dato que descarta media
-   idea: **Waze no admite paradas intermedias desde un enlace**
+El motivo es el hallazgo **H18**, y esta demostrado con evidencia: **la ruta se calcula con
+Mapbox y se dibuja sobre un mapa de Google**, y en Amalfi los dos no coinciden. El usuario vio
+la linea cruzando manzanas vacias; se rendero la MISMA ruta, con las MISMAS coordenadas, sobre
+el mapa de Mapbox y cada tramo caia sobre una calle. La ruta esta bien; el mapa de debajo es el
+que le falta informacion.
 
-**La Fase 14 esta terminada**, con su registro en la seccion 15.14. Alli estan tambien las dos
-cosas que quedaron sin verificar y **por que no se pueden verificar con el equipo actual**.
+Lo que implica el cambio: una libreria nativa (`@rnmapbox/maps`), **recompilar el cliente de
+desarrollo** y reescribir `src/features/map/map.tsx`, que es un solo archivo justamente porque
+D117 se escribio pensando en este dia. De paso cierra el pendiente de los terminos de Mapbox
+sobre mapa ajeno.
+
+**La Fase 15 esta terminada**, con su registro en la seccion 15.15. Alli estan las dos cosas
+que quedaron sin verificar y por que.
 
 **Cosas del entorno que conviene no redescubrir:**
 
@@ -435,6 +440,23 @@ el sistema.
 | D169 | Un solo hook de tiempo real para los dos lados | El pasajero y el conductor escuchan la misma tabla con el mismo hook. **Quien ve que no lo decide el codigo sino las politicas**, que se aplican tambien en tiempo real. Dos hooks casi iguales serian duplicar para acabar dependiendo igualmente de las mismas dos politicas |
 | D170 | Calificacion cero | Un promedio de 0 se traduce a "sin calificaciones" antes de llegar a ninguna pantalla. El servidor guarda 0 cuando no hay ninguna, y una calificacion real nunca puede valer 0 porque el minimo es una estrella. Pintarle un 0,0 a un conductor nuevo le atribuiria un mal servicio que nadie ha dado |
 | D171 | Geometria de las rutas | `overview=full` y no `simplified`. La simplificada trae 4 puntos para 659 metros, o sea tramos rectos de 220 metros que atraviesan tres manzanas y salen de las calles. La completa trae 10, de 73 metros. **La diferencia son 131 bytes por peticion**: el ahorro que justificaba lo otro no existia. Lo vio el usuario mirando la pantalla |
+
+### Decisiones de la Fase 15
+
+| # | Decision | Valor |
+|---|---|---|
+| D181 | Terminar un servicio NO enciende la disponibilidad | `complete_ride` y `cancel_ride` acababan con `set is_available = true`, escrito en la Fase 5 cuando un viaje equivalia a estar ocupado. **D161 y D164 lo dejaron obsoleto y nadie volvio a mirarlo**: un conductor que apagaba el interruptor porque paraba de trabajar reaparecia disponible al cerrar su ultimo servicio, y con varios viajes encima quedaba "disponible" con el motorraton lleno. Se quito la linea en vez de recalcular: para encender con criterio habria que saber **quien** apago el interruptor, y ese dato no existe. Entre encender a quien no queria (invisible, y contra una decision aprobada) y dejar apagado a quien si (visible en la tarjeta mas grande de su pantalla, y a un toque), el segundo error es mucho mas barato |
+| D182 | Un solo boton por tarjeta, el que toca ahora | No los cuatro con tres apagados. El conductor mira la tarjeta de reojo, a veces en movimiento, y una fila de botones grises es ruido que hay que leer para descartar. Cual es lo decide el estado, y el estado lo decide el servidor |
+| D183 | Confirmacion solo al finalizar | Es la unica transicion irreversible de las cuatro, y la Fase 0 la dejo escrita como situacion a cubrir: "el conductor termina accidentalmente un servicio". Pedir confirmacion en las cuatro convertiria el ciclo normal en ocho toques y ensenaria a confirmar sin leer |
+| D184 | Se publica `rides` ademas de `ride_requests` | De las cuatro transiciones, **solo dos tocan la solicitud**: iniciar y finalizar. Salir hacia el punto y anunciar la llegada se quedaban sin que nadie las oyera, y **la llegada es justo el aviso que hace que el pasajero salga a la calle**. D168 no se equivoco: publico la tabla correcta para lo que existia entonces, cuando no habia transiciones. El pasajero se suscribe a SU viaje, filtrado por identificador |
+| D185 | Que ve el pasajero al terminar | Un resumen breve que el cierra cuando quiera, no una pantalla que se va sola a los cinco segundos: puede estar bajandose, guardando el telefono o pagando. Sin estrellas, que son de la Fase 17. Antes de esto la solicitud desaparecia y la pantalla se quedaba diciendo "tu motorraton va en camino" con los botones de "Volver a pedirlo" debajo |
+| D186 | Ventana del resumen | Cinco minutos, configurable en `app_settings`. Cubre "bajarse y guardar el telefono"; pasado ese rato, quien abre la aplicacion viene a otra cosa. Se probo con treinta y el resumen recibia al pasajero media hora despues |
+| D187 | El resumen solo cubre servicios TERMINADOS | No los cancelados. Cuando cancela el pasajero ya lo sabe, y cuando cancela el conductor antes de empezar la solicitud vuelve a `searching` y sigue viva. Queda fuera el caso de que el conductor cancele con el pasajero a bordo, que es de la **Fase 18**, la que decide que ve el pasajero ante cada tipo de cancelacion |
+| D188 | La distancia del viaje cuenta solo el viaje | `complete_ride` medi­a **todos** los puntos del rastro, y la politica de la Fase 5 deja al conductor insertar puntos tambien mientras va hacia la recogida. El cliente solo graba durante el recorrido, asi que en uso normal salia bien, pero por la API se podia inflar la distancia con el trayecto de aproximacion. Ahora solo cuentan los puntos desde `started_at` |
+| D189 | El rastro se graba cada 50 metros, no cada diez segundos | La posicion actual ya va cada diez (R9) y con eso el pasajero ve moverse el motorraton. El rastro es otra cosa: es el registro del viaje, y un punto cada diez segundos llenaria la tabla de puntos identicos con el conductor parado en un semaforo. Es el "filtro de distancia minima" que D14 dejo escrito |
+| D190 | La navegacion sigue al estado | Con el pasajero fuera lleva al punto de recogida; con el a bordo, al destino. Y la etiqueta dice a donde va, "Ir a la recogida" o "Ir al destino", en vez de un "Cómo llegar" que obliga a deducir el destino del estado de la tarjeta mientras se conduce. Cierra lo que D179 dejo pendiente: hasta que existieron los estados, la aplicacion no sabia quien iba dentro |
+| D191 | Las paradas no se reordenan | Aparecen en el orden en que el conductor las acepto, que es el unico que no nos hemos inventado. Ordenarlas por cercania seria facil y seria mentir: la mas cercana en linea recta puede estar al otro lado de una quebrada, y quien sabe si algo le queda de camino es el conductor. Es D161 aplicado |
+| D192 | Una parada por vez, sin ruta multiparada | Cada parada se navega por separado. Una ruta con paradas intermedias obliga a Google Maps, porque **Waze no las admite desde un enlace**, y eso dejaria sin efecto el selector de aplicaciones de D178 |
 
 ### Decisiones de la Fase 14
 
@@ -816,7 +838,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 12 | Modulo del conductor | COMPLETADA Y APROBADA |
 | 13 | Asignacion en tiempo real | COMPLETADA Y APROBADA |
 | 14 | Seguimiento del conductor | COMPLETADA Y APROBADA |
-| 15 | Ciclo completo del servicio | Pendiente |
+| 15 | Ciclo completo del servicio | COMPLETADA |
 | 16 | Historial | Pendiente |
 | 17 | Calificaciones | Pendiente |
 | 18 | Cancelaciones y errores operativos | Pendiente |
@@ -2294,16 +2316,142 @@ Y en dispositivo, con un servicio aceptado:
 
 ---
 
+## 15.15 CICLO COMPLETO DEL SERVICIO (Fase 15)
+
+### Lo que ya estaba hecho, y lo que faltaba
+
+**Las cuatro funciones de transicion existian desde la Fase 5**, escritas y probadas
+antes de que hubiera una sola pantalla que las llamara, con la regla R5 dentro y el
+calculo de la distancia incluido. Esta fase no invento la maquina de estados: la
+conecto, y al conectarla encontro tres cosas rotas que solo se ven cuando algo las usa.
+
+### Los cinco pasos
+
+1. **Las cuatro transiciones en la pantalla del conductor**, un boton por vez (D182)
+2. **El pasajero ve en que va su servicio**, y se despide al terminar (D185)
+3. **El recorrido historico**, que hasta ahora nadie escribia
+4. **Los dos encargos heredados de la Fase 14**: navegacion al destino y lista de paradas
+5. **Restaurar al reabrir** y validar el ciclo entero
+
+### Los tres fallos que encontro
+
+**El primero, y el mas grave: el pasajero no se enteraba de que el conductor habia
+llegado.** Se movio el viaje a "en camino" desde el servidor y la pantalla siguio
+diciendo "tomo tu servicio" indefinidamente. La causa es exacta: las cuatro transiciones
+escriben en `rides`, y el pasajero solo escuchaba `ride_requests`. **De las cuatro, solo
+dos tocan la solicitud.** Salir hacia el punto y anunciar la llegada se quedaban sin que
+nadie las oyera, y la llegada es justo el aviso que hace que el pasajero salga a la calle.
+Se corrigio publicando `rides` (D184).
+
+**El segundo: terminar un servicio encendia la disponibilidad** (D181). Una linea de la
+Fase 5 que D161 y D164 dejaron obsoleta sin que nadie volviera a mirarla. Un conductor que
+apagaba el interruptor porque paraba de trabajar volvia a recibir solicitudes al cerrar su
+ultimo viaje.
+
+**El tercero, sutil: la distancia del viaje podia incluir la aproximacion** (D188). La
+politica de la Fase 5 deja al conductor grabar puntos tambien mientras va a recoger, y
+`complete_ride` los sumaba todos. En uso normal no pasaba, porque el cliente solo graba
+durante el recorrido; por la API si.
+
+### La pregunta de las paradas, respondida en codigo
+
+El usuario pregunto al cerrar la Fase 14 como se mostrarian los puntos de recogida y
+destino con dos o tres servicios. La respuesta esta implementada y sale del dato, no de
+una suposicion: un viaje que aun no arranco aporta su recogida, uno en curso aporta su
+destino. **Solo se podia hacer ahora**, porque hace falta saber quien va ya a bordo.
+
+### Archivos
+
+```
+supabase/migrations/20260812083511_finishing_does_not_turn_availability_on.sql  NUEVO
+supabase/migrations/20260812084420_revoke_anon_on_ride_transitions.sql          NUEVO
+supabase/migrations/20260812091646_finished_request_summary.sql                 NUEVO
+supabase/migrations/20260812093837_shorter_finished_summary_window.sql          NUEVO
+supabase/migrations/20260812094629_publish_rides_realtime.sql                   NUEVO
+supabase/migrations/20260812132825_trip_distance_from_started_at.sql            NUEVO
+
+src/features/ride/use-ride-realtime.ts        NUEVO. El pasajero escucha su viaje
+src/features/driver/use-track-recording.ts    NUEVO. El rastro, cada 50 m
+src/features/driver/pending-stops.tsx         NUEVO. La lista de paradas
+
+src/features/driver/driver-service.ts    las cuatro transiciones y el rastro
+src/features/driver/active-ride-card.tsx un boton por estado, navegacion segun estado
+src/features/ride/ride-service.ts        rideStatus y el resumen final
+src/features/ride/errors.ts              los codigos de las transiciones
+src/app/driver/index.tsx                 avanzarViaje, rastro y paradas
+src/app/passenger/index.tsx              los cinco estados y la despedida
+src/types/database.ts                    regenerado
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Una prueba que no comprueba las dos vistas no comprueba nada.** El fallo de la
+   llegada habria pasado cualquier prueba que mirara la tabla `rides`. Por eso la prueba
+   del ciclo comprueba, en cada paso, lo que ve el pasajero Y lo que ve el conductor.
+2. **Una linea correcta puede volverse falsa sin que nadie la toque.** El
+   `set is_available = true` era razonable cuando se escribio. Lo rompieron dos decisiones
+   posteriores, y siguio ahi. Al cambiar una regla hay que buscar quien mas dependia de la
+   anterior.
+3. **Un dato de prueba escrito a mano parece un fallo del producto.** Volvio a pasar: el
+   usuario vio que el destino no era el hospital. No lo era, y estaba a 426 m, porque el
+   asistente lo habia escrito a mano en un script. Es la segunda vez en dos dias.
+4. **Antes de culpar al proveedor, comprobar el propio estilo.** Con las rutas "por calles
+   que no existen" se reviso primero `map-style.ts`, que solo apaga puntos de interes.
+5. **La recarga en caliente no resuelve archivos nuevos.** Un `ReferenceError` sobre un
+   hook recien creado no era del codigo: Metro no lo habia resuelto. Se arregla arrancando
+   en frio, y hay que comprobarlo antes de tocar nada.
+6. **En Git Bash, `adb ... /sdcard/...` falla.** La ruta se convierte en ruta de Windows.
+   Va por PowerShell. Ya estaba escrito y se volvio a tropezar.
+
+### Pruebas
+
+**35 comprobaciones automaticas**, todas en verde y dentro de transacciones que se
+deshacen.
+
+| Script | Comprobaciones | Que protege |
+|---|---|---|
+| `prueba_transiciones.sql` | 12 | Que no se pueda saltar ni repetir un paso, R5, y que el viaje sea de su conductor |
+| `prueba_recorrido.sql` | 7 | Quien puede escribir el rastro y que la distancia mida solo el viaje |
+| `prueba_paradas.sql` | 4 | Dos servicios en estados distintos, que es de donde sale la lista |
+| `prueba_ciclo_completo.sql` | 12 | El ciclo entero, **comprobando las dos vistas en cada paso** |
+
+**En dispositivo:** el ciclo completo tocado uno por uno desde la pantalla del conductor,
+el cambio de estado llegando al pasajero en tiempo real, la despedida al terminar, la
+lista de paradas con dos servicios, los botones "Ir a la recogida" y "Ir al destino", y
+**el criterio de aceptacion 5**: matar la aplicacion con dos servicios encima y verla
+volver entera.
+
+### Lo que quedo sin verificar
+
+1. **Que la aplicacion grabe el rastro en movimiento.** El emulador no le entrega
+   posiciones que cambien: comprobado con Fake GPS, que solo la entrega al arrancar el
+   vigilante, y con `emu geo fix` en bucle, que no llega. Es la misma limitacion que
+   bloqueo la regla de los 50 m en la Fase 14, ahora confirmada por dos caminos.
+2. **La restauracion del lado del pasajero en pantalla.** El camino de datos si esta
+   probado (comprobacion 8 del ciclo) y en la Fase 14 se vio la ruta reconstruirse tras
+   cerrar del todo, pero no se vio la pantalla del pasajero restaurandose en pleno viaje.
+
+### Lo que queda comprometido para despues
+
+1. **Cambiar el mapa a Mapbox**, ya aprobado por el usuario para justo despues de esta
+   fase. El motivo esta en H18: la ruta se calcula con Mapbox y se dibuja sobre un mapa de
+   Google, y en Amalfi no coinciden.
+2. **Las cancelaciones son de la Fase 18.** Hoy la pantalla del pasajero sigue ofreciendo
+   "Cancelar servicio" con el pasajero dentro del motorraton. Cuando se puede cancelar y
+   que pasa entonces se decide alli.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 14 completadas y aprobadas, **mas D161**. Siguiente: Fase 15,
-  ciclo completo del servicio, pendiente de autorizacion
-- **Paso actual:** Ninguno en curso. **La Fase 14 esta sin confirmar en git**: tres migraciones
-  nuevas, dos archivos nuevos y doce modificados, mas este documento
-- **Ultimo paso completado:** Cierre de la Fase 14. El pasajero ve la ruta de su viaje y su
-  motorraton moviendose por el mapa, con cuanto falta y si se perdio la señal. El conductor
-  recibe una referencia escrita de donde esta la persona y puede abrir la navegacion hacia
-  ella
+- **Fase actual:** Fases 0 a 14 completadas y aprobadas, **mas D161**. **Fase 15 terminada y
+  pendiente de aprobacion.** Siguiente: **cambiar el mapa a Mapbox**, ya aprobado, y despues la
+  Fase 16
+- **Paso actual:** Ninguno en curso. **La Fase 15 esta sin confirmar en git**: seis migraciones
+  nuevas, tres archivos nuevos y siete modificados, mas este documento
+- **Ultimo paso completado:** Cierre de la Fase 15. El conductor mueve el servicio por sus
+  cinco estados, el pasajero ve en cual va y recibe un resumen al terminar, el recorrido queda
+  registrado, y con dos o tres servicios encima ve la lista de sus paradas
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -2319,7 +2467,10 @@ Y en dispositivo, con un servicio aceptado:
   alguien acepta, y el conductor deja de ver lo que ya no existe, y **el seguimiento del
   conductor**: la referencia escrita del punto de recogida, la ruta dibujada en la pantalla del
   pasajero, los dos ritmos de envio de posicion de R9, el motorraton moviendose en el mapa con
-  su tiempo de llegada y su estado de conexion, y la navegacion hacia el punto de recogida
+  su tiempo de llegada y su estado de conexion, y la navegacion hacia el punto de recogida, y
+  **el ciclo completo del servicio**: las cuatro transiciones desde la pantalla del conductor,
+  los cinco estados reflejados en la del pasajero, el resumen al terminar, el recorrido
+  historico con su distancia, y la lista de paradas cuando lleva varios servicios
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -2333,12 +2484,23 @@ Y en dispositivo, con un servicio aceptado:
   seis de privacidad ejecutadas como `authenticated`, la RLS de tiempo real probada con un
   cliente real, y las pruebas de dos aparatos a la vez, detalladas en 15.13. Fase 14, 24
   automaticas y 17 en dispositivo, detalladas en 15.14, con cinco de privacidad de la posicion
-  del conductor y tres de regresion de E30
-- **Errores pendientes:** Ninguno. **Dos cosas sin verificar en la Fase 14**, escritas en
-  15.14, y las dos por la misma causa: **el equipo actual no puede producir movimiento**. Son
-  la regla de los 50 metros de R9 y el marcador atenuado. **Sigue sin verificarse tambien** el
-  aviso de mapa incompleto de D161, escrito en 15.12
-- **Errores resueltos hasta ahora:** E1 a E30. Los veinte ultimos, todos del asistente.
+  del conductor y tres de regresion de E30. Fase 15, 35 automaticas repartidas en cuatro
+  scripts y el ciclo completo en dispositivo, detalladas en 15.15, con la prueba del ciclo
+  comprobando **las dos vistas en cada paso**
+- **Errores pendientes:** Ninguno. **Sin verificar, todo por la misma causa —el equipo actual
+  no puede producir movimiento—:** la regla de los 50 metros de R9, que la aplicacion grabe el
+  rastro moviendose, y el aviso de mapa incompleto de D161. Ademas, **la restauracion del lado
+  del pasajero no se vio en pantalla** (15.15). El marcador atenuado si quedo verificado en la
+  Fase 15
+- **Errores resueltos hasta ahora:** E1 a E33. Los veintitres ultimos, todos del asistente.
+  **Fase 15, los tres encontrados al conectar la maquina de estados:** E31, **el pasajero no se
+  enteraba de que el conductor habia llegado**, porque las cuatro transiciones escriben en
+  `rides` y el pasajero solo escuchaba `ride_requests`; de las cuatro, solo dos tocan la
+  solicitud. E32, **terminar un servicio encendia la disponibilidad** aunque el conductor la
+  hubiera apagado a mano: una linea de la Fase 5 que D161 y D164 dejaron obsoleta sin que nadie
+  volviera a mirarla. E33, **la distancia del viaje podia incluir el trayecto de aproximacion**,
+  porque `complete_ride` sumaba todos los puntos del rastro y la politica permite grabar
+  tambien yendo a recoger. **Los tres salieron de conectar y probar, no de leer el codigo.**
   **Fase 14, uno del asistente:** E30, al reescribir `request_ride` para anadirle la
   referencia se partio de la definicion de la Fase 5, cuando esa funcion se habia redefinido
   dos veces despues; la version aplicada **borro las dos comprobaciones de zona de servicio y
@@ -2421,6 +2583,14 @@ Y en dispositivo, con un servicio aceptado:
   pantalla durante las pruebas. En la Fase 5 se decidio asi razonando que "Amalfi cabe
   holgadamente en el radio que habriamos puesto", dando por hecho que todos los conductores
   estan dentro del municipio. Conviene decidir si eso debe seguir siendo cierto.
+  **H18** **la ruta se calcula con Mapbox y se dibuja sobre un mapa de Google, y en Amalfi los
+  dos no coinciden.** Lo vio el usuario: la linea cruzaba manzanas vacias y los puntos no caian
+  donde debian. Se comprobo renderizando la MISMA ruta con las MISMAS coordenadas sobre el mapa
+  de Mapbox: cada tramo cae sobre una calle. Mapbox dice que pasa por Calle 17, Carrera 23 y
+  168 m de una via sin nombre; Google dibuja esa zona casi vacia. No es el estilo propio, que
+  solo apaga puntos de interes. Encaja con lo que ya sabiamos desde la Fase 8: de 39 sitios
+  reales de Amalfi, Mapbox acerto 22 y Google 13. **Se resuelve pasando el mapa a Mapbox**, ya
+  aprobado por el usuario para justo despues de la Fase 15.
   **H17** `AMALFI_CENTER`, la vista inicial del mapa, esta a **353 metros del parque**. D122 la
   documenta como "Parque de Amalfi (6,9047 / -75,0767)", pero la tabla de lugares tiene el
   parque en 6,907392 / -75,074987. **Lo encontro el usuario mirando la pantalla**, al ver que
@@ -2443,7 +2613,9 @@ Y en dispositivo, con un servicio aceptado:
   3490d35 selector de pasajeros y hoja ajustada al contenido,
   fe6c852 estado de la Fase 12 y la decision de recoger en ruta,
   154711f recoger pasajeros en ruta (D161),
-  1f16df6 asignacion en tiempo real de las dos partes (Fase 13)
+  1f16df6 asignacion en tiempo real de las dos partes (Fase 13),
+  d2ec67d seguimiento del conductor en el mapa del pasajero (Fase 14),
+  1c2e465 aprobacion de la Fase 14 en el documento
 - **Datos de prueba que quedaron en el servidor:** nueve solicitudes de la cuenta del usuario,
   una cancelada y ocho caducadas, todas de "Alto de la Virgen" a "El parque". Se dejaron a
   proposito, porque borrarlas no se deshace y sirven para probar el historial de la Fase 16.
@@ -2451,7 +2623,8 @@ Y en dispositivo, con un servicio aceptado:
   `fase11.auth@motomoto-qa.co`, creada para poder cerrar sesion en el emulador sin pedirle la
   contrasena al usuario. **Al cerrar la Fase 14 no quedo nada mas**: los servicios de prueba se
   cancelaron por la funcion real y los parametros volvieron a 30, 10 y 20
-- **Proximo paso autorizado:** Ninguno hasta autorizacion de la Fase 15
+- **Proximo paso autorizado:** **Cambiar el mapa a Mapbox**, aprobado por el usuario al cerrar
+  la Fase 15. La Fase 16 va despues
 
 ### Estado del equipo ahora mismo
 
@@ -2547,9 +2720,13 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
   la Fase 14 se cerro solo con 411 dp
 - **Los scripts de prueba no estan en el repositorio.** `prueba_capacidad.sql`,
   `prueba_asientos.sql`, `prueba_ciclo.sql`, `prueba_interruptor.sql`, `prueba_referencia.sql`
-  y `prueba_posicion.sql` viven en carpetas temporales, pero los checklists de regresion de las
+  `prueba_posicion.sql`, `prueba_transiciones.sql`, `prueba_recorrido.sql`,
+  `prueba_paradas.sql` y `prueba_ciclo_completo.sql` viven en carpetas temporales, pero los checklists de regresion de las
   secciones 15.12 y 15.14 los nombran como si estuvieran a mano. **Hoy esa lista apunta a
   archivos que nadie tiene.** Recogerlos en `supabase/dev-tools/` antes de la Fase 23
+- **Revocar `anon` en las funciones que faltan** (Fase 22). En la Fase 15 se cerro para las
+  cuatro transiciones; quedan `accept_ride_offer`, `reject_ride_offer`, `cancel_request` y
+  `rate_ride`, ademas de varias funciones de disparador que no deberia poder llamar nadie
 - **Decidir la coordenada del parque (H17).** `AMALFI_CENTER` esta a 353 m del parque que dice
   la tabla de lugares, y D122 la documenta como el parque
 - Conectividad de datos durante las pruebas de campo en Amalfi. Sin ella el dispositivo

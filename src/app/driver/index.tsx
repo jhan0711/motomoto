@@ -13,17 +13,23 @@ import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
 import {
   acceptOffer,
+  completeRide,
+  confirmArrival,
   fetchDriverState,
   rejectOffer,
   fetchActiveRides,
   setAvailability,
+  startDrivingToPickup,
+  startRide,
   type DriverRide,
   type DriverState,
 } from '@/features/driver/driver-service';
-import { ActiveRideCard } from '@/features/driver/active-ride-card';
+import { ActiveRideCard, type RideAction } from '@/features/driver/active-ride-card';
+import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
+import { useTrackRecording } from '@/features/driver/use-track-recording';
 import { useLocation } from '@/features/map/use-location';
 import { RIDE_ERROR_CODES } from '@/features/ride/errors';
 import { useRequestRealtime } from '@/features/ride/use-request-realtime';
@@ -86,6 +92,11 @@ export default function DriverHome() {
     riding: viajes.length > 0,
   });
 
+  // El rastro se graba solo mientras hay pasajero a bordo. Un viaje aceptado o de
+  // camino no cuenta: eso es la aproximacion, no el recorrido.
+  const viajesEnRecorrido = viajes.filter((v) => v.status === 'in_progress').map((v) => v.rideId);
+  useTrackRecording(viajesEnRecorrido, coords);
+
   const sinVehiculoAun = estado !== null && estado.vehicle === null;
   const ofertas = useDriverOffers(disponible && !sinVehiculoAun);
 
@@ -106,12 +117,72 @@ export default function DriverHome() {
   const [respondiendo, setRespondiendo] = useState<string | null>(null);
   const [rechazando, setRechazando] = useState<string | null>(null);
 
+  /**
+   * Que viaje esta esperando respuesta del servidor, y que fallo en cual.
+   *
+   * Van por identificador de viaje y no como un booleano suelto porque desde
+   * D161 puede haber dos o tres tarjetas a la vez: un girador global las pondria
+   * a todas en marcha, y un mensaje de error global aparecerian bajo la tarjeta
+   * equivocada.
+   */
+  const [avanzando, setAvanzando] = useState<string | null>(null);
+  const [errorViaje, setErrorViaje] = useState<{ rideId: string; message: string } | null>(null);
+
   const cargarViajes = useCallback(async () => {
     const resultado = await fetchActiveRides();
     if (resultado.ok) {
       setViajes(resultado.data);
     }
   }, []);
+
+  /**
+   * Mueve un servicio al estado siguiente.
+   *
+   * Se releen los viajes siempre, salga bien o mal, y esa es la parte que
+   * importa. Si sale bien, para que la tarjeta ensene el boton que toca ahora.
+   * Y si sale mal, porque los dos errores que puede devolver significan lo mismo:
+   * **el viaje ya no esta donde la pantalla creia**. Pasa cuando el pasajero
+   * cancela mientras el conductor va de camino, o cuando dos toques seguidos
+   * llegan al servidor. Dejar la tarjeta como estaba invitaria a insistir contra
+   * un estado que ya cambio.
+   *
+   * `complete_ride` es la unica que ademas hace desaparecer la tarjeta, porque
+   * `list_driver_active_rides` solo devuelve los viajes vivos.
+   */
+  const avanzarViaje = useCallback(
+    async (viaje: DriverRide, accion: RideAction) => {
+      setAvanzando(viaje.rideId);
+      setErrorViaje(null);
+
+      const resultado = await (accion === 'on_the_way'
+        ? startDrivingToPickup(viaje.rideId)
+        : accion === 'arrived'
+          ? confirmArrival(viaje.rideId)
+          : accion === 'start'
+            ? startRide(viaje.rideId)
+            : completeRide(viaje.rideId));
+
+      setAvanzando(null);
+
+      if (!resultado.ok) {
+        setErrorViaje({ rideId: viaje.rideId, message: resultado.failure.message });
+
+        // Salvo cuando el conductor solo esta lejos: ahi el viaje sigue
+        // exactamente donde estaba, y releer no cambiaria nada. Lo que tiene que
+        // hacer es acercarse y volver a tocar.
+        if (resultado.failure.code !== RIDE_ERROR_CODES.tooFarFromPickup) {
+          void cargarViajes();
+        }
+        return;
+      }
+
+      // Terminar un servicio libera asientos, y con ellos puede volver la
+      // disponibilidad (D164). Por eso se relee tambien el estado.
+      void cargarViajes();
+      if (accion === 'complete') void cargar();
+    },
+    [cargar, cargarViajes],
+  );
 
   /**
    * Toma el servicio.
@@ -398,8 +469,20 @@ export default function DriverHome() {
           </Text>
         )}
 
+        {/* La vista de conjunto va ANTES de las tarjetas: con dos o tres
+            servicios abiertos, lo primero que necesita el conductor es saber
+            que le falta en total, no leer tres tarjetas completas para
+            reconstruirlo. Con un solo servicio no aparece. */}
+        <PendingStops rides={viajes} />
+
         {viajes.map((viaje) => (
-          <ActiveRideCard key={viaje.rideId} ride={viaje} />
+          <ActiveRideCard
+            key={viaje.rideId}
+            ride={viaje}
+            onAdvance={(r, accion) => void avanzarViaje(r, accion)}
+            advancing={avanzando === viaje.rideId}
+            error={errorViaje?.rideId === viaje.rideId ? errorViaje.message : null}
+          />
         ))}
 
         {viajes.length > 0 && ofertas.offers.length > 0 && (

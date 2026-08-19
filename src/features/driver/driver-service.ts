@@ -190,6 +190,42 @@ export async function reportLocation(
   return ok(undefined);
 }
 
+/**
+ * Graba un punto del recorrido de un viaje en curso.
+ *
+ * Es la tercera excepcion de D83 en la que el cliente escribe directo en una
+ * tabla, por lo mismo que `reportLocation`: pasar cada punto por una funcion no
+ * anadiria ninguna comprobacion que la politica `ride_locations_insert_own_driver`
+ * no haga ya. Esa politica solo deja insertar en un viaje que es de quien llama y
+ * esta activo, asi que un conductor no puede escribir en el recorrido de otro.
+ *
+ * DISTINTO DE `reportLocation`, y conviene no confundirlos. Aquel sobrescribe la
+ * UNICA fila de `driver_locations` con la posicion de ahora, para las busquedas y
+ * para que el pasajero vea moverse el motorraton. Este ANADE una fila a
+ * `ride_locations`, que es el rastro del viaje: nunca se sobrescribe y solo se
+ * llena durante el recorrido. De ese rastro sale la distancia que calcula
+ * `complete_ride`.
+ *
+ * Un fallo se devuelve pero no se reintenta: un punto perdido es un hueco en el
+ * rastro, y el rastro tolera huecos. Lo que el pasajero ve en vivo va por otra
+ * tabla, y `complete_ride` mide con los puntos que haya.
+ */
+export async function recordTrackPoint(
+  rideId: string,
+  coords: { latitude: number; longitude: number },
+): Promise<Result> {
+  const { error } = await supabase.from('ride_locations').insert({
+    ride_id: rideId,
+    location: `SRID=4326;POINT(${coords.longitude} ${coords.latitude})`,
+  });
+
+  if (error) {
+    return fail(error);
+  }
+
+  return ok(undefined);
+}
+
 /** Las solicitudes que puede tomar ahora mismo. */
 export async function fetchOffers(): Promise<Result<DriverOffer[]>> {
   const { data, error } = await supabase.rpc('list_driver_offers');
@@ -339,4 +375,61 @@ export async function rejectOffer(offerId: string): Promise<Result> {
   }
 
   return ok(undefined);
+}
+
+/**
+ * Las cuatro transiciones del servicio (Fase 15).
+ *
+ * LAS FUNCIONES YA EXISTIAN DESDE LA FASE 5, escritas y probadas antes de que
+ * hubiera una sola pantalla que las llamara. Esto no anade logica: la conecta.
+ *
+ * Cada una comprueba en el servidor dos cosas que el cliente no puede garantizar
+ * (D15): que el viaje es de quien llama, y que el estado actual admite esa
+ * transicion. Por eso aqui no hay ninguna comprobacion previa. Preguntar "sigue
+ * en camino?" antes de llamar solo abriria una ventana entre la respuesta y la
+ * llamada, que es el mismo razonamiento que ya se aplico al aceptar una oferta.
+ *
+ * `confirmArrival` es la unica que ademas valida contra el mundo fisico: la
+ * regla R5 no deja anunciar la llegada a mas de 150 metros del punto de
+ * recogida, medidos contra la ultima posicion enviada. Si el conductor no tiene
+ * posicion reciente se le permite igualmente, porque en zona de montana perder
+ * cobertura es normal y bloquear el servicio por eso seria peor que fiarse.
+ */
+async function transicion(rpc: RideTransitionRpc, rideId: string): Promise<Result> {
+  const { error } = await supabase.rpc(rpc, { p_ride_id: rideId });
+
+  if (error) {
+    return fail(error);
+  }
+
+  return ok(undefined);
+}
+
+/**
+ * Los nombres de las cuatro funciones, tipados contra el esquema real.
+ *
+ * Escribirlos sueltos en cada llamada dejaria que una errata pasara el
+ * compilador y fallara en el telefono; asi el tipo generado los valida.
+ */
+type RideTransitionRpc =
+  'start_driving_to_pickup' | 'confirm_driver_arrival' | 'start_ride' | 'complete_ride';
+
+/** Sale hacia el punto de recogida. */
+export function startDrivingToPickup(rideId: string): Promise<Result> {
+  return transicion('start_driving_to_pickup', rideId);
+}
+
+/** Anuncia que llego. Sujeto a la regla R5. */
+export function confirmArrival(rideId: string): Promise<Result> {
+  return transicion('confirm_driver_arrival', rideId);
+}
+
+/** Arranca con el pasajero a bordo. */
+export function startRide(rideId: string): Promise<Result> {
+  return transicion('start_ride', rideId);
+}
+
+/** Termina el servicio. */
+export function completeRide(rideId: string): Promise<Result> {
+  return transicion('complete_ride', rideId);
 }

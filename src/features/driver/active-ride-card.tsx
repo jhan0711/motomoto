@@ -1,10 +1,19 @@
-import { Circle, MapPin, Navigation as NavigationIcon, Phone, Users } from 'lucide-react-native';
+import {
+  ArrowRight,
+  Circle,
+  Flag,
+  MapPin,
+  Navigation as NavigationIcon,
+  Phone,
+  Users,
+} from 'lucide-react-native';
 import { useCallback, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormError } from '@/components/ui/form-error';
+import { Modal } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
@@ -19,42 +28,132 @@ import { openNavigation } from './navigation';
  * justo el tipo de friccion que hace que la gente termine llamando por otro
  * canal y deje de usar la aplicacion.
  *
- * Las transiciones del servicio, que son "voy en camino", "llegue", "iniciar" y
- * "finalizar", son de la Fase 15. Esta tarjeta enseña a quien recoger y donde;
- * moverlo por sus estados es otra cosa.
+ * DESDE LA FASE 15 LA TARJETA MUEVE EL SERVICIO. Se ve un solo boton, el que
+ * toca ahora, y no los cuatro con tres apagados: el conductor la mira de reojo,
+ * a veces en movimiento, y una fila de botones grises es ruido que hay que leer
+ * para descartar. El estado manda cual es, y el estado lo decide el servidor.
  */
+
+/** Lo que el conductor puede hacer con el servicio en este momento. */
+export type RideAction = 'on_the_way' | 'arrived' | 'start' | 'complete';
+
+interface Siguiente {
+  action: RideAction;
+  label: string;
+  /**
+   * Finalizar pide confirmacion y las demas no.
+   *
+   * Es la unica irreversible de las cuatro, y la Fase 0 la dejo escrita como
+   * situacion a cubrir: "el conductor termina accidentalmente un servicio". Las
+   * otras tres se deshacen solas avanzando, o como mucho adelantan un estado que
+   * iba a llegar igual. Pedir confirmacion en todas convertiria el ciclo normal
+   * en ocho toques y ensenaria a confirmar sin leer.
+   */
+  confirma?: { titulo: string; descripcion: string };
+}
+
+/** Que toca hacer ahora, o null si el viaje ya no admite nada. */
+export function siguienteAccion(status: DriverRide['status']): Siguiente | null {
+  switch (status) {
+    case 'assigned':
+      return { action: 'on_the_way', label: 'Voy en camino' };
+    case 'driver_on_the_way':
+      return { action: 'arrived', label: 'Llegué al punto' };
+    case 'driver_arrived':
+      return { action: 'start', label: 'Iniciar recorrido' };
+    case 'in_progress':
+      return {
+        action: 'complete',
+        label: 'Finalizar servicio',
+        confirma: {
+          titulo: '¿Terminaste el servicio?',
+          descripcion: 'Se cierra el viaje y ya no se puede deshacer.',
+        },
+      };
+    default:
+      return null;
+  }
+}
+
+/** Como se llama el estado para el conductor. */
+function tituloDelEstado(status: DriverRide['status']): string {
+  switch (status) {
+    case 'driver_on_the_way':
+      return 'VAS EN CAMINO';
+    case 'driver_arrived':
+      return 'ESPERANDO AL PASAJERO';
+    case 'in_progress':
+      return 'EN RECORRIDO';
+    default:
+      return 'SERVICIO ACEPTADO';
+  }
+}
 
 export interface ActiveRideCardProps {
   ride: DriverRide;
+  /** Mueve el servicio al estado siguiente. */
+  onAdvance: (ride: DriverRide, action: RideAction) => void;
+  /** El servidor esta respondiendo a la transicion de ESTE viaje. */
+  advancing?: boolean;
+  /** Lo que fallo al intentar avanzar, ya traducido. */
+  error?: string | null;
 }
 
-export function ActiveRideCard({ ride }: ActiveRideCardProps) {
+export function ActiveRideCard({
+  ride,
+  onAdvance,
+  advancing = false,
+  error = null,
+}: ActiveRideCardProps) {
   const { colors } = useTheme();
 
   const [errorNavegacion, setErrorNavegacion] = useState<string | null>(null);
+  const [confirmando, setConfirmando] = useState(false);
+
+  const siguiente = siguienteAccion(ride.status);
+
+  const avanzar = useCallback(() => {
+    if (siguiente === null) return;
+
+    if (siguiente.confirma !== undefined) {
+      setConfirmando(true);
+      return;
+    }
+
+    onAdvance(ride, siguiente.action);
+  }, [onAdvance, ride, siguiente]);
 
   /**
-   * Abre la navegacion hacia donde hay que recoger.
+   * Abre la navegacion hacia donde toca ir AHORA.
+   *
+   * Y "ahora" lo decide el estado, que es lo que la Fase 14 no podia hacer. Con
+   * el pasajero todavia fuera se va al punto de recogida; con el ya a bordo, al
+   * destino. Antes de que existieran las transiciones, la aplicacion no sabia
+   * cual de las dos cosas era cierta, y por eso el boton solo servia para la
+   * recogida y desaparecia despues (D179).
    *
    * Se le manda el nombre del sitio ademas de la coordenada, para que el
    * conductor vea "El parque" en su navegador y pueda reconocer el punto antes
    * de arrancar. La referencia escrita no viaja: es una frase para leer, no una
    * direccion, y el sitio donde tiene que leerla es esta tarjeta.
    */
-  const irAlPuntoDeRecogida = useCallback(async () => {
+  const yendoAlDestino = ride.status === 'in_progress';
+  const parada = yendoAlDestino ? ride.destination : ride.origin;
+
+  const irALaParada = useCallback(async () => {
     setErrorNavegacion(null);
 
-    const abierto = await openNavigation(ride.origin, ride.origin.label);
+    const abierto = await openNavigation(parada, parada.label);
 
     if (!abierto) {
       setErrorNavegacion('No pudimos abrir la navegación. La dirección está arriba.');
     }
-  }, [ride.origin]);
+  }, [parada]);
 
   return (
     <Card variant="elevated" style={{ borderColor: colors.brand, borderWidth: 1 }}>
       <Text variant="caption" color="textTertiary">
-        SERVICIO ACEPTADO
+        {tituloDelEstado(ride.status)}
       </Text>
       <Text variant="subheading">{ride.passengerName}</Text>
 
@@ -112,22 +211,33 @@ export function ActiveRideCard({ ride }: ActiveRideCardProps) {
         </Text>
       </View>
 
-      {/* Ir primero, llamar despues. El conductor acaba de aceptar y lo
-          siguiente que hace es arrancar; llamar es lo que hace cuando ya llego y
-          no encuentra a nadie. Por eso este va en color de marca y el otro
-          queda como accion secundaria.
+      {/* Mover el servicio es lo principal, y por eso va en color de marca y
+          primero. Navegar y llamar son apoyos: se usan cuando hace falta, no en
+          cada viaje. */}
+      {siguiente !== null && (
+        <Button
+          label={siguiente.label}
+          variant="brand"
+          icon={ArrowRight}
+          iconPosition="right"
+          fullWidth
+          loading={advancing}
+          style={styles.llamar}
+          onPress={avanzar}
+        />
+      )}
 
-          IMPORTANTE: lleva al PUNTO DE RECOGIDA, no al destino. El del destino
-          va en la Fase 15, junto a "iniciar recorrido", porque hasta que exista
-          ese boton la aplicacion no sabe si ya recogio al pasajero, y dos
-          botones sin ese dato pueden mandarlo al sitio equivocado. */}
+      {/* La etiqueta dice A DONDE, no solo que se puede navegar. "Cómo llegar" a
+          secas obligaba al conductor a deducir el destino del estado de la
+          tarjeta, y con dos o tres servicios abiertos esa deduccion se hace
+          mirando de reojo mientras conduce. */}
       <Button
-        label="Cómo llegar"
-        variant="brand"
+        label={yendoAlDestino ? 'Ir al destino' : 'Ir a la recogida'}
+        variant="secondary"
         icon={NavigationIcon}
         fullWidth
-        style={styles.llamar}
-        onPress={() => void irAlPuntoDeRecogida()}
+        style={styles.llamarDespues}
+        onPress={() => void irALaParada()}
       />
 
       <Button
@@ -139,7 +249,21 @@ export function ActiveRideCard({ ride }: ActiveRideCardProps) {
         onPress={() => void Linking.openURL(`tel:${ride.passengerPhone}`)}
       />
 
-      <FormError message={errorNavegacion} />
+      <FormError message={errorNavegacion ?? error} />
+
+      <Modal
+        visible={confirmando}
+        onRequestClose={() => setConfirmando(false)}
+        title={siguiente?.confirma?.titulo ?? ''}
+        description={siguiente?.confirma?.descripcion}
+        icon={Flag}
+        confirmLabel="Sí, finalizar"
+        cancelLabel="Todavía no"
+        onConfirm={() => {
+          setConfirmando(false);
+          if (siguiente !== null) onAdvance(ride, siguiente.action);
+        }}
+      />
     </Card>
   );
 }

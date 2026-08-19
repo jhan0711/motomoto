@@ -3,6 +3,7 @@ import {
   ArrowRight,
   Bike as BikeIcon,
   Circle,
+  CircleCheck,
   Clock,
   History,
   LocateFixed,
@@ -50,8 +51,11 @@ import {
   cancelRequest,
   createRequest,
   fetchActiveRequest,
+  fetchFinishedRequest,
   type ActiveRequest,
   type AssignedDriver,
+  type FinishedRequest,
+  type RideStatus,
 } from '@/features/ride/ride-service';
 import {
   fetchRoute,
@@ -64,6 +68,7 @@ import { useDriverLocation } from '@/features/ride/use-driver-location';
 import { useMaxPassengers, useNumericSetting } from '@/features/ride/settings';
 import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
 import { useRequestRealtime } from '@/features/ride/use-request-realtime';
+import { useRideRealtime } from '@/features/ride/use-ride-realtime';
 import {
   MIN_TOUCH_TARGET,
   iconSize,
@@ -134,14 +139,25 @@ export default function PassengerHome() {
    */
   const [restaurando, setRestaurando] = useState(true);
 
+  /**
+   * El servicio que acaba de terminar, mientras el pasajero no lo cierre.
+   *
+   * Vive aparte de `solicitud` a proposito: no es un servicio en curso, es una
+   * despedida. Mezclarlos obligaria a que cada rama del panel comprobara si lo
+   * que tiene delante todavia existe.
+   */
+  const [resumenFinal, setResumenFinal] = useState<FinishedRequest | null>(null);
+
   /** Las cuatro caras de la hoja, en el orden en que las ve el pasajero. */
   const modo: ModoHoja = restaurando
     ? 'cargando'
     : solicitud !== null
       ? 'buscando'
-      : destination !== null
-        ? 'resumen'
-        : 'destino';
+      : resumenFinal !== null
+        ? 'terminado'
+        : destination !== null
+          ? 'resumen'
+          : 'destino';
 
   /**
    * La hoja vuelve a su altura minima cuando cambia lo que contiene.
@@ -452,11 +468,30 @@ export default function PassengerHome() {
       return;
     }
 
-    // El servidor dice que no queda ninguna viva. Si teniamos una, no se borra
-    // en silencio: se deja en cero para que el pasajero vea que se acabo el
-    // tiempo, en lugar de encontrarse el mapa limpio y preguntarse que paso.
+    // El servidor dice que no queda ninguna viva. Antes de dar nada por
+    // caducado hay que preguntar por lo contrario: que haya TERMINADO.
+    //
+    // Sin esta pregunta, el pasajero que acaba de bajarse del motorraton veia su
+    // cuenta atras en cero y, debajo, "Volver a pedirlo" y "Cambiar el viaje",
+    // como si nadie lo hubiera recogido. Es el mismo dato leido al reves.
+    const terminada = await fetchFinishedRequest();
+
+    if (turno !== sincronizacion.current) return;
+
+    if (terminada.ok && terminada.data !== null) {
+      setSolicitud(null);
+      setResumenFinal(terminada.data);
+      // El viaje elegido se limpia aqui y no antes: hasta este momento seguia
+      // siendo el viaje en curso, y borrarlo habria dejado la pantalla sin saber
+      // de donde a donde iba.
+      limpiarBorrador();
+      return;
+    }
+
+    // No termino y no esta viva: se acabo el tiempo. Se deja en cero para que el
+    // pasajero lo vea, en lugar de encontrarse el mapa limpio sin explicacion.
     setSolicitud((actual) => (actual === null ? null : { ...actual, segundosRestantes: 0 }));
-  }, []);
+  }, [limpiarBorrador]);
 
   useEffect(() => {
     const listener = AppState.addEventListener('change', (siguiente) => {
@@ -481,6 +516,16 @@ export default function PassengerHome() {
    * telefono de alguien.
    */
   useRequestRealtime(solicitud !== null, sincronizarSolicitud, 'pasajero-su-solicitud');
+
+  /**
+   * Y del viaje concreto, que es donde viven las transiciones del conductor.
+   *
+   * Las dos suscripciones se solapan a proposito en dos de los cuatro estados:
+   * iniciar y finalizar tocan las dos tablas, asi que llegan por los dos canales
+   * y se relee dos veces. Es una lectura de mas en dos momentos de todo el
+   * servicio, y a cambio no hay que decidir en el cliente que evento ignorar.
+   */
+  useRideRealtime(solicitud?.conductor?.rideId ?? null, sincronizarSolicitud);
 
   /**
    * Donde esta su motorraton, mientras haya uno asignado.
@@ -530,8 +575,22 @@ export default function PassengerHome() {
 
   const conductorLat = posicionConductor?.latitude ?? null;
   const conductorLng = posicionConductor?.longitude ?? null;
-  const recogidaLat = solicitud?.origen.latitude ?? null;
-  const recogidaLng = solicitud?.origen.longitude ?? null;
+
+  /**
+   * Hacia donde se mide el tiempo que falta, que cambia a mitad del servicio.
+   *
+   * Mientras viene a recogerlo, al punto de recogida. Con el pasajero ya dentro,
+   * al destino: seguir midiendo hasta la recogida seria contar los minutos que
+   * faltan para llegar al sitio del que acaba de salir, y el numero encima
+   * bajaria hasta cero y se quedaria ahi.
+   */
+  const enRecorrido = solicitud?.conductor?.rideStatus === 'in_progress';
+  const recogidaLat = enRecorrido
+    ? (solicitud?.destino.latitude ?? null)
+    : (solicitud?.origen.latitude ?? null);
+  const recogidaLng = enRecorrido
+    ? (solicitud?.destino.longitude ?? null)
+    : (solicitud?.origen.longitude ?? null);
 
   /**
    * Cambiar de conductor caduca el tiempo de llegada del anterior.
@@ -805,11 +864,13 @@ export default function PassengerHome() {
             // un conductor ya asignado, "Buscando motorratón" contradecia a
             // "Tu motorratón va en camino" a dos centimetros de distancia.
             <Text variant="subheading">
-              {solicitud?.conductor != null
-                ? 'Servicio confirmado'
-                : expirada
-                  ? 'Nadie tomó tu servicio'
-                  : 'Buscando motorratón'}
+              {modo === 'terminado'
+                ? 'Llegaste'
+                : solicitud?.conductor != null
+                  ? tituloDelViaje(solicitud.conductor.rideStatus)
+                  : expirada
+                    ? 'Nadie tomó tu servicio'
+                    : 'Buscando motorratón'}
             </Text>
           )
         }
@@ -848,6 +909,10 @@ export default function PassengerHome() {
           />
         )}
 
+        {modo === 'terminado' && resumenFinal !== null && (
+          <ViajeTerminado resumen={resumenFinal} onCerrar={() => setResumenFinal(null)} />
+        )}
+
         {modo === 'buscando' && solicitud !== null && (
           <BuscandoConductor
             solicitud={solicitud}
@@ -856,6 +921,8 @@ export default function PassengerHome() {
             cancelando={cancelando}
             reintentando={enviando}
             llegada={llegada}
+            enRecorrido={enRecorrido}
+            yaLlego={solicitud.conductor?.rideStatus === 'driver_arrived'}
             posicionCaducada={posicionCaducada}
             sinPosicion={solicitud.conductor !== null && posicionConductor === null}
             error={errorSolicitud}
@@ -869,8 +936,8 @@ export default function PassengerHome() {
   );
 }
 
-/** Las cuatro caras de la hoja del pasajero. */
-type ModoHoja = 'cargando' | 'destino' | 'resumen' | 'buscando';
+/** Las cinco caras de la hoja del pasajero. */
+type ModoHoja = 'cargando' | 'destino' | 'resumen' | 'buscando' | 'terminado';
 
 /**
  * Lo minimo para pintar el panel de busqueda.
@@ -917,6 +984,43 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
     segundosRestantes: activa.secondsRemaining,
     conductor: activa.driver,
   };
+}
+
+/**
+ * Como se llama cada estado del viaje para el pasajero.
+ *
+ * Se distingue "aceptó" de "va en camino" a proposito, aunque para el pasajero
+ * las dos signifiquen esperar. Son momentos distintos: en la primera el
+ * conductor se comprometio pero puede no haber arrancado, y en la segunda ya
+ * viene. Juntarlas obligaria a decir "va en camino" antes de que sea cierto, que
+ * es la clase de mentira pequeña que hace que la gente deje de creerle a la
+ * pantalla.
+ */
+function tituloDelViaje(status: RideStatus): string {
+  switch (status) {
+    case 'driver_arrived':
+      return 'Tu motorratón llegó';
+    case 'in_progress':
+      return 'Vas en camino';
+    default:
+      return 'Servicio confirmado';
+  }
+}
+
+/** La linea grande de la tarjeta, en las palabras del pasajero. */
+function mensajeDelViaje(status: RideStatus): string {
+  switch (status) {
+    case 'assigned':
+      return 'Un motorratón tomó tu servicio';
+    case 'driver_on_the_way':
+      return 'Tu motorratón va en camino';
+    case 'driver_arrived':
+      return 'Tu motorratón está esperándote';
+    case 'in_progress':
+      return 'Vas camino a tu destino';
+    default:
+      return 'Tu motorratón va en camino';
+  }
 }
 
 /** Cuantos lugares caben en la hoja sin obligar a desplegarla. */
@@ -1194,8 +1298,12 @@ interface BuscandoConductorProps {
   expirada: boolean;
   cancelando: boolean;
   reintentando: boolean;
-  /** Cuanto falta para que llegue a recogerlo. Nulo si no se pudo calcular. */
+  /** Cuanto falta para llegar. Nulo si no se pudo calcular. */
   llegada: RouteEstimate | null;
+  /** El pasajero ya va dentro, asi que el tiempo es hasta su destino. */
+  enRecorrido: boolean;
+  /** El motorraton ya esta en el punto de recogida, esperando. */
+  yaLlego: boolean;
   /** Su ultima posicion es demasiado vieja para fiarse. */
   posicionCaducada: boolean;
   /** Hay conductor pero todavia no ha llegado ninguna posicion suya. */
@@ -1231,6 +1339,8 @@ function BuscandoConductor({
   cancelando,
   reintentando,
   llegada,
+  enRecorrido,
+  yaLlego,
   posicionCaducada,
   sinPosicion,
   error,
@@ -1259,7 +1369,7 @@ function BuscandoConductor({
           <View style={styles.filaLugarTextos}>
             <Text variant="bodyStrong">
               {conductor !== null
-                ? 'Tu motorratón va en camino'
+                ? mensajeDelViaje(conductor.rideStatus)
                 : expirada
                   ? 'Ningún motorratón tomó el servicio'
                   : 'Avisando a los motorratones cercanos'}
@@ -1331,12 +1441,25 @@ function BuscandoConductor({
               )}
               <Text variant="caption" color={posicionCaducada ? 'textSecondary' : 'textSecondary'}>
                 {posicionCaducada
-                  ? 'Perdimos su señal. El motorratón sigue en camino.'
+                  ? enRecorrido
+                    ? 'Perdimos la señal del motorratón. El viaje sigue.'
+                    : yaLlego
+                      ? 'Perdimos su señal, pero ya está en el punto de recogida.'
+                      : 'Perdimos su señal. El motorratón sigue en camino.'
                   : sinPosicion
                     ? 'Ubicando su motorratón'
-                    : llegada !== null
-                      ? `Llega en ${formatDuration(llegada.seconds)} aproximadamente`
-                      : 'Va en camino hacia ti'}
+                    : yaLlego
+                      ? // Con el motorraton parado en el punto, los minutos que
+                        // faltan son cero y repetirlo no aporta nada. Lo que hay
+                        // que decir es que salga.
+                        'Te está esperando en el punto de recogida'
+                      : llegada !== null
+                        ? enRecorrido
+                          ? `Llegas en ${formatDuration(llegada.seconds)} aproximadamente`
+                          : `Llega en ${formatDuration(llegada.seconds)} aproximadamente`
+                        : enRecorrido
+                          ? 'Vas camino a tu destino'
+                          : 'Va en camino hacia ti'}
               </Text>
             </View>
 
@@ -1409,6 +1532,85 @@ function BuscandoConductor({
           onPress={onCancelar}
         />
       )}
+    </>
+  );
+}
+
+/**
+ * La despedida.
+ *
+ * No hay estrellas todavia: calificar es de la Fase 17. Lo que si tiene que
+ * haber es un final, porque hasta ahora el servicio terminaba y la pantalla se
+ * quedaba diciendo que el motorraton venia en camino.
+ *
+ * La distancia y el tiempo pueden faltar, y cuando faltan no se pinta la fila en
+ * lugar de rellenarla con ceros. Faltan cuando el conductor no tuvo cobertura
+ * para registrar el recorrido, y un "0 m" seria peor que no decir nada.
+ *
+ * El pasajero lo cierra cuando quiera. No se va solo a los cinco segundos: puede
+ * estar bajandose del motorraton, guardando el telefono o pagando.
+ */
+function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCerrar: () => void }) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <Card variant="outlined" padding="md">
+        <View style={styles.filaBuscando}>
+          <CircleCheck size={iconSize.md} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          <View style={styles.filaLugarTextos}>
+            <Text variant="bodyStrong">Servicio terminado</Text>
+            <Text variant="caption" color="textSecondary">
+              {resumen.driverName !== null && resumen.unitNumber !== null
+                ? `${resumen.driverName} · Motorratón ${resumen.unitNumber}`
+                : 'Gracias por viajar con nosotros.'}
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <View style={styles.puntoViaje}>
+          <Circle size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {resumen.originLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.puntoViaje}>
+          <MapPin size={iconSize.sm} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {resumen.destinationLabel}
+            </Text>
+          </View>
+        </View>
+
+        {(resumen.meters !== null || resumen.seconds !== null) && (
+          <>
+            <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+            <View style={styles.filaEstimacion}>
+              <RouteIcon
+                size={iconSize.sm}
+                color={colors.textTertiary}
+                strokeWidth={iconStrokeWidth}
+              />
+              <Text variant="caption" color="textSecondary">
+                {[
+                  resumen.meters !== null ? formatDistance(resumen.meters) : null,
+                  resumen.seconds !== null ? formatDuration(resumen.seconds) : null,
+                ]
+                  .filter((parte) => parte !== null)
+                  .join(' · ')}
+              </Text>
+            </View>
+          </>
+        )}
+      </Card>
+
+      <Button label="Listo" variant="brand" fullWidth onPress={onCerrar} />
     </>
   );
 }

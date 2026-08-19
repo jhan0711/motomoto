@@ -1,0 +1,35 @@
+-- =============================================================================
+-- Fase 15, paso 2: el pasajero se entera de que su motorraton ya llego
+-- =============================================================================
+--
+-- LO DESTAPO UNA PRUEBA EN PANTALLA. Con el servicio aceptado, se movio el viaje
+-- a 'driver_on_the_way' desde el servidor y la pantalla del pasajero **no se
+-- entero**: siguio diciendo "un motorratón tomó tu servicio" indefinidamente.
+--
+-- La causa es exacta. Las cuatro transiciones escriben en `rides`, y el pasajero
+-- solo estaba suscrito a `ride_requests` (D168). De las cuatro, unicamente dos
+-- tocan la solicitud: `start_ride` la pone en 'in_progress' y `complete_ride` en
+-- 'completed'. Las otras dos, salir hacia el punto y **anunciar la llegada**, se
+-- quedaban en `rides` sin que nadie las escuchara.
+--
+-- Que se pierda "voy en camino" es molesto. Que se pierda "llegue" es grave: es
+-- el aviso que hace que el pasajero salga a la calle, y sin el tendria que estar
+-- abriendo y cerrando la aplicacion para enterarse. El flujo 7.1 lo tiene escrito
+-- como paso 12 desde la Fase 0.
+--
+-- D168 NO SE EQUIVOCO, SE QUEDO CORTA. Publicar `ride_requests` era lo correcto
+-- para lo que existia entonces: asignacion, caducidad y cancelacion viven ahi. El
+-- detalle fino del viaje no existia todavia porque no habia transiciones. Ahora
+-- que existen, hace falta tambien la otra tabla.
+--
+-- LA SUSCRIPCION VA FILTRADA POR EL VIAJE CONCRETO, no por la tabla entera. El
+-- pasajero conoce el identificador de su viaje en cuanto alguien acepta, y con el
+-- filtro el servidor no tiene que evaluar la politica de este pasajero contra
+-- cada movimiento de cada viaje de la flota.
+--
+-- SIN `replica identity full`, igual que las otras dos: del evento solo se usa el
+-- aviso, y despues se relee por `get_active_request`, que trae el estado y los
+-- datos del conductor juntos.
+-- =============================================================================
+
+alter publication supabase_realtime add table public.rides;

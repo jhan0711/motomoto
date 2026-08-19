@@ -51,7 +51,17 @@ const MESSAGES: Record<string, string> = {
 
   // Cancelacion.
   REQUEST_NOT_FOUND: 'No encontramos esa solicitud.',
-  INVALID_STATE_TRANSITION: 'Ese servicio ya no se puede cancelar desde aquí.',
+  /**
+   * Lo lanzan DOS sitios, y por eso el texto es generico.
+   *
+   * Hasta la Fase 15 solo lo producia `cancel_request`, asi que decia "ya no se
+   * puede cancelar desde aqui". Ahora lo lanza tambien `assert_ride_driver`
+   * cuando el conductor intenta una transicion que su viaje no admite, y ese
+   * texto seria falso: nadie estaba cancelando nada. Pasa cuando dos toques
+   * seguidos llegan al servidor, o cuando el conductor toca "llegué" en un viaje
+   * que el pasajero acaba de cancelar.
+   */
+  INVALID_STATE_TRANSITION: 'Ese servicio ya no admite esa acción.',
 
   // Estados de la cuenta. El usuario no puede resolverlos por su cuenta, asi que
   // el mensaje le dice a quien acudir en lugar de invitarle a insistir.
@@ -80,6 +90,19 @@ const MESSAGES: Record<string, string> = {
   // no le caben. Pasa entre la oferta y el toque, y no hay nada que corregir.
   VEHICLE_CAPACITY_EXCEEDED: 'Ya no te quedan asientos libres para ese servicio.',
   DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motorratón.',
+
+  // Las transiciones del servicio, desde la Fase 15.
+  RIDE_NOT_FOUND: 'Ese servicio ya no es tuyo.',
+  /**
+   * REGLA R5, y es el unico de los tres que el conductor puede resolver.
+   *
+   * El servidor mide la distancia de verdad antes de dejar anunciar la llegada,
+   * asi que el mensaje dice que hacer —acercarse— en lugar de limitarse a
+   * negarse. El servidor incluye los metros en su texto, pero aqui se traduce
+   * desde el codigo (D155) y ese numero se pierde: cambiarlo por "acercate mas"
+   * es preferible a mostrar el texto del servidor, que viene sin tildes (H8).
+   */
+  TOO_FAR_FROM_PICKUP: 'Todavía estás lejos del punto de recogida. Acércate para confirmar.',
 };
 
 const NETWORK_CODE = 'network_error';
@@ -159,6 +182,16 @@ export const RIDE_ERROR_CODES = {
   // tarjeta y vuelve a leer sus viajes, porque el motorraton ya no esta como ella
   // creia.
   vehicleCapacityExceeded: 'VEHICLE_CAPACITY_EXCEEDED',
+
+  // El viaje ya no esta donde la pantalla creia: o lo cancelaron, o dos toques
+  // seguidos llegaron al servidor. En los dos casos hay que releer, no insistir.
+  invalidTransition: 'INVALID_STATE_TRANSITION',
+  rideNotFound: 'RIDE_NOT_FOUND',
+
+  // Este NO significa que el viaje haya cambiado: significa que el conductor
+  // esta lejos. La pantalla lo distingue porque no tiene que releer nada, solo
+  // dejar que se acerque y vuelva a tocar.
+  tooFarFromPickup: 'TOO_FAR_FROM_PICKUP',
 
   network: NETWORK_CODE,
   unknown: UNKNOWN_CODE,
