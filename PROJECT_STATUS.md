@@ -27,9 +27,20 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   seccion 15.18
 - **HAY TABLET OTRA VEZ** desde el 2026-08-20, una Xiaomi con Android 15 y sin GPS. Lo que
   cambia y lo que no, en el bloque LEE ESTO PRIMERO
-- **Trabajo siguiente:** **Fase 18, cancelaciones y errores operativos**
+- **Fase 18 PROBADA EN LOS DOS APARATOS A LA VEZ, EN TIEMPO REAL, EL 2026-08-21.** Las cinco
+  comprobaciones centrales salieron en verde con captura de pantalla: el pasajero cancela solo
+  cuando el servidor lo admite, con confirmacion y sin el boton en `in_progress`; el conductor
+  por fin puede cancelar desde la pantalla; y D187 queda resuelto para las dos ramas de la
+  cancelacion del conductor, las dos vistas actualizarse en tiempo real sin recargar. **Quien
+  toco los controles fue el asistente, no tu**, por `adb` y `supabase db query` — sigue
+  pendiente que la mires tu antes de aprobarla. Detalle y lo unico sin probar (D161 con dos
+  servicios a la vez) en la seccion 15.19. **Alcance cerrado por decision tuya del 2026-08-21
+  (D216)**: lo que quedaba de "errores operativos" —R10 y el bloqueo del administrador a mitad
+  de operacion— depende enteramente del panel, que no existe hasta la Fase 20
+- **Trabajo siguiente:** que confirmes la Fase 18 con tus propios ojos (o la des por buena con
+  lo ya probado). Con tu aprobacion, sigue la Fase 19 (notificaciones)
 - **Ultimo commit:** 8a46afa feat: ratings for passenger and driver, plus fixes found on
-  tablet. **Nada pendiente de confirmar**
+  tablet. **Pendiente de confirmar: toda la Fase 18**, ya probada por el asistente en pantalla
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -487,6 +498,16 @@ el sistema.
 | D209 | `already_rated` se filtra siempre por quien califica | Nunca solo por viaje. `ratings_select_involved` deja ver las dos filas del mismo servicio, asi que sin el filtro un servicio calificado por la otra parte se veria como calificado por uno mismo. **Lo destapo la prueba 20**, no la revision |
 | D210 | La zona del conductor es una pila por encima de las pestanas | Las tres pantallas viven en un grupo `(tabs)` que no cambia ninguna direccion. Antes el detalle y la calificacion colgaban de las pestanas con `href: null`, y **volver atras llevaba a otra pestana en lugar de a la pantalla anterior**: se calificaba desde el historial y se aterrizaba en Inicio |
 | D211 | `anon` deja de poder ejecutar `rate_ride` | Estaba anunciado desde la Fase 15 y lo confirmo la prueba. Se cierra solo esta, que es la de esta fase y la unica que se puede volver a probar entera hoy; `accept_ride_offer`, `reject_ride_offer`, `cancel_request` y `cancel_ride` siguen en la Fase 22, para mirarlas una por una |
+
+### Decisiones de la Fase 18
+
+| # | Decision | Valor |
+|---|---|---|
+| D212 | Que ve el pasajero cuando el conductor cancela ANTES de recogerlo | Nada nuevo del servidor. `cancel_ride` ya devolvia la solicitud a `searching` y la reofrecia; lo unico que faltaba era decirselo. Se detecta en el cliente comparando el conductor que habia con el que hay: si tenia uno, ahora no tiene ninguno y la solicitud sigue viva, es que cancelo. Un aviso breve y no una pantalla propia, porque la de "buscando motorratón" ya es honesta |
+| D213 | Que ve el pasajero cuando el conductor cancela CON EL A BORDO | Pantalla propia, `get_driver_cancelled_notice`, mismo patron que `get_finished_request` de la Fase 15/17: cero o una fila, solo importa si fue hace poco, y reusa el parametro `finished_summary_minutes` en lugar de inventar uno nuevo para la misma pregunta ("cuanto es hace poco"). Cierra el pendiente de D187. No ofrece calificar (R8 exige un viaje terminado) ni borra el viaje elegido: el pasajero seguia queriendo llegar a ese destino |
+| D214 | El boton de cancelar del pasajero respeta el estado real | Antes se ofrecia en los cinco estados, incluido `in_progress`, donde el servidor ya lo rechazaba con `INVALID_STATE_TRANSITION`. **Lo dejo escrito D187** y lo confirmo el codigo: se oculta con el pasajero a bordo, y en los demas casos pide confirmacion primero (antes cancelaba al primer toque) |
+| D215 | R10 (conductor sin senal, alerta al administrador) queda fuera de este paso | No hay panel todavia donde mostrar esa alerta (Fase 20). Implementarla ahora seria una alerta que nadie puede leer, mismo criterio que D204 con los reportes |
+| D216 | La Fase 18 se cierra sin construir mas "errores operativos" | Decision del usuario, 2026-08-21. Lo unico que quedaba de la lista de la seccion 8 —R10 y que el administrador bloquee a un conductor a mitad de operacion— depende del panel entero, no de una funcion suelta. Escribirlo antes que el panel seria adivinar su forma dos veces. Se revisa en la Fase 20 |
 
 ### Decisiones de la Fase 16
 
@@ -2915,11 +2936,138 @@ aplicacion—:
 
 ---
 
+## 15.19 FASE 18: CANCELACIONES Y ERRORES OPERATIVOS
+
+**PROBADA EN LOS DOS APARATOS A LA VEZ, EN TIEMPO REAL, EL 2026-08-21.** Con el emulador de
+conductor y la tablet de pasajero (cuenta personal del usuario, Jhan Roldan, la tablet ya la
+tenia abierta) conectados los dos por USB y `adb reverse` en los dos. **Quien toco los
+controles y tomo las capturas fue el asistente, no el usuario**: se dirigieron las dos
+pantallas por `adb shell input` y las transiciones de servidor (crear, aceptar y avanzar el
+viaje) se hicieron con `supabase db query` impersonando a cada usuario, siguiendo el mismo
+patron de los scripts de `dev-tools`. Se avisa esto explicitamente porque la regla del
+proyecto es "Jhan prueba en dispositivo", y aqui la excepcion queda anotada en vez de
+disimulada. **Falta que el usuario la mire con sus propios ojos antes de darla por
+aprobada**, que sigue siendo su decision, no la del asistente.
+
+El alcance quedo cerrado por decision del usuario (D216, 2026-08-21): de "errores operativos"
+solo se construyo lo que no depende del panel de administrador. R10 y el bloqueo de un
+conductor a mitad de operacion se revisan enteros en la Fase 20.
+
+### Que habia y que faltaba
+
+`cancel_request` (pasajero) y `cancel_ride` (conductor) existian desde la Fase 5 y estaban
+bien escritas. Lo que faltaba era todo lo demas:
+
+- La pantalla del pasajero ofrecia "Cancelar servicio" en los cinco estados, **incluido
+  `in_progress`**, donde el servidor ya la rechazaba con `INVALID_STATE_TRANSITION`. Lo dejo
+  escrito la seccion 15.15 al cerrar la Fase 15
+- `cancel_ride` no la llamaba ninguna pantalla. El conductor no tenia como cancelar
+- D187 (Fase 15) quedo pendiente a proposito: que ve el pasajero en cada tipo de cancelacion
+  del conductor
+
+### Que se hizo
+
+- **Migracion** `20260821201620_driver_cancelled_notice.sql`: funcion
+  `get_driver_cancelled_notice()`, mismo patron que `get_finished_request` (D213). Aplicada con
+  `db push` y verificada con `prueba_cancelaciones.sql` (nuevo, en `supabase/dev-tools/`): 5
+  comprobaciones en verde, incluido el ataque de que una pasajera no vea el aviso de otra
+- Tipos regenerados en `src/types/database.ts`
+- `src/features/ride/ride-service.ts`: `fetchDriverCancelledNotice`
+- `src/features/driver/driver-service.ts`: `cancelRide`
+- `src/features/driver/active-ride-card.tsx`: boton "Cancelar servicio" con confirmacion
+  (`Modal` con `tone="danger"`), texto distinto si el pasajero ya va a bordo
+- `src/app/driver/(tabs)/index.tsx`: `cancelarViaje`, releyendo estado y viajes al terminar.
+  No enciende la disponibilidad (D181 sigue mandando)
+- `src/app/passenger/index.tsx`, el cambio mas grande:
+  - El boton de cancelar desaparece en `in_progress` (D214) y pide confirmacion antes de
+    cancelar en los demas casos
+  - Aviso breve cuando el conductor anterior cancelo antes de recogerlo, detectado en el
+    cliente sin llamada nueva (D212)
+  - Pantalla nueva `ServicioCanceladoPorConductor` para cuando cancela con el pasajero a
+    bordo (D213), enganchada en `sincronizarSolicitud` justo despues de comprobar si el
+    servicio termino
+
+`npm run typecheck`, `lint` y `format:check` en cero.
+
+### Lo que queda fuera, a proposito (D216)
+
+- **R10**, conductor sin senal durante un viaje: pospuesto a la Fase 20 por falta de panel
+  (D215)
+- Bloqueo del administrador a mitad de operacion: mismo motivo, es del panel
+- El GPS que deja de responder ya tiene cobertura parcial de fases anteriores (H20, tope de
+  15 s) y no se toco aqui
+- El resto de la lista de la seccion 8 —nadie acepta, dos conductores aceptan a la vez, el
+  conductor termina por accidente, cerrar la aplicacion— ya estaba cubierto por fases
+  anteriores. Con esto, la Fase 18 no tiene mas trabajo de codigo pendiente: lo que sigue es
+  el checklist en dispositivo
+
+### Una cosa que se penso al escribir y resulto no ser cierta
+
+Se penso que `find_available_drivers`, al no excluir a quien acaba de cancelar, podia
+reofrecerle al mismo conductor la solicitud que el mismo acaba de soltar. **Probado y
+descartado**: en el checklist, el conductor de prueba cancelo (comprobacion 4) y no volvio a
+recibir esa solicitud, aunque siguio disponible y con ubicacion fresca. `offer_request_to_drivers`
+ya lo evita —no se investigo el mecanismo exacto, pero el comportamiento observado es el
+correcto— y no hace falta tocar nada.
+
+### Checklist, resultado real
+
+Las cinco comprobaciones centrales, **verificadas en pantalla con captura, no solo en la base
+de datos**:
+
+1. **Pasajero cancela mientras busca.** El modal dice "¿Cancelar la búsqueda?" / "Dejaremos de
+   buscarte un motorratón.". Confirma, la solicitud se cancela, vuelve a "¿A dónde vas?". OK
+2. **Pasajero cancela con conductor ya asignado, antes de que salga.** El modal dice "¿Cancelar
+   este servicio?" / "Le avisamos al conductor y queda libre para tomar otro servicio.". Al
+   confirmar, **la tarjeta del conductor desaparece de su pantalla en tiempo real**, sin tocar
+   nada del lado del conductor. OK
+3. **El boton de cancelar del pasajero no aparece en `in_progress`.** Con el viaje "Vas en
+   camino", la tarjeta termina en "Llamar al conductor": no hay boton de cancelar debajo. OK
+4. **Conductor cancela ANTES de llegar a recoger.** El pasajero, con la app ya suscrita (con
+   una solicitud viva), ve aparecer solo el aviso "Tu conductor anterior canceló. Seguimos
+   buscando otro." por encima de "Avisando a los motorratones cercanos", en tiempo real, sin
+   recargar nada. OK
+5. **Conductor cancela CON el pasajero a bordo.** El pasajero ve, en tiempo real, la pantalla
+   nueva: "Servicio cancelado" / "Conductor de prueba canceló el servicio" / "Puedes volver a
+   pedirlo cuando quieras.", con el origen y el destino debajo y el boton "Entendido". Al
+   cerrarla, cae limpio en el mapa. OK
+
+**Sin probar en pantalla, verificado solo por lectura de codigo:**
+
+6. Conductor con dos servicios a la vez (D161): cancelar uno no toca el otro. No se armo el
+   escenario de dos solicitudes simultaneas sobre el mismo conductor; el codigo opera siempre
+   por `rideId` (`cancelarViaje`, `ActiveRideCard`), asi que no hay por donde se puedan
+   mezclar, pero eso es lectura, no una captura. Queda pendiente si el usuario quiere verlo con
+   sus propios ojos
+7. Que el conductor no reciba de vuelta su propia solicitud cancelada: **si se probo**, ver el
+   apartado de arriba
+
+**Efectos secundarios de la sesion de pruebas, ya limpios:**
+
+- `offer_response_seconds` se subio a 300 para poder aceptar sin pelear con los 20 segundos de
+  R2, y se devolvio a 20 al terminar (comprobado con `select`)
+- Quedaron seis solicitudes de prueba en el servidor, todas `cancelled`, con el mismo criterio
+  de fases anteriores: no se borran porque no se puede deshacer y no molestan a nada
+- Se encontro (no se produjo) un caso de **H17 real**: `seed_test_driver.sql` dice dejar al
+  conductor "a unos 130 metros del parque", pero contra la fila real de `places` ("El parque",
+  6.907392 / -75.074987) esta a 963 m. La comprobacion 5 tuvo que crear su solicitud con la
+  ubicacion que el conductor reportaba de verdad, no contra "El parque", para poder pasar de
+  `assigned` a `in_progress` sin chocar con R5. No se toco la semilla: es el mismo hallazgo que
+  ya esta pendiente de tu decision
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 17 completadas y aprobadas, **mas D161 y el cambio del mapa a
-  Mapbox**. Siguiente: **Fase 18, cancelaciones y errores operativos**
-- **Paso actual:** Ninguno en curso. El arbol de trabajo esta limpio
+  Mapbox**. **Fase 18 probada en pantalla en tiempo real (seccion 15.19), alcance cerrado por
+  D216, pendiente de que el usuario la confirme con sus propios ojos**
+- **Paso actual:** La Fase 18 esperando tu aprobacion. El arbol de trabajo NO
+  esta limpio: hay migracion nueva ya aplicada al servidor y cambios sin confirmar en
+  `src/app/passenger/index.tsx`, `src/app/driver/(tabs)/index.tsx`,
+  `src/features/driver/active-ride-card.tsx`, `src/features/driver/driver-service.ts`,
+  `src/features/ride/ride-service.ts`, `src/types/database.ts` y el nuevo
+  `supabase/dev-tools/prueba_cancelaciones.sql`
 - **Ultimo paso completado:** La Fase 17 entera, con su checklist de validacion. Antes, la
   Fase 16
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles

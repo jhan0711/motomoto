@@ -433,3 +433,29 @@ export function startRide(rideId: string): Promise<Result> {
 export function completeRide(rideId: string): Promise<Result> {
   return transicion('complete_ride', rideId);
 }
+
+/**
+ * Cancela el servicio (Fase 18).
+ *
+ * `cancel_ride` existe desde la Fase 5 y hasta ahora ninguna pantalla lo
+ * llamaba, mismo caso que las cuatro transiciones de arriba. El servidor
+ * decide que pasa segun donde iba el viaje: antes de recoger, la solicitud
+ * vuelve a 'searching' y se reofrece a otros conductores; con el pasajero ya
+ * a bordo, se cancela con el (D187).
+ *
+ * El motivo es opcional, mismo criterio que `cancelRequest` del lado del
+ * pasajero: obligar a escribirlo anadiria un paso a quien ya decidio no
+ * seguir.
+ */
+export async function cancelRide(rideId: string, reason?: string): Promise<Result> {
+  const { error } = await supabase.rpc('cancel_ride', {
+    p_ride_id: rideId,
+    ...(reason !== undefined && reason.trim() !== '' ? { p_reason: reason.trim() } : {}),
+  });
+
+  if (error) {
+    return fail(error);
+  }
+
+  return ok(undefined);
+}

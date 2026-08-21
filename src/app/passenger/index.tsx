@@ -1,11 +1,13 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ArrowRight,
+  Ban,
   Bike as BikeIcon,
   Circle,
   CircleCheck,
   Clock,
   History,
+  Info,
   LocateFixed,
   MapPin,
   Navigation,
@@ -35,6 +37,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FormError } from '@/components/ui/form-error';
 import { Input } from '@/components/ui/input';
+import { Modal } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
 import { describePoint } from '@/features/destination/describe-point';
@@ -50,9 +53,11 @@ import {
   cancelRequest,
   createRequest,
   fetchActiveRequest,
+  fetchDriverCancelledNotice,
   fetchFinishedRequest,
   type ActiveRequest,
   type AssignedDriver,
+  type DriverCancelledNotice,
   type FinishedRequest,
   type RideStatus,
 } from '@/features/ride/ride-service';
@@ -147,16 +152,27 @@ export default function PassengerHome() {
    */
   const [resumenFinal, setResumenFinal] = useState<FinishedRequest | null>(null);
 
-  /** Las cuatro caras de la hoja, en el orden en que las ve el pasajero. */
+  /**
+   * El aviso de que el conductor cancelo con el pasajero a bordo (D187, Fase 18).
+   *
+   * Vive aparte de `resumenFinal` por el mismo motivo que ese vive aparte de
+   * `solicitud`: no es un servicio en curso ni una despedida normal, es un
+   * desenlace distinto y la hoja tiene que poder distinguirlo.
+   */
+  const [avisoCancelacion, setAvisoCancelacion] = useState<DriverCancelledNotice | null>(null);
+
+  /** Las seis caras de la hoja, en el orden en que las ve el pasajero. */
   const modo: ModoHoja = restaurando
     ? 'cargando'
     : solicitud !== null
       ? 'buscando'
       : resumenFinal !== null
         ? 'terminado'
-        : destination !== null
-          ? 'resumen'
-          : 'destino';
+        : avisoCancelacion !== null
+          ? 'cancelado_conductor'
+          : destination !== null
+            ? 'resumen'
+            : 'destino';
 
   /**
    * La hoja vuelve a su altura minima cuando cambia lo que contiene.
@@ -519,8 +535,23 @@ export default function PassengerHome() {
       return;
     }
 
-    // No termino y no esta viva: se acabo el tiempo. Se deja en cero para que el
-    // pasajero lo vea, en lugar de encontrarse el mapa limpio sin explicacion.
+    // Tampoco termino: puede que el conductor haya cancelado con el pasajero
+    // a bordo (D187). NO se limpia el borrador aqui, a diferencia de arriba: el
+    // pasajero seguia queriendo llegar a ese destino, y perderlo lo obligaria a
+    // escribirlo otra vez justo despues de que le cancelaran el servicio.
+    const cancelada = await fetchDriverCancelledNotice();
+
+    if (turno !== sincronizacion.current) return;
+
+    if (cancelada.ok && cancelada.data !== null) {
+      setSolicitud(null);
+      setAvisoCancelacion(cancelada.data);
+      return;
+    }
+
+    // No termino, no la cancelo el conductor y no esta viva: se acabo el
+    // tiempo. Se deja en cero para que el pasajero lo vea, en lugar de
+    // encontrarse el mapa limpio sin explicacion.
     setSolicitud((actual) => (actual === null ? null : { ...actual, segundosRestantes: 0 }));
   }, [limpiarBorrador]);
 
@@ -634,9 +665,28 @@ export default function PassengerHome() {
   const claveLlegada = solicitud?.conductor?.id ?? null;
   const [claveLlegadaAnterior, setClaveLlegadaAnterior] = useState(claveLlegada);
 
+  /**
+   * El conductor que tenia desaparecio y la solicitud sigue viva (Fase 18).
+   *
+   * Solo puede pasar por una razon: cancelo antes de recogerlo, y
+   * `cancel_ride` devolvio la solicitud a 'searching' para reofrecerla (D187,
+   * rama contraria a `avisoCancelacion`). No hace falta preguntarle nada al
+   * servidor: el propio cambio de `claveLlegada` de no-nulo a nulo, con
+   * `solicitud` todavia viva, ES el aviso.
+   *
+   * Se apaga solo en cuanto vuelva a haber conductor, o al salir de
+   * 'buscando': sin eso, un servicio nuevo heredaria el aviso del anterior.
+   */
+  const [conductorCancelo, setConductorCancelo] = useState(false);
+
   if (claveLlegada !== claveLlegadaAnterior) {
     setClaveLlegadaAnterior(claveLlegada);
     setLlegada(null);
+    setConductorCancelo(
+      claveLlegadaAnterior !== null && claveLlegada === null && solicitud !== null,
+    );
+  } else if (solicitud === null && conductorCancelo) {
+    setConductorCancelo(false);
   }
 
   useEffect(() => {
@@ -897,11 +947,13 @@ export default function PassengerHome() {
             <Text variant="subheading">
               {modo === 'terminado'
                 ? 'Llegaste'
-                : solicitud?.conductor != null
-                  ? tituloDelViaje(solicitud.conductor.rideStatus)
-                  : expirada
-                    ? 'Nadie tomó tu servicio'
-                    : 'Buscando motorratón'}
+                : modo === 'cancelado_conductor'
+                  ? 'Servicio cancelado'
+                  : solicitud?.conductor != null
+                    ? tituloDelViaje(solicitud.conductor.rideStatus)
+                    : expirada
+                      ? 'Nadie tomó tu servicio'
+                      : 'Buscando motorratón'}
             </Text>
           )
         }
@@ -944,6 +996,13 @@ export default function PassengerHome() {
           <ViajeTerminado resumen={resumenFinal} onCerrar={() => setResumenFinal(null)} />
         )}
 
+        {modo === 'cancelado_conductor' && avisoCancelacion !== null && (
+          <ServicioCanceladoPorConductor
+            aviso={avisoCancelacion}
+            onCerrar={() => setAvisoCancelacion(null)}
+          />
+        )}
+
         {modo === 'buscando' && solicitud !== null && (
           <BuscandoConductor
             solicitud={solicitud}
@@ -956,6 +1015,7 @@ export default function PassengerHome() {
             yaLlego={solicitud.conductor?.rideStatus === 'driver_arrived'}
             posicionCaducada={posicionCaducada}
             sinPosicion={solicitud.conductor !== null && posicionConductor === null}
+            conductorCancelo={conductorCancelo}
             error={errorSolicitud}
             onCancelar={() => void cancelar()}
             onReintentar={() => void confirmar()}
@@ -967,8 +1027,9 @@ export default function PassengerHome() {
   );
 }
 
-/** Las cinco caras de la hoja del pasajero. */
-type ModoHoja = 'cargando' | 'destino' | 'resumen' | 'buscando' | 'terminado';
+/** Las seis caras de la hoja del pasajero. */
+type ModoHoja =
+  'cargando' | 'destino' | 'resumen' | 'buscando' | 'terminado' | 'cancelado_conductor';
 
 /**
  * Lo minimo para pintar el panel de busqueda.
@@ -1339,6 +1400,8 @@ interface BuscandoConductorProps {
   posicionCaducada: boolean;
   /** Hay conductor pero todavia no ha llegado ninguna posicion suya. */
   sinPosicion: boolean;
+  /** El conductor que tenia cancelo antes de recogerlo y se busca otro (Fase 18, D187). */
+  conductorCancelo: boolean;
   error: string | null;
   onCancelar: () => void;
   onReintentar: () => void;
@@ -1374,6 +1437,7 @@ function BuscandoConductor({
   yaLlego,
   posicionCaducada,
   sinPosicion,
+  conductorCancelo,
   error,
   onCancelar,
   onReintentar,
@@ -1382,8 +1446,26 @@ function BuscandoConductor({
   const { colors } = useTheme();
   const conductor = solicitud.conductor;
 
+  /**
+   * Confirmacion antes de cancelar (Fase 18).
+   *
+   * Antes se cancelaba al primer toque. Es la unica accion irreversible de
+   * este panel: deshace un servicio pedido, y con conductor ya asignado le
+   * avisa a una persona real que iba de camino.
+   */
+  const [confirmando, setConfirmando] = useState(false);
+
   return (
     <>
+      {conductorCancelo && conductor === null && !expirada && (
+        <View style={[styles.avisoConductorCancelo, { backgroundColor: colors.surfaceSubtle }]}>
+          <Info size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <Text variant="caption" color="textSecondary" style={styles.avisoConductorCanceloTexto}>
+            Tu conductor anterior canceló. Seguimos buscando otro.
+          </Text>
+        </View>
+      )}
+
       <Card
         variant="outlined"
         padding="md"
@@ -1555,14 +1637,40 @@ function BuscandoConductor({
           <Button label="Cambiar el viaje" variant="secondary" fullWidth onPress={onCambiarViaje} />
         </>
       ) : (
-        <Button
-          label="Cancelar servicio"
-          variant="secondary"
-          fullWidth
-          loading={cancelando}
-          onPress={onCancelar}
-        />
+        // Sin boton en 'in_progress': el servidor ya no admite cancelar desde
+        // aqui (INVALID_STATE_TRANSITION) porque el pasajero va a bordo, y
+        // ofrecer un boton que siempre falla es peor que no ofrecerlo. Antes
+        // se veia igual en los cinco estados; lo encontro el usuario mirando
+        // la pantalla (seccion 15.15).
+        !enRecorrido && (
+          <Button
+            label="Cancelar servicio"
+            variant="secondary"
+            fullWidth
+            loading={cancelando}
+            onPress={() => setConfirmando(true)}
+          />
+        )
       )}
+
+      <Modal
+        visible={confirmando}
+        onRequestClose={() => setConfirmando(false)}
+        title={conductor === null ? '¿Cancelar la búsqueda?' : '¿Cancelar este servicio?'}
+        description={
+          conductor === null
+            ? 'Dejaremos de buscarte un motorratón.'
+            : 'Le avisamos al conductor y queda libre para tomar otro servicio.'
+        }
+        icon={Ban}
+        tone="danger"
+        confirmLabel="Sí, cancelar"
+        cancelLabel="No"
+        onConfirm={() => {
+          setConfirmando(false);
+          onCancelar();
+        }}
+      />
     </>
   );
 }
@@ -1674,6 +1782,71 @@ function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCer
   );
 }
 
+/**
+ * D187: que ve el pasajero cuando el conductor cancela con el a bordo.
+ *
+ * Pantalla propia y no un texto suelto, con el mismo criterio que
+ * `ViajeTerminado`: es un desenlace del servicio y merece que el pasajero lo
+ * cierre cuando quiera, no que desaparezca solo.
+ *
+ * No ofrece calificar ni "Volver a pedirlo": lo primero no tiene sentido para
+ * un viaje que no se completo (R8, `rate_ride` exige 'completed'), y lo
+ * segundo tampoco hace falta, porque al cerrar esta pantalla el borrador del
+ * viaje sigue puesto (no se llama a `limpiarBorrador`) y el pasajero cae
+ * directo en el resumen, listo para confirmar otra vez.
+ */
+function ServicioCanceladoPorConductor({
+  aviso,
+  onCerrar,
+}: {
+  aviso: DriverCancelledNotice;
+  onCerrar: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <>
+      <Card variant="outlined" padding="md">
+        <View style={styles.filaBuscando}>
+          <Ban size={iconSize.md} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <View style={styles.filaLugarTextos}>
+            <Text variant="bodyStrong">
+              {aviso.driverName !== null
+                ? `${aviso.driverName} canceló el servicio`
+                : 'El conductor canceló el servicio'}
+            </Text>
+            <Text variant="caption" color="textSecondary">
+              Puedes volver a pedirlo cuando quieras.
+            </Text>
+          </View>
+        </View>
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <View style={styles.puntoViaje}>
+          <Circle size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {aviso.originLabel}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.puntoViaje}>
+          <MapPin size={iconSize.sm} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          <View style={styles.puntoViajeTextos}>
+            <Text variant="body" numberOfLines={1}>
+              {aviso.destinationLabel}
+            </Text>
+          </View>
+        </View>
+      </Card>
+
+      <Button label="Entendido" variant="brand" fullWidth onPress={onCerrar} />
+    </>
+  );
+}
+
 interface PuntoDelViajeProps {
   icon: typeof MapPin;
   color: string;
@@ -1743,6 +1916,17 @@ function FloatingButton({ label, icon: Icon, onPress }: FloatingButtonProps) {
 }
 
 const styles = StyleSheet.create({
+  avisoConductorCancelo: {
+    alignItems: 'center',
+    borderRadius: radius.md,
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginBottom: spacing.md,
+    padding: spacing.md,
+  },
+  avisoConductorCanceloTexto: {
+    flex: 1,
+  },
   botonCancelar: {
     alignItems: 'center',
     borderRadius: radius.full,

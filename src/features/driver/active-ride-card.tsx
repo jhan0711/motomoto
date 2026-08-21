@@ -1,5 +1,6 @@
 import {
   ArrowRight,
+  Ban,
   Circle,
   Flag,
   MapPin,
@@ -97,6 +98,10 @@ export interface ActiveRideCardProps {
   advancing?: boolean;
   /** Lo que fallo al intentar avanzar, ya traducido. */
   error?: string | null;
+  /** Cancela el servicio (Fase 18). */
+  onCancel: (ride: DriverRide) => void;
+  /** El servidor esta respondiendo a la cancelacion de ESTE viaje. */
+  cancelling?: boolean;
 }
 
 export function ActiveRideCard({
@@ -104,11 +109,14 @@ export function ActiveRideCard({
   onAdvance,
   advancing = false,
   error = null,
+  onCancel,
+  cancelling = false,
 }: ActiveRideCardProps) {
   const { colors } = useTheme();
 
   const [errorNavegacion, setErrorNavegacion] = useState<string | null>(null);
   const [confirmando, setConfirmando] = useState(false);
+  const [confirmandoCancelacion, setConfirmandoCancelacion] = useState(false);
 
   const siguiente = siguienteAccion(ride.status);
 
@@ -249,6 +257,18 @@ export function ActiveRideCard({
         onPress={() => void Linking.openURL(`tel:${ride.passengerPhone}`)}
       />
 
+      {/* Al final y en el tono mas bajo de la tarjeta: se usa poco, y ponerla al
+          nivel de "Voy en camino" invitaria a tocarla por error. */}
+      <Button
+        label="Cancelar servicio"
+        variant="ghost"
+        icon={Ban}
+        fullWidth
+        loading={cancelling}
+        style={styles.llamarDespues}
+        onPress={() => setConfirmandoCancelacion(true)}
+      />
+
       <FormError message={errorNavegacion ?? error} />
 
       <Modal
@@ -262,6 +282,25 @@ export function ActiveRideCard({
         onConfirm={() => {
           setConfirmando(false);
           if (siguiente !== null) onAdvance(ride, siguiente.action);
+        }}
+      />
+
+      <Modal
+        visible={confirmandoCancelacion}
+        onRequestClose={() => setConfirmandoCancelacion(false)}
+        title="¿Cancelar este servicio?"
+        description={
+          ride.status === 'in_progress'
+            ? `${ride.passengerName} ya va contigo. Se cerrará el servicio y no se puede deshacer.`
+            : `Le avisamos a ${ride.passengerName} y buscamos otro motorratón para su servicio.`
+        }
+        icon={Ban}
+        tone="danger"
+        confirmLabel="Sí, cancelar"
+        cancelLabel="No"
+        onConfirm={() => {
+          setConfirmandoCancelacion(false);
+          onCancel(ride);
         }}
       />
     </Card>

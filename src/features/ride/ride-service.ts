@@ -275,6 +275,50 @@ export interface DriverLocation {
 }
 
 /**
+ * El aviso de que el conductor cancelo con el pasajero a bordo (D187, Fase 18).
+ *
+ * Solo existe para ESE caso. Si el conductor cancela antes de recoger, la
+ * solicitud vuelve a 'searching' y se reofrece: el pasajero sigue viendo
+ * "buscando motorratón", que ya es una pantalla honesta, y no necesita esto.
+ */
+export interface DriverCancelledNotice {
+  id: string;
+  originLabel: string;
+  destinationLabel: string;
+  cancelledAt: string;
+  /** Nulo si el viaje del conductor no se pudo enlazar. Rarisimo, pero posible. */
+  driverName: string | null;
+}
+
+/**
+ * El ultimo servicio que el conductor cancelo con el pasajero dentro, si fue
+ * hace poco.
+ *
+ * Mismo criterio que `fetchFinishedRequest`: devolver null es el caso normal,
+ * y solo importa preguntar cuando no hay servicio activo.
+ */
+export async function fetchDriverCancelledNotice(): Promise<Result<DriverCancelledNotice | null>> {
+  const { data, error } = await supabase.rpc('get_driver_cancelled_notice');
+
+  if (error) {
+    return fail(error);
+  }
+
+  const row = (data ?? [])[0];
+  if (row === undefined) {
+    return ok(null);
+  }
+
+  return ok({
+    id: row.id,
+    originLabel: row.origin_label,
+    destinationLabel: row.destination_label,
+    cancelledAt: row.cancelled_at,
+    driverName: row.driver_name,
+  });
+}
+
+/**
  * Lee la posicion del conductor asignado.
  *
  * Devolver null no es un error: significa que ese conductor no tiene posicion

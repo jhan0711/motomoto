@@ -994,6 +994,16 @@ export type Database = {
           vehicle_unit_number: number;
         }[];
       };
+      get_driver_cancelled_notice: {
+        Args: never;
+        Returns: {
+          cancelled_at: string;
+          destination_label: string;
+          driver_name: string;
+          id: string;
+          origin_label: string;
+        }[];
+      };
       get_driver_job: {
         Args: { p_offer_id: string };
         Returns: {

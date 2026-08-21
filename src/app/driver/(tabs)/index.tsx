@@ -15,6 +15,7 @@ import { useSession } from '@/features/auth/session';
 import { hasRated } from '@/features/rating/rating-service';
 import {
   acceptOffer,
+  cancelRide,
   completeRide,
   confirmArrival,
   fetchDriverState,
@@ -225,6 +226,41 @@ export default function DriverHome() {
         void cargar();
         setRecienTerminado({ rideId: viaje.rideId, passengerName: viaje.passengerName });
       }
+    },
+    [cargar, cargarViajes],
+  );
+
+  /**
+   * Que viaje esta esperando respuesta a una cancelacion (Fase 18).
+   *
+   * Aparte de `avanzando` y no reutilizado: son dos acciones distintas sobre la
+   * misma tarjeta, y confundirlas pondria a girar el boton equivocado si algun
+   * dia coinciden.
+   */
+  const [cancelandoViaje, setCancelandoViaje] = useState<string | null>(null);
+
+  /**
+   * Cancela el servicio.
+   *
+   * No enciende la disponibilidad (D181): se relee el estado solo porque
+   * cancelar libera asientos, no porque el interruptor vaya a moverse solo.
+   */
+  const cancelarViaje = useCallback(
+    async (viaje: DriverRide) => {
+      setCancelandoViaje(viaje.rideId);
+      setErrorViaje(null);
+
+      const resultado = await cancelRide(viaje.rideId);
+      setCancelandoViaje(null);
+
+      if (!resultado.ok) {
+        setErrorViaje({ rideId: viaje.rideId, message: resultado.failure.message });
+        void cargarViajes();
+        return;
+      }
+
+      void cargar();
+      void cargarViajes();
     },
     [cargar, cargarViajes],
   );
@@ -546,6 +582,8 @@ export default function DriverHome() {
             onAdvance={(r, accion) => void avanzarViaje(r, accion)}
             advancing={avanzando === viaje.rideId}
             error={errorViaje?.rideId === viaje.rideId ? errorViaje.message : null}
+            onCancel={(r) => void cancelarViaje(r)}
+            cancelling={cancelandoViaje === viaje.rideId}
           />
         ))}
 
