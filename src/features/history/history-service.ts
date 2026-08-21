@@ -64,6 +64,15 @@ export interface PassengerTrip {
   driverName: string | null;
   unitNumber: number | null;
   plate: string | null;
+  /**
+   * Si quien mira ya califico este servicio.
+   *
+   * NULO cuando no hubo viaje, y esa es la tercera posibilidad que importa: una
+   * solicitud que caduco no esta "sin calificar", es que no hay nada que
+   * calificar. Con un booleano a secas la pantalla ensenaria "sin calificar" en
+   * viajes que nunca existieron.
+   */
+  alreadyRated: boolean | null;
 }
 
 /**
@@ -106,6 +115,7 @@ export async function fetchPassengerHistory(
       driverName: texto(row.driver_name),
       unitNumber: numero(row.vehicle_unit_number),
       plate: texto(row.vehicle_plate),
+      alreadyRated: typeof row.already_rated === 'boolean' ? row.already_rated : null,
     })),
   );
 }
@@ -154,6 +164,8 @@ export interface DriverJob {
   seconds: number | null;
   cancelledBy: Actor | null;
   passengerName: string | null;
+  /** Ver el gemelo en `PassengerTrip`: nulo cuando no hubo viaje. */
+  alreadyRated: boolean | null;
 }
 
 /** Una pagina del historial del conductor, de la mas reciente a la mas antigua. */
@@ -190,6 +202,7 @@ export async function fetchDriverHistory(
       seconds: numero(row.duration_s),
       cancelledBy: texto(row.cancelled_by) as Actor | null,
       passengerName: texto(row.passenger_name),
+      alreadyRated: typeof row.already_rated === 'boolean' ? row.already_rated : null,
     })),
   );
 }
@@ -226,6 +239,9 @@ function numero(valor: number | null): number | null {
  */
 export interface PassengerTripDetail extends PassengerTrip {
   pickupReference: string | null;
+  /** Las estrellas que dio quien mira, y su comentario. Nulos si no califico. */
+  myStars: number | null;
+  myComment: string | null;
   expiresAt: string;
   cancelledAt: string | null;
   acceptedAt: string | null;
@@ -277,6 +293,13 @@ export async function fetchPassengerTrip(
     driverName: texto(row.driver_name),
     unitNumber: numero(row.vehicle_unit_number),
     plate: texto(row.vehicle_plate),
+    myStars: numero(row.my_stars),
+    myComment: texto(row.my_comment),
+    // El detalle no trae la columna calculada de la lista: aqui se deduce. Y la
+    // condicion es que el viaje TERMINARA, no que exista: un servicio cancelado
+    // despues de aceptar tiene viaje y no se puede calificar (`rate_ride`
+    // responde RIDE_NOT_COMPLETED). Lo encontro la tablet con datos reales.
+    alreadyRated: row.ride_status === 'completed' ? numero(row.my_stars) !== null : null,
   });
 }
 
@@ -289,6 +312,8 @@ export async function fetchPassengerTrip(
  */
 export interface DriverJobDetail extends DriverJob {
   offerExpiresAt: string;
+  myStars: number | null;
+  myComment: string | null;
   /** Cuando dejo de estar pendiente, la respondiera el o la respondiera el reloj. */
   respondedAt: string | null;
   pickupReference: string | null;
@@ -343,5 +368,10 @@ export async function fetchDriverJob(offerId: string): Promise<Result<DriverJobD
     meters: numero(row.distance_m),
     seconds: numero(row.duration_s),
     passengerName: texto(row.passenger_name),
+    myStars: numero(row.my_stars),
+    myComment: texto(row.my_comment),
+    // Mismo criterio que en el pasajero: solo lo terminado se puede calificar, y
+    // el detalle del conductor lo sabe por la hora de finalizacion.
+    alreadyRated: texto(row.completed_at) !== null ? numero(row.my_stars) !== null : null,
   });
 }

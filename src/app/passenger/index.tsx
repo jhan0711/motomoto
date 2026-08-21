@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ArrowRight,
   Bike as BikeIcon,
@@ -272,6 +272,38 @@ export default function PassengerHome() {
     setClaveSolicitudAnterior(claveSolicitud);
     setErrorSolicitud(null);
   }
+
+  /**
+   * Al volver de calificar, releer la despedida.
+   *
+   * La tarjeta se quedaba ofreciendo "Calificar el viaje" despues de haberlo
+   * calificado: la calificacion se guarda en otra pantalla y esta no se entera
+   * de nada. Se vio en dispositivo, no en el codigo.
+   *
+   * Solo se relee si hay despedida en pantalla. Volver al mapa desde el destino
+   * o desde el historial no tiene por que costar una consulta.
+   */
+  const hayDespedida = resumenFinal !== null;
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!hayDespedida) return;
+
+      // Diferido, como en el resto de la aplicacion: el compilador de React
+      // rechaza un setState alcanzable sincronamente desde un efecto.
+      const tarea = setTimeout(() => {
+        void fetchFinishedRequest().then((resultado) => {
+          if (resultado.ok) {
+            setResumenFinal(resultado.data);
+          }
+        });
+      }, 0);
+
+      return () => clearTimeout(tarea);
+      // Depende de si HAY despedida, no de cual: con el objeto entero cada
+      // relectura dispararia la siguiente, en bucle.
+    }, [hayDespedida]),
+  );
 
   useEffect(() => {
     if (
@@ -1551,6 +1583,12 @@ function BuscandoConductor({
  */
 function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCerrar: () => void }) {
   const { colors } = useTheme();
+  const router = useRouter();
+
+  // Solo se ofrece calificar si hay viaje y si no lo hizo ya. Un boton que lleva
+  // a una pantalla que va a responder "ya calificaste este servicio" es un
+  // callejon sin salida con buena cara.
+  const puedeCalificar = resumen.rideId !== null && !resumen.alreadyRated;
 
   return (
     <>
@@ -1609,7 +1647,29 @@ function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCer
         )}
       </Card>
 
-      <Button label="Listo" variant="brand" fullWidth onPress={onCerrar} />
+      {puedeCalificar && resumen.rideId !== null ? (
+        <>
+          <Button
+            label="Calificar el viaje"
+            variant="brand"
+            fullWidth
+            onPress={() =>
+              router.push({
+                pathname: '/passenger/rate/[id]',
+                params: {
+                  id: resumen.rideId ?? '',
+                  // El nombre viaja por parametro y no se vuelve a consultar: ya
+                  // esta en pantalla, y la calificacion no depende de el.
+                  ...(resumen.driverName !== null ? { name: resumen.driverName } : {}),
+                },
+              })
+            }
+          />
+          <Button label="Ahora no" variant="ghost" fullWidth onPress={onCerrar} />
+        </>
+      ) : (
+        <Button label="Listo" variant="brand" fullWidth onPress={onCerrar} />
+      )}
     </>
   );
 }

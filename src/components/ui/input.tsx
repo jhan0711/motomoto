@@ -57,6 +57,12 @@ export function Input({
   style,
   ...rest
 }: InputProps) {
+  /**
+   * A multiline field cannot keep the fixed one-line height, and it cannot
+   * center its content either: text has to start at the top and grow downwards.
+   * Added in Phase 17 for the rating comment, the app's first long-text field.
+   */
+  const isMultiline = rest.multiline === true;
   const { colors } = useTheme();
   const [isFocused, setIsFocused] = useState(false);
   const [isSecureVisible, setIsSecureVisible] = useState(false);
@@ -79,6 +85,7 @@ export function Input({
       <View
         style={[
           styles.field,
+          isMultiline && styles.fieldMultiline,
           {
             backgroundColor: editable ? colors.surface : colors.surfaceSubtle,
             borderColor,
@@ -95,7 +102,13 @@ export function Input({
         )}
 
         <TextInput
-          style={[styles.input, textStyles.body, { color: colors.textPrimary }]}
+          style={[
+            styles.input,
+            isMultiline && styles.inputMultiline,
+            textStyles.body,
+            { color: colors.textPrimary },
+          ]}
+          textAlignVertical={isMultiline ? 'top' : 'center'}
           placeholderTextColor={colors.textTertiary}
           secureTextEntry={secureTextEntry && !isSecureVisible}
           editable={editable}
@@ -149,11 +162,22 @@ const styles = StyleSheet.create({
     height: FIELD_HEIGHT,
     paddingHorizontal: spacing.md,
   },
+  fieldMultiline: {
+    alignItems: 'flex-start',
+    height: undefined,
+    minHeight: FIELD_HEIGHT * 2,
+    paddingVertical: spacing.md,
+  },
   input: {
     flex: 1,
     // Android adds vertical padding to TextInput by default, which breaks the
     // fixed field height. Zeroing it keeps the text centered.
     paddingVertical: 0,
+  },
+  inputMultiline: {
+    // The field already pads vertically, and `flex: 1` would stretch a short
+    // comment across the whole box.
+    alignSelf: 'stretch',
   },
   message: {
     alignItems: 'flex-start',

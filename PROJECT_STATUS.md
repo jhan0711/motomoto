@@ -4,13 +4,13 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-19
+- **Ultima actualizacion:** 2026-08-20
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
-  14 seguimiento del conductor, 15 ciclo completo del servicio
+  14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -18,15 +18,20 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   registrado. Detalle en la seccion 15.15
 - **El mapa ya es Mapbox.** Se cambio justo despues de la Fase 15, fuera del plan de fases,
   para cerrar el hallazgo H18. Detalle en la seccion 15.16
-- **Fase 16 terminada, pendiente de aprobacion:** las dos partes tienen historial. El
+- **Fase 16 terminada y aprobada:** las dos partes tienen historial. El
   pasajero ve sus servicios terminados, cancelados y caducados; el conductor ve sus ofertas
   con su desenlace, **incluidas las que rechazo**. Detalle en la seccion 15.17
-- **Trabajo siguiente:** **Fase 17, calificaciones**
-- **Ultimo commit:** b84c4d6 feat: draw the map with Mapbox instead of Google.
-  **Toda la Fase 16 esta hecha y probada pero SIN CONFIRMAR:** tres migraciones, dos scripts
-  de prueba en `supabase/dev-tools/`, seis archivos nuevos en `src/features/history/`, las
-  cuatro pantallas del historial, `driver/_layout.tsx`, `features/ride/errors.ts`,
-  `features/auth/errors.ts` y `src/types/database.ts`, mas este documento
+- **Fase 17 terminada y aprobada:** las dos partes se califican, al terminar o
+  despues desde el historial, y el promedio del conductor ya se ve en su perfil. Detalle en la
+  seccion 15.18
+- **HAY TABLET OTRA VEZ** desde el 2026-08-20, una Xiaomi con Android 15 y sin GPS. Lo que
+  cambia y lo que no, en el bloque LEE ESTO PRIMERO
+- **Trabajo siguiente:** **Fase 18, cancelaciones y errores operativos**
+- **Ultimo commit:** d0a433f feat: ride history for passenger and driver.
+  **Toda la Fase 17 esta hecha y probada pero SIN CONFIRMAR:** tres migraciones, un script de
+  prueba, dos archivos nuevos en `src/features/rating/`, las dos pantallas de calificar, la
+  reorganizacion de la zona del conductor en `(tabs)`, y los retoques de historial, despedidas,
+  errores, `Input` y los tipos, mas este documento
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -76,7 +81,7 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue: la Fase 17, calificaciones.**
+**Por donde se sigue: la Fase 18, cancelaciones y errores operativos.**
 
 La Fase 16 esta terminada y pendiente de tu aprobacion, con su registro en la seccion 15.17.
 Dos cosas de ella que conviene saber antes de tocar nada: **el historial del conductor sale
@@ -161,26 +166,48 @@ estaba abierta con codigo viejo, `am force-stop com.motomoto.app` antes.
   android.permission.ACCESS_FINE_LOCATION`. Con Fake GPS corriendo, la aplicacion si recibe
   una posicion de Amalfi al arrancar. La salida "Continuar sin ubicacion" sigue estando
 
-**YA NO HAY TABLET.** Desde la Fase 14 el unico aparato es el emulador `motomoto_phone`. Eso
-cambia tres cosas y conviene tenerlas presentes antes de planear una prueba:
+**HAY TABLET OTRA VEZ, desde el 2026-08-20.** No es la de antes: es una **Xiaomi 25040RP0AL
+con Android 15**, 1600x2560 a 360 dpi, o sea **711 dp de ancho en vertical y 1138 en
+horizontal**. Se conecta por USB como `rk6xcyobpfwwrgnj`. Lo que hay que saber de ella:
 
-- **No hay dos aparatos.** Para probar los dos lados hay que alternar sesiones en el mismo
-  emulador, y `signOut` cierra la sesion de ese usuario en todas partes. Alternar cuesta unos
-  minutos por vuelta. La alternativa que funciono bien en la Fase 14 es **manejar un lado
-  desde SQL**: crear la solicitud, aceptarla o mover la posicion del conductor con
-  `supabase db query`, y mirar la otra mitad en pantalla.
-- **No hay ancho de 800 dp.** Se simula con `adb shell wm size` y `wm density`, o creando un
-  AVD de tablet. No es una tablet, pero cubre el reparto del espacio, que es lo que se probaba.
-- **No hay hardware real.** Ni SIM, ni GPS de verdad, ni conectividad de campo. Todo lo que
-  dependa de eso queda pendiente de conseguir un telefono Android.
+- **NO TIENE GPS.** Tiene instalado **Fake GPS** (`com.lexa.fakegps`), igual que el emulador.
+  Si eso alcanza para simular movimiento —lo que el emulador no logro— **esta sin comprobar**:
+  la regla de los 50 metros de R9 y el rastro del recorrido siguen pendientes hasta que alguien
+  lo mida.
+- **Es Xiaomi, y MIUI bloquea instalar por USB.** `adb install` responde
+  `INSTALL_FAILED_USER_RESTRICTED`. Dos salidas: activar "Instalar via USB" en las opciones de
+  desarrollador —pide cuenta Mi— o copiar el APK con `adb push` a `/sdcard/Download` e
+  instalarlo tocandolo en la tablet.
+- **Es ARM, y el emulador es x86_64.** El APK del cliente de desarrollo hay que compilarlo para
+  las dos: `.\gradlew.bat assembleDebug "-PreactNativeArchitectures=arm64-v8a,x86_64"`, con las
+  comillas, porque PowerShell parte la coma. Tres minutos y medio. Sin arm64 la instalacion
+  falla con `INSTALL_FAILED_NO_MATCHING_ABIS`.
+
+**Lo que la tablet SI resuelve:** las dos partes a la vez. Conductor en el emulador y pasajero
+en la tablet, sin alternar sesiones ni volver a escribir contrasenas, que es lo que hizo lento
+todo el trabajo de las fases 14 a 17. Y el ancho de pantalla grande, por fin en una pantalla
+grande de verdad.
+
+**Lo que NO resuelve, hasta que se compruebe:** el movimiento. Y sigue sin haber SIM ni
+conectividad de campo.
+
+Con un solo aparato —si la tablet no esta a mano— la alternativa que funciono en las fases 14 a
+17 es **manejar un lado desde SQL**: crear la solicitud, aceptarla o mover la posicion del
+conductor con `supabase db query`, y mirar la otra mitad en pantalla.
 
 **El emulador no puede producir movimiento, y esto se comprobo a fondo en la Fase 14.** Hay un
 **Fake GPS instalado** que si le da una posicion de Amalfi a la aplicacion, pero **solo la
 entrega cuando el vigilante arranca**: con la aplicacion corriendo, mover el punto en Fake GPS
 no le llega. Verificado midiendo la posicion enviada al servidor antes y despues de moverla, y
 reiniciando la aplicacion para ver el salto. Consecuencia: **nada que dependa de un aparato que
-se mueve se puede probar aqui**, y eso incluye la regla de los 50 metros de R9 y el marcador
-del pasajero moviendose de verdad.
+se mueve se puede probar en el emulador**, y eso incluye la regla de los 50 metros de R9 y el
+marcador del pasajero moviendose de verdad.
+
+**Y ojo con la posicion del conductor en el emulador:** la aplicacion envia la suya propia cada
+pocos segundos y **pisa la que siembra `seed_test_driver.sql`**. La semilla lo deja a 109 m del
+parque; con la aplicacion abierta, el conductor acaba donde diga Fake GPS, que en las pruebas
+de la Fase 17 estaba a 1,3 km. Por eso "He llegado" no se puede tocar sin subir antes
+`driver_arrival_radius_m`.
 
 Otras dos cosas del entorno que siguen valiendo:
 
@@ -449,6 +476,19 @@ el sistema.
 | D169 | Un solo hook de tiempo real para los dos lados | El pasajero y el conductor escuchan la misma tabla con el mismo hook. **Quien ve que no lo decide el codigo sino las politicas**, que se aplican tambien en tiempo real. Dos hooks casi iguales serian duplicar para acabar dependiendo igualmente de las mismas dos politicas |
 | D170 | Calificacion cero | Un promedio de 0 se traduce a "sin calificaciones" antes de llegar a ninguna pantalla. El servidor guarda 0 cuando no hay ninguna, y una calificacion real nunca puede valer 0 porque el minimo es una estrella. Pintarle un 0,0 a un conductor nuevo le atribuiria un mal servicio que nadie ha dado |
 | D171 | Geometria de las rutas | `overview=full` y no `simplified`. La simplificada trae 4 puntos para 659 metros, o sea tramos rectos de 220 metros que atraviesan tres manzanas y salen de las calles. La completa trae 10, de 73 metros. **La diferencia son 131 bytes por peticion**: el ahorro que justificaba lo otro no existia. Lo vio el usuario mirando la pantalla |
+
+### Decisiones de la Fase 17
+
+| # | Decision | Valor |
+|---|---|---|
+| D204 | Los reportes no entran en esta fase | "Reportar un problema" va a la **Fase 20**, con la bandeja que los gestiona. Un boton que envia un reporte que nadie puede leer todavia es peor que no tenerlo: promete atencion que no existe |
+| D205 | La calificacion es una pantalla propia, y se abre por identificador de viaje | No un panel dentro de la despedida. Asi la misma pantalla sirve para calificar al terminar y para calificar desde el historial semanas despues, y funciona igual si se llega por un enlace o si la aplicacion se reabre encima |
+| D206 | Estrellas obligatorias, comentario opcional | El boton de enviar no se activa sin estrellas. No existe el cero: el minimo del esquema es 1, y "sin calificar" ya se representa con la ausencia de fila, no con un cero |
+| D207 | El atajo del conductor no sobrevive a cerrar la aplicacion | Los dos datos que hacen falta —que viaje y a quien llevo— los tiene la tarjeta que se acaba de cerrar, asi que no se le pregunta al servidor por algo que ya se sabe. Lo que quede sin calificar vive en el historial, que es donde se busca al dia siguiente |
+| D208 | La calificacion que uno RECIBE no se ensena viaje por viaje | Es un dato de la otra parte sobre uno, y ensenarlo por viaje convierte el historial en un sitio donde mirar quien te puso tres estrellas. Lo que si se ve es el promedio, en el perfil del conductor, que existe desde la Fase 5 |
+| D209 | `already_rated` se filtra siempre por quien califica | Nunca solo por viaje. `ratings_select_involved` deja ver las dos filas del mismo servicio, asi que sin el filtro un servicio calificado por la otra parte se veria como calificado por uno mismo. **Lo destapo la prueba 20**, no la revision |
+| D210 | La zona del conductor es una pila por encima de las pestanas | Las tres pantallas viven en un grupo `(tabs)` que no cambia ninguna direccion. Antes el detalle y la calificacion colgaban de las pestanas con `href: null`, y **volver atras llevaba a otra pestana en lugar de a la pantalla anterior**: se calificaba desde el historial y se aterrizaba en Inicio |
+| D211 | `anon` deja de poder ejecutar `rate_ride` | Estaba anunciado desde la Fase 15 y lo confirmo la prueba. Se cierra solo esta, que es la de esta fase y la unica que se puede volver a probar entera hoy; `accept_ride_offer`, `reject_ride_offer`, `cancel_request` y `cancel_ride` siguen en la Fase 22, para mirarlas una por una |
 
 ### Decisiones de la Fase 16
 
@@ -864,8 +904,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 13 | Asignacion en tiempo real | COMPLETADA Y APROBADA |
 | 14 | Seguimiento del conductor | COMPLETADA Y APROBADA |
 | 15 | Ciclo completo del servicio | COMPLETADA Y APROBADA |
-| 16 | Historial | COMPLETADA, pendiente de aprobacion |
-| 17 | Calificaciones | Pendiente |
+| 16 | Historial | COMPLETADA Y APROBADA |
+| 17 | Calificaciones | COMPLETADA Y APROBADA |
 | 18 | Cancelaciones y errores operativos | Pendiente |
 | 19 | Notificaciones | Pendiente |
 | 20 | Panel administrativo | Pendiente |
@@ -2722,17 +2762,168 @@ src/types/database.ts             regenerado
 
 ---
 
+## 15.18 CALIFICACIONES (Fase 17)
+
+### Lo que ya estaba hecho, y lo que faltaba
+
+**La tabla, la funcion y el disparador se escribieron en la Fase 5 y hasta esta fase no los
+habia usado ninguna pantalla.** `ratings` con la regla R8 —una calificacion por parte y por
+viaje, no editable, sostenida por un indice unico y no por una comprobacion que alguien pueda
+olvidar—, `rate_ride` con sus tres validaciones, y el disparador que recalcula
+`drivers.rating_average`. Esta fase no invento la maquina: la conecto, y antes de conectarla
+la puso a prueba.
+
+### Los cinco pasos
+
+1. **Probar lo que ya existia**, intentando romperlo
+2. **La pantalla del pasajero**, colgada de la despedida que ya salia al terminar
+3. **La del conductor**, colgada de una despedida nueva
+4. **Calificar desde el historial**, y ver ahi la calificacion dada
+5. **El checklist de validacion**
+
+### Los fallos que encontro
+
+**El primero, y estaba anunciado: `anon` podia ejecutar `rate_ride`.** La migracion de la Fase
+15 que cerro las transiciones dejo escrito, con nombre y apellido, que quedaban pendientes
+`accept_ride_offer`, `reject_ride_offer`, `cancel_request` y `rate_ride`. La prueba lo
+confirmo. Sin sesion no se puede colar una calificacion —`rater_id` no admite nulos— pero si
+distinguir las respuestas y averiguar si cierto viaje existe y en que estado esta, con una
+funcion que corre como el dueno de la base de datos. Se cerro solo esta (D211); las otras tres
+siguen en la lista de la Fase 22.
+
+**El segundo, dos veces, uno en cada lado: la tarjeta seguia ofreciendo calificar despues de
+haber calificado.** Pasa porque la calificacion ocurre en otra pantalla. Se corrigio
+preguntando al volver, y ahi esta lo que importa: **la pregunta filtra por quien califica, no
+por el viaje**. La politica `ratings_select_involved` deja ver las dos filas de un mismo
+servicio, la que uno dio y la que recibio, asi que preguntar solo por el viaje diria "ya esta
+calificado" en cuanto lo hiciera la otra parte, y la aplicacion dejaria de ofrecer algo que
+todavia se podia hacer. La prueba 20 existe para eso (D209).
+
+**El tercero, de navegacion, y solo se ve en el aparato: volver atras llevaba a otra pestana.**
+El detalle de un servicio y la pantalla de calificar del conductor colgaban de las pestanas,
+escondidos con `href: null`. Se calificaba desde el historial y se aterrizaba en Inicio. La
+zona del conductor pasa a ser una **pila por encima de las pestanas**, con las tres pantallas
+en un grupo `(tabs)` que no cambia ninguna direccion (D210).
+
+**El cuarto y el quinto los encontro LA TABLET, con datos reales, y ninguno de
+los dos habia salido en el emulador.**
+
+- **Un servicio cancelado que si tuvo conductor salia como "Sin calificar"** y
+  ofrecia el boton. Tocarlo habria dado error del servidor, porque `rate_ride`
+  solo acepta terminados. La condicion era "hay viaje"; la correcta es "hay viaje
+  y termino" (migracion `20260821021500`).
+- **La pantalla no se releia al volver de calificar.** Se calificaba desde el
+  detalle, se volvia, y seguia diciendo "todavia no calificaste" con la
+  calificacion ya guardada. Ahora las dos listas y los dos detalles releen al
+  recuperar el foco, saltandose la primera vez para no pedir dos veces al abrir.
+
+**El sexto no es del producto sino de la prueba, y merece quedar escrito.** La comprobacion
+del promedio decia "que cambie despues de calificar", y fallo: el conductor ya tenia una
+calificacion real de 4, se le puso otra de 4 y el promedio se quedo igual. Lo correcto no es
+exigir que se mueva, sino que **coincida con lo que dicen las calificaciones**. Igual que en la
+Fase 16 con las cuentas de filas: una prueba que espera un numero fijo se rompe sola en cuanto
+las cuentas de prueba se usan de verdad.
+
+### Archivos
+
+```
+supabase/migrations/20260819234500_revoke_anon_on_rate_ride.sql            NUEVO
+supabase/migrations/20260820001500_finished_request_has_ride_and_rating.sql NUEVO
+supabase/migrations/20260820020000_history_knows_about_ratings.sql         NUEVO
+supabase/dev-tools/prueba_calificaciones.sql                              NUEVO
+
+src/features/rating/rating-service.ts   NUEVO. Unico punto que llama a rate_ride
+src/features/rating/star-picker.tsx     NUEVO. Las estrellas, para tocar y para leer
+
+src/app/passenger/rate/[id].tsx   NUEVO. Calificar al conductor
+src/app/driver/rate/[id].tsx      NUEVO. Calificar al pasajero
+src/app/driver/(tabs)/_layout.tsx NUEVO. Las tres pestanas, ahora dentro de un grupo
+src/app/driver/_layout.tsx        el guardia, y ahora una pila por encima de las pestanas
+src/app/driver/(tabs)/index.tsx   la despedida del conductor y su atajo para calificar
+src/app/passenger/index.tsx       la despedida del pasajero, con su atajo
+src/app/passenger/history.tsx     la marca de "Sin calificar"
+src/app/driver/(tabs)/history.tsx idem
+src/app/passenger/trip/[id].tsx   el bloque TU CALIFICACION
+src/app/driver/job/[id].tsx       idem
+src/components/ui/input.tsx       primer campo de texto largo de la aplicacion
+src/features/history/history-service.ts  already_rated, my_stars y my_comment
+src/features/history/use-detail.ts       relee al volver a la pantalla
+src/features/history/use-history.ts      idem
+src/features/auth/session.tsx            tope de 15 s en el arranque (H20)
+supabase/migrations/20260821021500_only_completed_can_be_rated.sql  NUEVO
+src/features/ride/ride-service.ts        la despedida trae el viaje y si esta calificado
+src/features/ride/errors.ts              los codigos de calificar
+src/types/database.ts                    regenerado
+```
+
+### Reglas aprendidas, no repetir estos errores
+
+1. **Preguntar "esta calificado" no es lo mismo que "lo calificaste tu".** Son dos filas
+   distintas y la politica deja ver las dos. Cuando un dato tiene dos duenos posibles, el
+   filtro por dueno no es opcional.
+2. **Una prueba que exige que un numero cambie es fragil.** Lo que hay que exigir es el
+   invariante: que el precalculado coincida con lo calculado.
+3. **Un pendiente anunciado sigue siendo un pendiente.** Que `rate_ride` estuviera abierta a
+   `anon` estaba escrito desde la Fase 15 y aun asi hubo que tropezar con ello en una prueba
+   para cerrarlo.
+4. **Fast Refresh esta apagado en el emulador, y muerde una vez por fase.** En esta se termino
+   un servicio entero para ver que la tarjeta no salia, y no salia porque el bundle era
+   anterior. `am force-stop` y abrir de nuevo ANTES de dudar del codigo.
+5. **La aplicacion pisa la ubicacion sembrada.** `seed_test_driver.sql` deja al conductor a
+   109 m del parque, pero con la aplicacion abierta el aparato manda la suya cada pocos
+   segundos. En las pruebas acabo a 1,3 km, y por eso "He llegado" exigio subir
+   `driver_arrival_radius_m`.
+
+### Pruebas
+
+**74 comprobaciones automaticas**, todas en verde y dentro de transacciones que se deshacen.
+
+| Script | Comprobaciones | Que protege |
+|---|---|---|
+| `prueba_calificaciones.sql` | 24 | R8 por las dos partes, calificar lo ajeno, lo no terminado y lo inexistente, seis y cero estrellas, escribir a mano en la tabla, el promedio como invariante, y **que lo calificado por el otro no cuente como propio** |
+| `prueba_historial.sql` | 32 | Las dos listas de la Fase 16, ahora tambien con `already_rated` |
+| `prueba_detalle_historial.sql` | 18 | Los dos detalles de la Fase 16 |
+
+**En dispositivo**, con el ciclo completo del servicio recorrido **tres veces de punta a
+punta** —crear la solicitud desde SQL, aceptar, salir, llegar, iniciar y finalizar desde la
+aplicacion—:
+
+- La despedida del conductor al terminar, con su atajo para calificar
+- La pantalla de calificar, con sus cinco palabras y su comentario opcional
+- Entrar a calificar y volver **sin** calificar: el atajo sigue ahi
+- Calificar: el atajo se retira
+- El historial marcando "Sin calificar" solo donde toca
+- Calificar **desde el historial**, y el detalle mostrando despues las estrellas y el comentario
+- **El perfil del conductor con "4,0 · una calificacion"**, que es el disparador de la Fase 5
+  visto por primera vez en pantalla
+- Volver atras devolviendo a donde se estaba, despues de arreglar la navegacion
+
+### Lo que quedo sin verificar
+
+1. **Calificar al TERMINAR, del lado del pasajero.** Lo que si se vio en la tablet es
+   calificar desde el historial, de punta a punta: la marca "Sin calificar", el detalle, las
+   cinco estrellas, el boton bloqueado hasta elegir, el envio y las estrellas al volver. La
+   despedida con su atajo se probo del lado del conductor, y en el del pasajero se quedo sin
+   provocar.
+2. **Un comentario de mas de 1000 caracteres por la API.** El campo corta antes; la
+   restriccion de la tabla esta probada por el lado de las estrellas pero no por el del texto.
+
+### Lo que queda comprometido para despues
+
+- **Los reportes son de la Fase 20** (D204), con la bandeja que los lee
+- **Las otras tres funciones abiertas a `anon`** siguen en la Fase 22
+- **La calificacion que uno recibe** no se ensena viaje por viaje (D208). Si la empresa la
+  necesita al detalle, es del panel
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 15 completadas y aprobadas, **mas D161 y el cambio del mapa a
-  Mapbox**. La **Fase 16, historial, esta terminada y pendiente de tu aprobacion**.
-  Siguiente: **Fase 17, calificaciones**
-- **Paso actual:** Ninguno en curso. **Nada de la Fase 16 esta confirmado en git**: tres
-  migraciones, dos scripts de prueba, seis archivos de `src/features/history/`, las cuatro
-  pantallas del historial, `driver/_layout.tsx`, los dos archivos de errores y los tipos
-  regenerados, mas este documento
-- **Ultimo paso completado:** La Fase 16 entera, con su checklist de validacion. Antes, el
-  cambio del mapa a Mapbox
+- **Fase actual:** Fases 0 a 17 completadas y aprobadas, **mas D161 y el cambio del mapa a
+  Mapbox**. Siguiente: **Fase 18, cancelaciones y errores operativos**
+- **Paso actual:** Ninguno en curso. El arbol de trabajo esta limpio
+- **Ultimo paso completado:** La Fase 17 entera, con su checklist de validacion. Antes, la
+  Fase 16
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -2754,7 +2945,10 @@ src/types/database.ts             regenerado
   historico con su distancia, y la lista de paradas cuando lleva varios servicios, y **el
   historial de las dos partes**: el pasajero ve sus servicios terminados, cancelados y
   caducados; el conductor ve sus ofertas con su desenlace, incluidas las que rechazo y las que
-  se llevo otro, y las dos partes pueden abrir el detalle con la linea de tiempo completa
+  se llevo otro, y las dos partes pueden abrir el detalle con la linea de tiempo completa, y
+  **las calificaciones**: las dos partes se califican al terminar o mas tarde desde el
+  historial, una sola vez por servicio, y el promedio del conductor se recalcula solo y se ve
+  en su perfil
 - **Pruebas realizadas:** Entorno 13 puntos. Proyecto 15 puntos. Diseno 15 puntos.
   Navegacion validada en emulador y tablet. Base de datos 57 verificaciones contra el
   servidor. Autenticacion 43 verificaciones, detalladas en 15.5. Perfil y foto, detalladas
@@ -2772,7 +2966,9 @@ src/types/database.ts             regenerado
   scripts y el ciclo completo en dispositivo, detalladas en 15.15, con la prueba del ciclo
   comprobando **las dos vistas en cada paso**. Fase 16, 50 automaticas en dos scripts y las
   cuatro pantallas en dispositivo con las dos cuentas, detalladas en 15.17, incluidos cinco
-  intentos de leer lo ajeno y **el mismo servicio contrastado desde los dos lados**
+  intentos de leer lo ajeno y **el mismo servicio contrastado desde los dos lados**. Fase 17,
+  73 automaticas en tres scripts, detalladas en 15.18, y **el ciclo completo del servicio
+  recorrido tres veces de punta a punta** en el emulador
 - **Errores pendientes:** Ninguno. **Sin verificar, todo por la misma causa —el equipo actual
   no puede producir movimiento—:** la regla de los 50 metros de R9, que la aplicacion grabe el
   rastro moviendose, y el aviso de mapa incompleto de D161. Ademas, **la restauracion del lado
@@ -2867,7 +3063,15 @@ src/types/database.ts             regenerado
   hecho:** los comentarios de las dos funciones y de la politica ya dicen la verdad, y ninguna
   pantalla del historial ensena el telefono ni el nombre de quien no llevo. El plan de cierre,
   en cuatro pasos, esta escrito en `20260819223000_h15_comment_tells_the_truth.sql`.
-  **H19 RESUELTO** en la Fase 16: **sin conexion, ninguna pantalla decia "sin conexion"**. La
+  **H20 RESUELTO** en la Fase 17, y lo encontro la tablet: **la aplicacion se quedaba en
+  "Cargando" para siempre al arrancar** si la peticion del perfil no respondia ni fallaba, que
+  es lo que hace una red que va y viene. Sin error, sin reintentar y sin salida. La pantalla de
+  entrada ya sabia enseñar el error y ofrecer las dos cosas desde la Fase 6; lo que faltaba era
+  que el error llegara a existir. Ahora esas dos peticiones del arranque tienen tope de 15 s
+  (`conLimite` en `features/auth/session.tsx`). Medido en la tablet: con la red bien el perfil
+  llega en 1,4 s, asi que el tope no estorba. **En el emulador no salio nunca**: hizo falta un
+  aparato real con una red de verdad.
+    **H19 RESUELTO** en la Fase 16: **sin conexion, ninguna pantalla decia "sin conexion"**. La
   lista de textos de red buscaba `failed to fetch` y el mensaje real de Android es
   `fetch failed: java.net.UnknownHostException`, que es lo mismo escrito al reves. Afectaba a
   toda la aplicacion desde la Fase 6, y no se vio antes porque nadie habia apagado la red y
@@ -2917,8 +3121,7 @@ src/types/database.ts             regenerado
   `fase11.auth@motomoto-qa.co`, creada para poder cerrar sesion en el emulador sin pedirle la
   contrasena al usuario. **Al cerrar la Fase 14 no quedo nada mas**: los servicios de prueba se
   cancelaron por la funcion real y los parametros volvieron a 30, 10 y 20
-- **Proximo paso autorizado:** Ninguno. **La Fase 16 esta terminada y pendiente de tu
-  aprobacion**; la Fase 17, calificaciones, esta pendiente de autorizacion
+- **Proximo paso autorizado:** Ninguno. La Fase 18 esta pendiente de autorizacion
 
 ### Estado del equipo ahora mismo
 

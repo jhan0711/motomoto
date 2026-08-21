@@ -1,22 +1,25 @@
-import { Redirect, Tabs } from 'expo-router';
-import { History, House, UserRound } from 'lucide-react-native';
+import { Redirect, Stack } from 'expo-router';
 
 import { homeRouteFor, useSession } from '@/features/auth/session';
-import { fontSize, fontWeight, iconSize, iconStrokeWidth, useTheme } from '@/theme';
 
 /**
- * Driver zone guard and navigation.
+ * Guardia de la zona del conductor, y la PILA que la envuelve.
  *
- * Unlike the passenger zone, this one uses a bottom tab bar. The driver screen
- * has no sheet competing for the bottom of the display, and a driver switches
- * between "what is happening now" and "what I did earlier" constantly, which is
- * exactly what tabs are for.
+ * Las tres pestanas viven en `(tabs)`, un grupo que no aparece en la ruta: sus
+ * direcciones siguen siendo /driver, /driver/history y /driver/profile.
  *
- * As with the passenger guard: this decides what renders, not what is allowed.
- * Real authorization lives in the database policies from Phase 5.
+ * POR QUE UNA PILA POR ENCIMA DE LAS PESTANAS. En la Fase 17 el detalle de un
+ * servicio y la pantalla de calificar estaban colgados directamente de las
+ * pestanas, escondidos con `href: null`. Funcionaban, pero **volver atras
+ * llevaba a la pestana anterior en lugar de a la pantalla anterior**: se
+ * calificaba desde el historial y se aterrizaba en Inicio. Se vio en el
+ * emulador, no en el codigo. Encima de las pestanas, una pila hace lo que
+ * cualquiera espera.
+ *
+ * Como en el guardia del pasajero: esto decide que se pinta, no que se permite.
+ * La autorizacion de verdad vive en las politicas de la Fase 5.
  */
 export default function DriverLayout() {
-  const { colors } = useTheme();
   const { user, isLoading, canOperate, isRecoveringPassword } = useSession();
 
   if (isRecoveringPassword) {
@@ -41,53 +44,5 @@ export default function DriverLayout() {
     return <Redirect href={homeRouteFor(user.role)} />;
   }
 
-  return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarActiveTintColor: colors.brandStrong,
-        tabBarInactiveTintColor: colors.textTertiary,
-        tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-        },
-        tabBarLabelStyle: {
-          fontSize: fontSize.xs,
-          fontWeight: fontWeight.medium,
-        },
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Inicio',
-          tabBarIcon: ({ color }) => (
-            <House size={iconSize.lg} color={color} strokeWidth={iconStrokeWidth} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: 'Servicios',
-          tabBarIcon: ({ color }) => (
-            <History size={iconSize.lg} color={color} strokeWidth={iconStrokeWidth} />
-          ),
-        }}
-      />
-      {/* El detalle de un servicio vive dentro de esta zona pero no es una
-          pestana: se llega tocando una fila del historial. Sin href: null,
-          expo-router le pondria su propio boton en la barra. */}
-      <Tabs.Screen name="job/[id]" options={{ href: null }} />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: 'Perfil',
-          tabBarIcon: ({ color }) => (
-            <UserRound size={iconSize.lg} color={color} strokeWidth={iconStrokeWidth} />
-          ),
-        }}
-      />
-    </Tabs>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }

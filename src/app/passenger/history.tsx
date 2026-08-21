@@ -5,6 +5,7 @@ import {
   History,
   MapPin,
   Route as RouteIcon,
+  Star,
   TimerOff,
   User,
   Users,
@@ -311,6 +312,17 @@ function TripCard({ trip, onPress }: { trip: PassengerTrip; onPress: () => void 
             <User size={iconSize.xs} color={colors.textTertiary} strokeWidth={iconStrokeWidth} />
             <Text variant="caption" color="textSecondary" style={styles.pieTexto} numberOfLines={1}>
               {conductor.join(' · ')}
+            </Text>
+          </View>
+        )}
+
+        {/* Solo cuando hubo viaje y falta calificarlo. Un nulo aqui significa que
+            no hubo viaje, y ahi no hay nada pendiente que anunciar. */}
+        {trip.alreadyRated === false && (
+          <View style={styles.pieLinea}>
+            <Star size={iconSize.xs} color={colors.warning} strokeWidth={iconStrokeWidth} />
+            <Text variant="caption" color="textSecondary">
+              Sin calificar
             </Text>
           </View>
         )}

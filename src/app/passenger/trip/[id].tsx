@@ -2,6 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CircleCheck, CircleSlash, MapPin, SearchX, TimerOff } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ErrorState } from '@/components/ui/error-state';
@@ -10,6 +11,7 @@ import { Screen } from '@/components/ui/screen';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { formatWhen } from '@/features/history/format-when';
+import { StarPicker } from '@/features/rating/star-picker';
 import { fetchPassengerTrip, type PassengerTripDetail } from '@/features/history/history-service';
 import { Timeline } from '@/features/history/timeline';
 import { useHistoryDetail } from '@/features/history/use-detail';
@@ -84,6 +86,7 @@ export default function PassengerTripDetailScreen() {
 
 function Contenido({ trip }: { trip: PassengerTripDetail }) {
   const { colors } = useTheme();
+  const router = useRouter();
   const { icon: Icon, color, titulo } = presentacionDe(trip);
 
   return (
@@ -185,6 +188,47 @@ function Contenido({ trip }: { trip: PassengerTripDetail }) {
           valor={trip.seconds !== null ? formatDuration(trip.seconds) : 'Sin registro'}
         />
       </Card>
+
+      {/* La calificacion, o la forma de darla. Va al final: es lo ultimo que se
+          hace con un viaje, y solo aparece cuando hubo viaje que calificar. */}
+      {trip.alreadyRated !== null && (
+        <Card padding="lg">
+          <Text variant="label" color="textSecondary" style={styles.tituloBloque}>
+            TU CALIFICACIÓN
+          </Text>
+
+          {trip.myStars !== null ? (
+            <View style={styles.calificacion}>
+              <StarPicker value={trip.myStars} size={22} />
+              {trip.myComment !== null && (
+                <Text variant="caption" color="textSecondary">
+                  {trip.myComment}
+                </Text>
+              )}
+            </View>
+          ) : (
+            <View style={styles.calificacion}>
+              <Text variant="caption" color="textSecondary">
+                Todavía no calificaste este servicio.
+              </Text>
+              <Button
+                label="Calificar"
+                variant="secondary"
+                fullWidth
+                onPress={() =>
+                  router.push({
+                    pathname: '/passenger/rate/[id]',
+                    params: {
+                      id: trip.rideId ?? '',
+                      ...(trip.driverName !== null ? { name: trip.driverName } : {}),
+                    },
+                  })
+                }
+              />
+            </View>
+          )}
+        </Card>
+      )}
     </View>
   );
 }
@@ -245,4 +289,5 @@ const styles = StyleSheet.create({
   tituloBloque: { marginBottom: spacing.md },
   dato: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
   motivo: { marginTop: spacing.sm },
+  calificacion: { alignItems: 'flex-start', gap: spacing.md },
 });

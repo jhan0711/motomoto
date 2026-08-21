@@ -1,3 +1,4 @@
+import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { RIDE_ERROR_CODES } from '@/features/ride/errors';
@@ -105,6 +106,31 @@ export function useHistory<T>(fetchPage: FetchPage<T>): UseHistoryResult<T> {
     const id = setTimeout(() => void cargar(0, 'primera'), 0);
     return () => clearTimeout(id);
   }, [cargar]);
+
+  /**
+   * Al volver a la lista, releerla. Misma razon que en use-detail: se califica en
+   * otra pantalla y la fila tiene que dejar de decir "Sin calificar".
+   *
+   * Vuelve a la primera pagina. Con una lista de historial es lo honesto: lo que
+   * cambia esta arriba, y quien estaba mirando el final rara vez acaba de
+   * cambiar algo alli.
+   */
+  const primeraVez = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (primeraVez.current) {
+        primeraVez.current = false;
+        return;
+      }
+
+      const tarea = setTimeout(() => {
+        setHasMore(true);
+        void cargar(0, 'refresco');
+      }, 0);
+      return () => clearTimeout(tarea);
+    }, [cargar]),
+  );
 
   const refresh = useCallback(() => {
     setHasMore(true);

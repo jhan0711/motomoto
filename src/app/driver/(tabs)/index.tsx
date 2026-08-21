@@ -1,4 +1,5 @@
-import { Inbox, MapPinOff, TriangleAlert } from 'lucide-react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
+import { CircleCheck, Inbox, MapPinOff, TriangleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 
@@ -11,6 +12,7 @@ import { Screen } from '@/components/ui/screen';
 import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
+import { hasRated } from '@/features/rating/rating-service';
 import {
   acceptOffer,
   completeRide,
@@ -59,6 +61,7 @@ import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
  * solicitudes en esta pantalla es el paso siguiente.
  */
 export default function DriverHome() {
+  const router = useRouter();
   const { colors } = useTheme();
   const { user } = useSession();
   const driverId = user?.id ?? null;
@@ -149,6 +152,45 @@ export default function DriverHome() {
    * `complete_ride` es la unica que ademas hace desaparecer la tarjeta, porque
    * `list_driver_active_rides` solo devuelve los viajes vivos.
    */
+  /**
+   * El servicio que el conductor acaba de terminar, para poder calificarlo.
+   *
+   * SE GUARDA AQUI Y NO SE PREGUNTA AL SERVIDOR. Los dos datos que hacen falta
+   * —que viaje era y a quien llevaba— los tiene la tarjeta que se acaba de
+   * cerrar, asi que preguntarlos otra vez seria una consulta para saber algo que
+   * ya sabemos.
+   *
+   * A cambio, esto no sobrevive a cerrar la aplicacion. No es un descuido: lo que
+   * queda sin calificar vive en el historial (paso 4), que es donde el conductor
+   * lo va a buscar al dia siguiente. Aqui solo esta el atajo del momento.
+   */
+  const [recienTerminado, setRecienTerminado] = useState<{
+    rideId: string;
+    passengerName: string;
+  } | null>(null);
+
+  /**
+   * Al volver de calificar, comprobar si de verdad califico.
+   *
+   * La tarjeta se quedaba ofreciendo "Calificar al pasajero" despues de haberlo
+   * hecho, porque la calificacion ocurre en otra pantalla. Se pregunta en vez de
+   * darlo por hecho: si el conductor entro y volvio sin enviar nada, el atajo
+   * tiene que seguir ahi.
+   */
+  useFocusEffect(
+    useCallback(() => {
+      if (recienTerminado === null || user === null) return;
+
+      const tarea = setTimeout(() => {
+        void hasRated(recienTerminado.rideId, user.id).then((resultado) => {
+          if (resultado.ok && resultado.data) setRecienTerminado(null);
+        });
+      }, 0);
+
+      return () => clearTimeout(tarea);
+    }, [recienTerminado, user]),
+  );
+
   const avanzarViaje = useCallback(
     async (viaje: DriverRide, accion: RideAction) => {
       setAvanzando(viaje.rideId);
@@ -179,7 +221,10 @@ export default function DriverHome() {
       // Terminar un servicio libera asientos, y con ellos puede volver la
       // disponibilidad (D164). Por eso se relee tambien el estado.
       void cargarViajes();
-      if (accion === 'complete') void cargar();
+      if (accion === 'complete') {
+        void cargar();
+        setRecienTerminado({ rideId: viaje.rideId, passengerName: viaje.passengerName });
+      }
     },
     [cargar, cargarViajes],
   );
@@ -459,6 +504,25 @@ export default function DriverHome() {
       <View style={styles.feed}>
         {ofertas.error !== null && <FormError message={ofertas.error} />}
 
+        {/* Lo primero de la hoja, y solo justo despues de terminar: es lo ultimo
+            que ha pasado y lo unico que pide una respuesta suya. Se va en cuanto
+            califica o toca "Ahora no". */}
+        {recienTerminado !== null && (
+          <ServicioTerminado
+            passengerName={recienTerminado.passengerName}
+            onCalificar={() =>
+              router.push({
+                pathname: '/driver/rate/[id]',
+                params: {
+                  id: recienTerminado.rideId,
+                  name: recienTerminado.passengerName,
+                },
+              })
+            }
+            onCerrar={() => setRecienTerminado(null)}
+          />
+        )}
+
         {/* Los encabezados solo aparecen cuando hay las dos cosas a la vez. Con
             una sola lista serian una etiqueta sobre lo evidente; con las dos,
             son lo que impide que se lean como un unico monton de tarjetas.
@@ -570,7 +634,52 @@ function Aviso({ icon: Icon, titulo, detalle, accion }: AvisoProps) {
   );
 }
 
+/**
+ * La despedida del conductor.
+ *
+ * Mas corta que la del pasajero a proposito. El pasajero se esta bajando del
+ * motorraton y puede leer; el conductor tiene la siguiente solicitud entrando por
+ * la misma pantalla, asi que aqui solo va lo que hace falta para decidir: a quien
+ * llevo y dos botones.
+ *
+ * NO SE CIERRA SOLA. Que desaparezca a los pocos segundos significaria perder la
+ * calificacion justo cuando el conductor esta guardando el telefono.
+ */
+function ServicioTerminado({
+  passengerName,
+  onCalificar,
+  onCerrar,
+}: {
+  passengerName: string;
+  onCalificar: () => void;
+  onCerrar: () => void;
+}) {
+  const { colors } = useTheme();
+
+  return (
+    <Card padding="lg">
+      <View style={styles.filaTerminado}>
+        <CircleCheck size={iconSize.md} color={colors.brand} strokeWidth={iconStrokeWidth} />
+        <View style={styles.textosTerminado}>
+          <Text variant="bodyStrong">Servicio terminado</Text>
+          <Text variant="caption" color="textSecondary">
+            Llevaste a {passengerName}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.botonesTerminado}>
+        <Button label="Calificar al pasajero" variant="brand" fullWidth onPress={onCalificar} />
+        <Button label="Ahora no" variant="ghost" fullWidth onPress={onCerrar} />
+      </View>
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
+  filaTerminado: { alignItems: 'center', flexDirection: 'row', gap: spacing.sm },
+  textosTerminado: { flex: 1, gap: spacing.xxs },
+  botonesTerminado: { gap: spacing.xs, marginTop: spacing.md },
   aviso: {
     borderRadius: radius.md,
     flexDirection: 'row',

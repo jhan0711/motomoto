@@ -5,6 +5,7 @@ import {
   History,
   MapPin,
   Route as RouteIcon,
+  Star,
   TimerOff,
   User,
   UserCheck,
@@ -314,6 +315,15 @@ function JobCard({ job, onPress }: { job: DriverJob; onPress: () => void }) {
             <MapPin size={iconSize.xs} color={colors.textTertiary} strokeWidth={iconStrokeWidth} />
             <Text variant="caption" color="textSecondary" style={styles.pieTexto} numberOfLines={1}>
               {aparte}
+            </Text>
+          </View>
+        )}
+
+        {job.alreadyRated === false && (
+          <View style={styles.pieLinea}>
+            <Star size={iconSize.xs} color={colors.warning} strokeWidth={iconStrokeWidth} />
+            <Text variant="caption" color="textSecondary">
+              Sin calificar
             </Text>
           </View>
         )}

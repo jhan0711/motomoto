@@ -200,6 +200,16 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
  */
 export interface FinishedRequest {
   id: string;
+  /**
+   * El viaje concreto, que es lo que hace falta para calificar.
+   *
+   * Puede venir nulo: la solicitud esta terminada pero el viaje se lee por un
+   * LEFT JOIN, y si algun dia no lo encuentra la despedida se pinta igual, solo
+   * que sin ofrecer calificar.
+   */
+  rideId: string | null;
+  /** Si quien mira ya califico este servicio. Ver la Fase 17. */
+  alreadyRated: boolean;
   originLabel: string;
   destinationLabel: string;
   passengerCount: number;
@@ -231,6 +241,8 @@ export async function fetchFinishedRequest(): Promise<Result<FinishedRequest | n
 
   return ok({
     id: row.id,
+    rideId: typeof row.ride_id === 'string' && row.ride_id !== '' ? row.ride_id : null,
+    alreadyRated: row.already_rated === true,
     originLabel: row.origin_label,
     destinationLabel: row.destination_label,
     passengerCount: row.passenger_count,

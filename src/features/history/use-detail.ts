@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { RIDE_ERROR_CODES } from '@/features/ride/errors';
 
@@ -61,6 +62,31 @@ export function useHistoryDetail<T>(
     const tarea = setTimeout(() => void cargar(), 0);
     return () => clearTimeout(tarea);
   }, [cargar]);
+
+  /**
+   * Al volver a la pantalla, releer.
+   *
+   * EL FALLO QUE ARREGLA, visto en la tablet: se califica un servicio desde el
+   * detalle, se vuelve, y el detalle sigue diciendo "todavia no calificaste"
+   * aunque la calificacion ya esta guardada. La pantalla se cargo antes de que
+   * existiera y nadie le dijo que mirara otra vez.
+   *
+   * SALTA LA PRIMERA VEZ. El efecto de arriba ya hizo esa consulta; sin este
+   * salto, abrir el detalle costaria dos peticiones en lugar de una.
+   */
+  const primeraVez = useRef(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (primeraVez.current) {
+        primeraVez.current = false;
+        return;
+      }
+
+      const tarea = setTimeout(() => void cargar(), 0);
+      return () => clearTimeout(tarea);
+    }, [cargar]),
+  );
 
   const reload = useCallback(() => {
     setLoading(true);

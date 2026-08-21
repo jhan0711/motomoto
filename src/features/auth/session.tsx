@@ -147,6 +147,43 @@ interface LoadedProfile {
   error: string | null;
 }
 
+/**
+ * Cuanto se espera al arranque antes de darse por vencido.
+ *
+ * Quince segundos es mucho para una red buena y poco para quedarse colgado. El
+ * numero sale de lo que se vio en la tablet: con la red bien, el perfil llega en
+ * 1,4 s; con la red trabada, no llegaba nunca.
+ */
+const ARRANQUE_TIMEOUT_MS = 15000;
+
+/**
+ * Le pone un limite a una espera que no lo tiene.
+ *
+ * EL FALLO QUE ARREGLA, encontrado en la tablet: si la peticion del perfil se
+ * queda a medias —red que va y viene, que es lo normal en Amalfi— no falla ni
+ * responde, y la aplicacion se queda en "Cargando" **para siempre**, sin error,
+ * sin reintentar y sin salida. La pantalla de entrada ya sabia enseñar el error
+ * y ofrecer las dos cosas; lo que faltaba era que el error llegara a existir.
+ *
+ * No cancela la peticion, porque `fetch` de React Native no lo permite sin un
+ * AbortController que habria que llevar hasta la capa de datos. Lo que hace es
+ * dejar de esperarla: si contesta despues, su resultado ya no le importa a
+ * nadie.
+ */
+async function conLimite<T>(tarea: Promise<T>, siTarda: T): Promise<T> {
+  let temporizador: ReturnType<typeof setTimeout> | undefined;
+
+  const limite = new Promise<T>((resolve) => {
+    temporizador = setTimeout(() => resolve(siTarda), ARRANQUE_TIMEOUT_MS);
+  });
+
+  try {
+    return await Promise.race([tarea, limite]);
+  } finally {
+    clearTimeout(temporizador);
+  }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [auth, setAuth] = useState<AuthState>({ checked: false, authUser: null });
   const [loaded, setLoaded] = useState<LoadedProfile | null>(null);
@@ -216,7 +253,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     let active = true;
 
     void (async () => {
-      const result = await fetchProfile(userId);
+      const result = await conLimite(fetchProfile(userId), {
+        ok: false as const,
+        failure: {
+          code: 'startup_timeout',
+          message: 'No pudimos cargar tu cuenta. Revisa tu conexión e inténtalo de nuevo.',
+        },
+      });
 
       // El proveedor pudo desmontarse, o pudo entrar otro usuario, mientras la
       // consulta viajaba. Escribir el resultado ahora pondria en pantalla el
@@ -238,7 +281,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       let approvalStatus: DriverApproval | null = null;
 
       if (profile.role === 'driver') {
-        const driverResult = await fetchDriver(userId);
+        const driverResult = await conLimite(fetchDriver(userId), {
+          ok: false as const,
+          failure: {
+            code: 'startup_timeout',
+            message: 'No pudimos cargar tu cuenta. Revisa tu conexión e inténtalo de nuevo.',
+          },
+        });
 
         if (!active) {
           return;

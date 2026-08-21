@@ -91,6 +91,16 @@ const MESSAGES: Record<string, string> = {
   VEHICLE_CAPACITY_EXCEEDED: 'Ya no te quedan asientos libres para ese servicio.',
   DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motorratón.',
 
+  // Las calificaciones, desde la Fase 17.
+  //
+  // ALREADY_RATED no es un fallo del usuario: es la regla R8, una calificacion
+  // por parte y por viaje, y no editable. La pantalla evita llegar aqui porque
+  // ya sabe si esta calificado, pero el mensaje existe para cuando dos toques
+  // seguidos lleguen al servidor.
+  ALREADY_RATED: 'Ya calificaste este servicio.',
+  RIDE_NOT_COMPLETED: 'Ese servicio todavía no ha terminado.',
+  NOT_A_PARTICIPANT: 'Ese servicio no es tuyo.',
+
   // Las transiciones del servicio, desde la Fase 15.
   RIDE_NOT_FOUND: 'Ese servicio ya no es tuyo.',
   /**
@@ -205,6 +215,12 @@ export const RIDE_ERROR_CODES = {
   // seguidos llegaron al servidor. En los dos casos hay que releer, no insistir.
   invalidTransition: 'INVALID_STATE_TRANSITION',
   rideNotFound: 'RIDE_NOT_FOUND',
+
+  // Calificaciones. `alreadyRated` lo compara la pantalla para cerrar sin ruido
+  // en lugar de ensenar un error rojo por algo que ya estaba hecho.
+  alreadyRated: 'ALREADY_RATED',
+  rideNotCompleted: 'RIDE_NOT_COMPLETED',
+  notAParticipant: 'NOT_A_PARTICIPANT',
 
   // Este NO significa que el viaje haya cambiado: significa que el conductor
   // esta lejos. La pantalla lo distingue porque no tiene que releer nada, solo

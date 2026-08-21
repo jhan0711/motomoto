@@ -1006,6 +1006,8 @@ export type Database = {
           distance_m: number;
           driver_arrived_at: string;
           duration_s: number;
+          my_comment: string;
+          my_stars: number;
           offer_expires_at: string;
           offer_id: string;
           offered_at: string;
@@ -1035,6 +1037,7 @@ export type Database = {
       get_finished_request: {
         Args: never;
         Returns: {
+          already_rated: boolean;
           completed_at: string;
           destination_label: string;
           distance_m: number;
@@ -1043,6 +1046,7 @@ export type Database = {
           id: string;
           origin_label: string;
           passenger_count: number;
+          ride_id: string;
           vehicle_unit_number: number;
         }[];
       };
@@ -1060,6 +1064,8 @@ export type Database = {
           driver_name: string;
           duration_s: number;
           expires_at: string;
+          my_comment: string;
+          my_stars: number;
           origin_label: string;
           passenger_count: number;
           pickup_reference: string;
@@ -1109,6 +1115,7 @@ export type Database = {
       list_driver_history: {
         Args: { p_limit?: number; p_offset?: number };
         Returns: {
+          already_rated: boolean;
           cancelled_by: Database['public']['Enums']['actor_type'];
           destination_label: string;
           distance_m: number;
@@ -1147,6 +1154,7 @@ export type Database = {
       list_passenger_history: {
         Args: { p_limit?: number; p_offset?: number };
         Returns: {
+          already_rated: boolean;
           cancellation_reason: string;
           cancelled_by: Database['public']['Enums']['actor_type'];
           destination_label: string;

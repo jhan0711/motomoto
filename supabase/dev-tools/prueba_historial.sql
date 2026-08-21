@@ -42,6 +42,7 @@ create temp table resultados (
 -- prueba que espera un numero fijo se rompe cada vez que alguien las usa.
 create temp table filas (
   quien text,
+  pos integer,
   ident uuid
 ) on commit drop;
 
@@ -208,6 +209,7 @@ declare
 
   v_n   integer;
   v_txt text;
+  v_admin_txt text;
   v_int integer;
   v_ok  boolean;
 begin
@@ -216,7 +218,8 @@ begin
     json_build_object('sub', c_ana, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
 
-  insert into filas select 'ana', h.request_id from public.list_passenger_history(50, 0) h;
+  insert into filas
+  select 'ana', row_number() over (), h.request_id from public.list_passenger_history(50, 0) h;
 
   select count(*) into v_n from filas f where f.quien = 'ana' and f.ident in (c_ra1, c_ra2, c_ra3);
   insert into resultados values (1, 'Ana ve sus tres solicitudes cerradas', '3', v_n::text, v_n = 3);
@@ -247,16 +250,27 @@ begin
   insert into resultados values (7, 'La caducada no tiene viaje ni conductor',
     'true', coalesce(v_ok::text, '(sin fila)'), coalesce(v_ok, false));
 
-  select h.request_id into v_txt from public.list_passenger_history() h limit 1;
-  insert into resultados values (8, 'Orden: primero la mas reciente',
-    c_ra3::text, coalesce(v_txt, '(nulo)'), v_txt = c_ra3::text);
+  -- RELATIVO Y NO ABSOLUTO. Antes se pedia que la primera fila de la lista fuera
+  -- la de la prueba, y eso se rompio solo en cuanto la cuenta hizo servicios de
+  -- verdad mas recientes. Lo que hay que exigir es el ORDEN entre las tres filas
+  -- que esta prueba creo.
+  select
+    (select f.pos from filas f where f.quien = 'ana' and f.ident = c_ra3) <
+    (select f.pos from filas f where f.quien = 'ana' and f.ident = c_ra2)
+    and
+    (select f.pos from filas f where f.quien = 'ana' and f.ident = c_ra2) <
+    (select f.pos from filas f where f.quien = 'ana' and f.ident = c_ra1)
+  into v_ok;
+  insert into resultados values (8, 'Orden: de la mas reciente a la mas antigua',
+    'true', coalesce(v_ok::text, '(sin filas)'), coalesce(v_ok, false));
 
   select count(*) into v_n from public.list_passenger_history(1, 0);
   insert into resultados values (9, 'El limite se respeta', '1', v_n::text, v_n = 1);
 
   select h.request_id into v_txt from public.list_passenger_history(1, 1) h;
-  insert into resultados values (10, 'El desplazamiento salta a la segunda',
-    c_ra2::text, coalesce(v_txt, '(nulo)'), v_txt = c_ra2::text);
+  select f.ident::text into v_admin_txt from filas f where f.quien = 'ana' and f.pos = 2;
+  insert into resultados values (10, 'El desplazamiento salta a la segunda de la lista',
+    coalesce(v_admin_txt, '(sin segunda)'), coalesce(v_txt, '(nulo)'), v_txt = v_admin_txt);
 
   select count(*) into v_n from public.list_passenger_history(0, 0);
   insert into resultados values (11, 'Un limite de cero se sube a uno', '1', v_n::text, v_n = 1);
@@ -272,7 +286,8 @@ begin
     json_build_object('sub', c_cond1, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
 
-  insert into filas select 'cond1', h.offer_id from public.list_driver_history(50, 0) h;
+  insert into filas
+  select 'cond1', row_number() over (), h.offer_id from public.list_driver_history(50, 0) h;
 
   select count(*) into v_n from filas f
   where f.quien = 'cond1' and f.ident in (c_of1, c_of2, c_of6);
@@ -314,7 +329,8 @@ begin
     json_build_object('sub', c_cond2, 'role', 'authenticated')::text, true);
   perform set_config('role', 'authenticated', true);
 
-  insert into filas select 'cond2', h.offer_id from public.list_driver_history(50, 0) h;
+  insert into filas
+  select 'cond2', row_number() over (), h.offer_id from public.list_driver_history(50, 0) h;
 
   select count(*) into v_n from filas f
   where f.quien = 'cond2' and f.ident in (c_of3, c_of5);
