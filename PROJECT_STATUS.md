@@ -4,13 +4,14 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-20
+- **Ultima actualizacion:** 2026-08-21
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
-  14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial
+  14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial,
+  17 calificaciones
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -27,11 +28,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **HAY TABLET OTRA VEZ** desde el 2026-08-20, una Xiaomi con Android 15 y sin GPS. Lo que
   cambia y lo que no, en el bloque LEE ESTO PRIMERO
 - **Trabajo siguiente:** **Fase 18, cancelaciones y errores operativos**
-- **Ultimo commit:** d0a433f feat: ride history for passenger and driver.
-  **Toda la Fase 17 esta hecha y probada pero SIN CONFIRMAR:** tres migraciones, un script de
-  prueba, dos archivos nuevos en `src/features/rating/`, las dos pantallas de calificar, la
-  reorganizacion de la zona del conductor en `(tabs)`, y los retoques de historial, despedidas,
-  errores, `Input` y los tipos, mas este documento
+- **Ultimo commit:** 8a46afa feat: ratings for passenger and driver, plus fixes found on
+  tablet. **Nada pendiente de confirmar**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
