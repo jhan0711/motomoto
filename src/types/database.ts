@@ -429,6 +429,7 @@ export type Database = {
           full_name: string;
           id: string;
           phone: string | null;
+          push_token: string | null;
           role: Database['public']['Enums']['user_role'];
           status: Database['public']['Enums']['user_status'];
           updated_at: string;
@@ -439,6 +440,7 @@ export type Database = {
           full_name: string;
           id: string;
           phone?: string | null;
+          push_token?: string | null;
           role?: Database['public']['Enums']['user_role'];
           status?: Database['public']['Enums']['user_status'];
           updated_at?: string;
@@ -449,6 +451,7 @@ export type Database = {
           full_name?: string;
           id?: string;
           phone?: string | null;
+          push_token?: string | null;
           role?: Database['public']['Enums']['user_role'];
           status?: Database['public']['Enums']['user_status'];
           updated_at?: string;
@@ -1226,6 +1229,16 @@ export type Database = {
           p_ride_status: Database['public']['Enums']['ride_status'];
         };
         Returns: string;
+      };
+      send_push_notification: {
+        Args: {
+          p_body: string;
+          p_data?: Json;
+          p_title: string;
+          p_type: string;
+          p_user_id: string;
+        };
+        Returns: undefined;
       };
       shares_ride_with: { Args: { p_other_id: string }; Returns: boolean };
       start_driving_to_pickup: {

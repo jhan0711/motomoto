@@ -11,7 +11,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   9 seleccion de origen y destino, 10 seleccion de pasajeros,
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
   14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial,
-  17 calificaciones
+  17 calificaciones, 18 cancelaciones y errores operativos (comprometida por el usuario el
+  2026-08-21)
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -27,20 +28,20 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   seccion 15.18
 - **HAY TABLET OTRA VEZ** desde el 2026-08-20, una Xiaomi con Android 15 y sin GPS. Lo que
   cambia y lo que no, en el bloque LEE ESTO PRIMERO
-- **Fase 18 PROBADA EN LOS DOS APARATOS A LA VEZ, EN TIEMPO REAL, EL 2026-08-21.** Las cinco
-  comprobaciones centrales salieron en verde con captura de pantalla: el pasajero cancela solo
-  cuando el servidor lo admite, con confirmacion y sin el boton en `in_progress`; el conductor
-  por fin puede cancelar desde la pantalla; y D187 queda resuelto para las dos ramas de la
-  cancelacion del conductor, las dos vistas actualizarse en tiempo real sin recargar. **Quien
-  toco los controles fue el asistente, no tu**, por `adb` y `supabase db query` — sigue
-  pendiente que la mires tu antes de aprobarla. Detalle y lo unico sin probar (D161 con dos
-  servicios a la vez) en la seccion 15.19. **Alcance cerrado por decision tuya del 2026-08-21
-  (D216)**: lo que quedaba de "errores operativos" —R10 y el bloqueo del administrador a mitad
-  de operacion— depende enteramente del panel, que no existe hasta la Fase 20
-- **Trabajo siguiente:** que confirmes la Fase 18 con tus propios ojos (o la des por buena con
-  lo ya probado). Con tu aprobacion, sigue la Fase 19 (notificaciones)
-- **Ultimo commit:** 8a46afa feat: ratings for passenger and driver, plus fixes found on
-  tablet. **Pendiente de confirmar: toda la Fase 18**, ya probada por el asistente en pantalla
+- **Fase 18 APROBADA Y COMPROMETIDA POR EL USUARIO EL 2026-08-21.** Cancelaciones de las dos
+  partes, con confirmacion, sin el boton en `in_progress`, y D187 resuelto para las dos ramas
+  de la cancelacion del conductor. Detalle en la seccion 15.19
+- **FASE 19 PROBADA DE PUNTA A PUNTA EL 2026-08-25.** Notificaciones push para los dos avisos
+  que pide el flujo, **los dos vistos llegar a la bandeja del sistema en aparatos distintos**:
+  "Nueva solicitud de servicio" al conductor en el emulador, "Tu motorratón llegó" al pasajero
+  en la tablet. Backend con 7 comprobaciones en verde. **Hizo falta un proyecto de Firebase
+  ademas del de Expo**, un costo que el asistente no advirtio al ofrecer esta opcion; detalle
+  en la seccion 15.20. Pendiente de tu aprobacion y del commit
+- **Trabajo siguiente:** que apruebes la Fase 19 y la comitees. Despues sigue la **Fase 20,
+  panel administrativo**, que ademas desbloquea R10 y el bloqueo de conductor que la Fase 18
+  dejo pendientes (D215, D216)
+- **Ultimo commit:** el usuario confirmo haber comiteado la Fase 18 el 2026-08-21, hash sin
+  registrar aqui. **Pendiente de confirmar: toda la Fase 19**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -3057,17 +3058,209 @@ de datos**:
 
 ---
 
+## 15.20 FASE 19: NOTIFICACIONES PUSH
+
+**PROBADA DE PUNTA A PUNTA EL 2026-08-25, CON LOS DOS AVISOS VISTOS EN LA BANDEJA DEL SISTEMA
+DE DOS APARATOS DISTINTOS.** Pendiente unicamente de tu aprobacion y del commit.
+
+### Que cubre
+
+Los dos avisos que el flujo de la seccion 7 deja escritos: al pasajero cuando el conductor
+llega (`driver_arrived`), al conductor cuando le ofrecen una solicitud nueva. Nada mas: no se
+inventaron eventos que el flujo no pide.
+
+### Decision de arranque: hizo falta cuenta de Expo
+
+D113 (Fase 8) habia decidido trabajar sin cuenta de Expo. Un token de Expo Push exige un
+proyecto EAS si o si, asi que **se creo uno**: `npx eas-cli@latest login` mas
+`npx eas-cli@latest init`, cuenta `jhan160711`, proyecto `@jhan160711/motomoto`,
+`projectId` `93c1536c-ce38-4977-8588-7362b53d761a` ya escrito en `app.config.ts` en
+`extra.eas.projectId`. **El login lo hizo el usuario en su propia terminal**, no el asistente:
+entrar credenciales esta fuera de lo que el asistente puede ejecutar. Esto NO cambia como se
+compila hoy (D113 sigue vigente para eso), solo identifica el proyecto ante el servicio de
+notificaciones.
+
+### Backend, TERMINADO Y VERIFICADO
+
+- Migracion `20260821223728_push_notifications.sql`: activa `pg_net` (ya disponible en el
+  proyecto, no hizo falta pedir nada), anade `profiles.push_token`, y dos disparadores
+  (`rides` -> `driver_arrived`, `ride_offers` -> insercion) que llaman a
+  `send_push_notification`, una funcion que guarda el aviso en `notifications` y lo manda por
+  la API de Expo Push si hay token. **No se toco `confirm_driver_arrival` ni
+  `offer_request_to_drivers`**: son disparadores sobre las tablas, no cambios dentro de esas
+  funciones, para no arriesgarse a la leccion de E30 (recrear una funcion desde una version
+  vieja)
+- Migraciones `20260825163833_push_channel_high_importance.sql` y
+  `20260825164922_push_channel_v2.sql`: anaden `channelId` y `priority: high` al cuerpo que se
+  le manda a Expo. Ver "El canal de Android, tres intentos hasta que sono". **El
+  `channelId` del servidor y `CANAL_SERVICIO` del cliente tienen que coincidir**: si se
+  separan, el aviso entra por el canal generico de Expo y vuelve a llegar callado, con todo lo
+  demas funcionando
+- `prueba_notificaciones.sql` (nuevo, en `dev-tools`): **7 comprobaciones en verde**, incluida
+  la de que un usuario normal no puede llamar a `send_push_notification` directamente
+- Tipos regenerados
+
+### Firebase, EL COSTO QUE NO SE ADVIRTIO A TIEMPO
+
+**Expo Push entrega por FCM en Android, asi que ademas de la cuenta de Expo hace falta un
+proyecto de Firebase.** El asistente no lo dijo al presentar la opcion "empuje completo", solo
+menciono EAS; el usuario acepto sin saber que venia esto detras. Se reconocio al descubrirlo,
+pero la leccion es del asistente: **al ofrecer un camino hay que enumerar todos sus costos, no
+el primero que se ve.**
+
+Lo que hubo que hacer, en este orden:
+
+1. **`google-services.json`**, creado por el usuario en Firebase Console (proyecto
+   `motomoto2026-444cb`, paquete `com.motomoto.app`) y guardado en la raiz. Se referencia
+   desde `app.config.ts` con `android.googleServicesFile`. **NO esta en el repositorio**: la
+   plantilla de Expo ya lo ignoraba de fabrica (`.gitignore` linea 41) y se respeto esa
+   decision. No es que sea secreto —Firebase lo documenta como publico y acaba dentro del APK,
+   igual que la clave de mapas—, pero con un solo desarrollador no aporta versionarlo.
+   **RIESGO A NO OLVIDAR: si ese archivo se pierde, la compilacion nativa falla** y hay que
+   volver a bajarlo de Firebase Console. El asistente escribio primero que si iba al
+   repositorio, sin comprobar que la plantilla ya decia lo contrario; se corrigio al verlo en
+   `git status`
+2. **Clave de cuenta de servicio de FCM**, subida por el usuario al panel de Expo
+   (expo.dev -> Credentials -> Android -> FCM V1 service account key). **Esta SI es secreta**:
+   permite escribirle a todos los usuarios de la aplicacion. Esta en `.gitignore` como
+   `fcm-service-account.json` y `*-firebase-adminsdk-*.json`
+3. El formulario web de Expo **exige un keystore para crear el identificador**, aunque no se
+   use la compilacion en la nube. Se subio el keystore de DEPURACION que genera `prebuild`
+   (`android/app/debug.keystore`, contrasenas publicas y estandar: `android` /
+   `androiddebugkey` / `android`), copiado como `upload-debug.jks` porque el formulario valida
+   la extension y rechaza `.keystore`. **PENDIENTE PARA LA FASE 26**: ese keystore es de
+   desarrollo y no sirve para publicar; hay que generar uno real y reemplazarlo antes de subir
+   a Google Play
+
+### Cliente
+
+- `npx expo install expo-notifications`, mas el plugin en `app.config.ts`
+- `src/features/notifications/notifications-service.ts`: `savePushToken`, escritura directa a
+  `profiles.push_token` (excepcion acotada mas de las que ya describe D83)
+- `src/features/notifications/use-push-registration.ts`: pide permiso, saca el token de Expo
+  y lo guarda. Se llama una vez desde `src/app/_layout.tsx`, dentro de `SessionProvider`, no
+  desde cada pantalla
+- `typecheck`, `lint` y `format:check` en cero
+
+**Los cuatro caminos de fallo dejan rastro, y esto se corrigio a media fase.** La primera
+version devolvia `null` en silencio si no habia permiso, si faltaba el `projectId`, si fallaba
+la llamada o si algo lanzaba. Cuando el token no llegaba al servidor no habia forma de saber
+por cual de los cuatro: el permiso estaba concedido, la fila seguia vacia y el registro no
+decia nada. Se anadio un `console.warn` en cada uno, y **el mensaje aparecio de inmediato con
+la causa exacta**: `Unable to get Firebase Messaging instance. Did you configure
+googleServicesFile...`. Un fallo que no se anuncia cuesta el doble de encontrar.
+
+### Recompilacion nativa, HECHA
+
+`expo-notifications` es modulo nativo: hizo falta `npx expo prebuild --platform android` mas
+`gradlew.bat assembleDebug`. **Aqui aparecio un problema nuevo, sin relacion con el codigo**:
+el `.apk` con las dos arquitecturas junto pesa 210 MB, y el emulador solo tenia 513 MB libres
+(92% del disco lleno). Se resolvio compilando cada arquitectura por separado
+(`-PreactNativeArchitectures=x86_64` para el emulador, `=arm64-v8a` para la tablet), que da
+un `.apk` de ~125 MB cada uno. **Anotar esto para la proxima vez que haga falta recompilar**:
+un build con las dos arquitecturas juntas puede no caber.
+
+### Checklist, resultado real
+
+Con el conductor de prueba en el emulador y el pasajero (cuenta personal del usuario, que
+**autorizo explicitamente** al asistente a manejarla para estas pruebas) en la tablet:
+
+1. **El dialogo de permiso sale solo al abrir**, en los dos aparatos. OK
+2. **El token queda guardado en `profiles.push_token`** para las dos cuentas, empezando por
+   `ExponentPushToken[`. OK
+3. **Aviso al conductor.** Se creo una solicitud desde SQL y el push aparecio en la bandeja
+   del emulador: "Nueva solicitud de servicio / Tienes un servicio disponible cerca de ti".
+   **Visto en captura**, no deducido de la tabla. OK
+4. **Aviso al pasajero.** Se llevo un viaje hasta `driver_arrived` y el push aparecio en la
+   bandeja de la tablet: "Tu motorratón llegó / Te está esperando en el punto de recogida".
+   **Visto en captura.** OK
+5. **Expo acepto los tres envios** con `{"status":"ok"}` en `net._http_response`. OK
+
+6. **El aviso suena y sale flotando** (paso 3, ver abajo). Confirmado por el usuario en la
+   tablet: "si sonó y salió flotando". OK
+
+### El canal de Android, tres intentos hasta que sono
+
+**El aviso llegaba pero no se notaba.** En la primera version el canal quedo en importancia
+`DEFAULT`, que no suena ni se asoma: "Tu motorratón llegó" estaba en la bandeja, pero el
+usuario solo lo encontro al desplegarla, cuatro minutos tarde. Para los dos avisos de esta
+fase eso no sirve —uno saca al pasajero a la calle y el otro le da al conductor los veinte
+segundos de R2—, asi que el usuario pidio subir la importancia.
+
+Costo tres intentos, y los dos primeros fallaron por el mismo motivo de fondo: **Android
+congela la configuracion de un canal en cuanto se crea.** Despues solo el usuario puede
+tocarla desde los ajustes del sistema. Cambiar el codigo no cambia un canal que ya existe.
+
+1. `default`, importancia `DEFAULT`. Llegaba callado
+2. `service-alerts`, ya en `MAX`, pero creado con `sound: 'default'`. **Esa propiedad no
+   significa "el sonido del sistema"**: es el nombre de un archivo de sonido propio que
+   tendria que venir empaquetado. Los dos aparatos mostraron en pantalla "Custom sound
+   'default' not found in native app" y el aviso siguio sin sonar. Se vio en `dumpsys
+   notification`: el canal quedaba con `mAudioAttributes=null`
+3. `service-alerts-v2`, en `MAX` y **sin** `sound`, que es como se pide el sonido del sistema.
+   `dumpsys` ya muestra `mAudioAttributes: usage=USAGE_NOTIFICATION`, y el aviso suena
+
+`CANALES_VIEJOS` en `use-push-registration.ts` borra los dos anteriores al arrancar, para no
+dejarle al usuario tres entradas en sus ajustes de notificaciones con dos muertas.
+
+**La misma palabra significa dos cosas distintas en dos sitios**, y por ahi se colo el error:
+en el canal de Android `sound: 'default'` es un archivo que no existe, y en el cuerpo que se
+le manda a Expo Push `'sound': 'default'` si es el sonido por defecto. El del servidor se
+quedo como estaba, a proposito.
+
+### Tropiezos de esta sesion, que no eran del codigo
+
+- **Pantalla en blanco en los DOS aparatos a la vez.** Parecia un fallo del cambio recien
+  hecho y no lo era: **Metro estaba colgado**, sin responder a una peticion del bundle ni en
+  tres minutos. Probablemente quedo asi tras el `prebuild`, que regenera `android/`. Se
+  arreglo con `npx expo start --dev-client --clear`. **Si dos aparatos fallan igual y a la
+  vez, sospechar de Metro antes que del codigo**
+- **`gradlew assembleDebug` fallo una vez sin decir por que**, y al repetirlo exactamente
+  igual compilo bien. Se perdio el mensaje por filtrar la salida con `Select-Object -Last 5`:
+  al capturar todo, el error ya no estaba. **No filtrar la salida de un build que falla**
+- **Tres ANR al arrancar en el emulador**, de la sesion anterior: era la maquina sobrecargada
+  (Android Studio, Epic Games Launcher, Gradle). El usuario cerro programas y arranco a la
+  primera
+- El `.apk` con las dos arquitecturas pesa 210 MB y no cabia en el emulador (92% de disco).
+  **Compilar cada arquitectura por separado**: `-PreactNativeArchitectures=x86_64` para el
+  emulador, `=arm64-v8a` para la tablet, ~125 MB cada uno
+- El paquete `host.exp.exponent` (Expo Go) se desinstalo del emulador para liberar 264 MB. No
+  hacia falta desde D91
+- El servidor de `adb` se colgo una vez a mitad de una instalacion larga; se mato con
+  `Stop-Process` y se reinicio solo, sin perder nada
+
+### Efectos secundarios ya limpios
+
+- `offer_response_seconds` volvio a 20 y `driver_arrival_radius_m` a 150. Los dos se subieron
+  para poder aceptar y llegar sin pelear con R2 y R5, **y el motivo de R5 es el de siempre**:
+  la aplicacion pisa la ubicacion sembrada (ver el bloque LEE ESTO PRIMERO)
+- Quedaron notificaciones y solicitudes de prueba en el servidor, con el mismo criterio de
+  fases anteriores: no se borran
+
+### Lo que falta
+
+1. Tu aprobacion
+2. Commit desde GitHub Desktop. `google-services.json` y `upload-debug.jks` **no apareceran en
+   la lista**: el primero lo ignora la plantilla y el segundo es una copia temporal del
+   keystore de depuracion que se puede borrar cuando quieras
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 17 completadas y aprobadas, **mas D161 y el cambio del mapa a
-  Mapbox**. **Fase 18 probada en pantalla en tiempo real (seccion 15.19), alcance cerrado por
-  D216, pendiente de que el usuario la confirme con sus propios ojos**
-- **Paso actual:** La Fase 18 esperando tu aprobacion. El arbol de trabajo NO
-  esta limpio: hay migracion nueva ya aplicada al servidor y cambios sin confirmar en
-  `src/app/passenger/index.tsx`, `src/app/driver/(tabs)/index.tsx`,
-  `src/features/driver/active-ride-card.tsx`, `src/features/driver/driver-service.ts`,
-  `src/features/ride/ride-service.ts`, `src/types/database.ts` y el nuevo
-  `supabase/dev-tools/prueba_cancelaciones.sql`
+- **Fase actual:** Fases 0 a 18 completadas y aprobadas (Fase 18 comiteada por el usuario el
+  2026-08-21), **mas D161 y el cambio del mapa a Mapbox**. **Fase 19 probada de punta a punta
+  el 2026-08-25** (seccion 15.20), esperando tu aprobacion
+- **Paso actual:** La Fase 19 esperando aprobacion y commit. El arbol de trabajo NO esta
+  limpio: migracion de notificaciones ya aplicada al servidor, y sin comitear
+  `app.config.ts`, `.gitignore`, `package.json`/`package-lock.json`, `src/app/_layout.tsx`,
+  `src/types/database.ts`, la carpeta nueva `src/features/notifications/`,
+  `supabase/dev-tools/prueba_notificaciones.sql`, la migracion
+  `20260821223728_push_notifications.sql` y **`google-services.json`, que SI va al
+  repositorio**. `upload-debug.jks` es una copia temporal que se puede borrar
+- **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
+  Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
+  vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)
 - **Ultimo paso completado:** La Fase 17 entera, con su checklist de validacion. Antes, la
   Fase 16
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles

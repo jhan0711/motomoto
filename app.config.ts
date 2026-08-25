@@ -68,6 +68,18 @@ const config: ExpoConfig = {
     // Necesario desde la Fase 8: identifica la aplicación ante Google Maps.
     // La clave de la API está restringida a este nombre exacto.
     package: 'com.motomoto.app',
+    // Fase 19. Expo Push entrega por FCM en Android, y FCM exige este archivo:
+    // sin el, `getExpoPushTokenAsync` falla con "Default FirebaseApp is not
+    // initialized" y el token nunca llega al servidor.
+    //
+    // NO ESTA EN EL REPOSITORIO: la plantilla de Expo ya lo ignoraba de fabrica
+    // y se respeto esa decision. No es que sea secreto —Firebase lo documenta
+    // como publico y acaba dentro del APK, igual que la clave de mapas—, pero
+    // tampoco hace falta versionarlo con un solo desarrollador. Consecuencia a
+    // no olvidar: **si este archivo falta, la compilacion nativa falla**, y hay
+    // que volver a bajarlo de Firebase Console (proyecto motomoto2026-444cb,
+    // paquete com.motomoto.app). Queda anotado en la seccion 15.20.
+    googleServicesFile: './google-services.json',
     adaptiveIcon: {
       backgroundColor: '#E6F4FE',
       foregroundImage: './assets/images/android-icon-foreground.png',
@@ -122,12 +134,32 @@ const config: ExpoConfig = {
         imageWidth: 76,
       },
     ],
+    [
+      'expo-notifications',
+      {
+        // Sin icono ni sonido propios: el icono monocromo de notificacion es
+        // un activo de diseno que no existe todavia (D44 no lo cubrio), y usar
+        // el de la aplicacion a secas es aceptable para el MVP. Se revisa si
+        // hace falta cuando el sistema de diseno pase por aqui.
+        color: '#F27127',
+      },
+    ],
   ],
 
   experiments: {
     typedRoutes: true,
     reactCompiler: true,
   },
+
+  // Vinculado con `eas init` en la Fase 19. Sin cuenta de Expo hasta entonces
+  // (D113); esto no cambia como se compila hoy, solo identifica el proyecto
+  // ante el servicio de notificaciones push, que es lo que lo exige.
+  extra: {
+    eas: {
+      projectId: '93c1536c-ce38-4977-8588-7362b53d761a',
+    },
+  },
+  owner: 'jhan160711',
 };
 
 export default config;

@@ -49,3 +49,10 @@ example
 # generated native folders
 /ios
 /android
+
+# Clave de servicio de FCM (Fase 19). ESTA SI ES SECRETA, a diferencia de
+# google-services.json: permite enviar notificaciones en nombre del proyecto de
+# Firebase, asi que quien la tenga puede escribirle a todos los usuarios de la
+# aplicacion. Se sube a Expo desde su panel y no hace falta en el repositorio.
+fcm-service-account.json
+*-firebase-adminsdk-*.json

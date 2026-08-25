@@ -4,7 +4,8 @@ import { StyleSheet } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { SessionProvider } from '@/features/auth/session';
+import { SessionProvider, useSession } from '@/features/auth/session';
+import { usePushRegistration } from '@/features/notifications/use-push-registration';
 import { useTheme } from '@/theme';
 
 /**
@@ -46,6 +47,12 @@ const styles = StyleSheet.create({
  */
 function RootNavigator() {
   const { colors, isDark } = useTheme();
+  const { user } = useSession();
+
+  // Una vez por sesion abierta y no por pantalla (Fase 19): asi sirve igual
+  // para el pasajero que para el conductor, sin repetir la llamada en cada
+  // zona de la aplicacion.
+  usePushRegistration(user?.id ?? null);
 
   return (
     <>
