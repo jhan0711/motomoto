@@ -53,11 +53,17 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   error del asistente en ese paso abrio un agujero por el que un pasajero podia hacerse
   administrador, y lo cazo la prueba de romper**, no la revision del codigo. Corregido y con
   280 comprobaciones automaticas en verde
-- **Trabajo siguiente:** la Fase 20, paso 3: el tablero con los servicios en curso
-- **Ultimo commit:** `475214b`, "Fase 20 paso 1: proyecto del panel y acceso administrativo".
-  Antes, `611e0e8` cerro todo el bloque especial. **SIN COMITEAR: lo del paso 2** —las dos
-  migraciones `20260826170000` y `20260826180000`, `supabase/dev-tools/prueba_auditoria.sql`,
-  las dos correcciones de `prueba_notificaciones.sql`, los tipos regenerados y la actualizacion
+- **El paso 3 tambien esta hecho y verificado:** el panel tiene su primera pantalla con contenido
+  real, el tablero de servicios en curso, **visto funcionando por el usuario con dos servicios de
+  verdad**. 291 comprobaciones automaticas en verde
+- **Trabajo siguiente:** la Fase 20, paso 4: gestion de conductores —alta, edicion, bloqueo y
+  documentos—
+- **Ultimo commit:** `12bb3c2`, "Fase 20 paso 2: auditoria administrativa y bloqueo de cuentas".
+  Antes, `475214b` cerro el paso 1 y `611e0e8` todo el bloque especial. **SIN COMITEAR: lo del
+  paso 3** —la migracion `20260826200000`, `supabase/dev-tools/prueba_tablero.sql`, las dos
+  herramientas `seed_active_service.sql` y `remove_active_service.sql`, el modulo
+  `admin/src/features/dashboard/`, la pagina de inicio del panel, los clientes de Supabase
+  tipados, `admin/src/lib/supabase/database.types.ts`, los tipos regenerados y la actualizacion
   de este archivo—. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
   estaba fechada el 25 y el usuario comiteo despues. Lo que quedo comiteado en `475214b`: la
@@ -613,6 +619,8 @@ aplicacion sigue sin tocar dinero.
 | D238 | **La guardia del panel vive en un solo archivo y no autoriza, solo dibuja** | `admin/src/proxy.ts`. Mismo criterio que D70 —una pantalla nueva queda protegida sin acordarse— y que D72 —la autorizacion de verdad son las politicas RLS de la Fase 5, que ya exigen `is_admin()`—. Comprueba el rol **leyendolo del servidor con `getUser()`, no de la cookie con `getSession()`**, porque la segunda se cree lo que el navegador diga. Verificado mandando una cookie falsificada: responde igual que sin sesion. Y a quien tiene sesion valida pero no es administrador **se le cierra la sesion** antes de devolverlo al acceso, para que no quede atrapado con una sesion que no sirve y sin forma de entrar con otra cuenta |
 | D240 | **Las acciones administrativas van por funciones que auditan en la misma transaccion** | Decidido con el usuario el 2026-08-26, eligiendo entre esto, la escritura directa por RLS y un modelo mixto. El motivo de fondo es que la alternativa barata no era mas barata: con escritura directa, la auditoria hay que acordarse de escribirla desde el panel, y quien llame a la API a mano —cosa que puede hacer cualquiera con una sesion de administrador— no se acuerda nunca. Atado a la transaccion, si la auditoria falla el cambio tampoco pasa. **Es coherente con D83**, que ya decidio que los clientes solo leen, y el panel es un cliente |
 | D241 | **La marca `motomoto.admin_action` no autoriza: solo dice por donde vino la accion** | Sale de un error del asistente del mismo dia, cazado por la comprobacion 17 de `prueba_auditoria.sql`. La primera version dejo la marca como unica condicion del disparador, y entonces cualquiera que la pusiera podia cambiar rol y estado: **un pasajero podia hacerse administrador**. El disparador exige ahora la marca **y** `is_admin()`. La leccion es mas amplia que la correccion: al apretar una tuerca se aflojo otra, porque la proteccion vieja y la nueva cubrian cosas distintas y se sustituyo una por otra en vez de sumarlas |
+| D242 | **Las funciones de LECTURA del panel son `security invoker`, al reves que las de escritura** | Las que escriben son `security definer` porque tienen que poder tocar tablas que el cliente no toca, y comprueban `is_admin()` ellas mismas. Las que leen no: si `admin_list_active_services` fuera definer, **un pasajero que la llamara veria el tablero entero de la empresa**, porque la funcion esta concedida a `authenticated` como todas. Siendo invoker, las politicas RLS de la Fase 5 se aplican con la identidad de quien llama y cada uno ve lo que le toca. La comprobacion de administrador no hace falta escribirla: ya la hacen las politicas |
+| D243 | **El tablero consulta cada diez segundos en vez de suscribirse a tiempo real** | La Fase 13 publico `ride_requests` y `rides` en realtime, asi que suscribirse era posible. Se eligio preguntar porque **tres de los datos que el tablero muestra —la espera, la antiguedad de la ultima posicion y las ofertas vivas— cambian con el paso del tiempo aunque no cambie ninguna fila**, asi que una suscripcion no ahorraria el refresco: haria falta igual un temporizador para que los minutos avanzaran. Ademas el tablero es una lista agregada y no un marcador moviendose, asi que diez segundos no cambian ninguna decision de un despachador. Es reversible: si hace falta inmediatez, la suscripcion se anade encima |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4224,7 +4232,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 |---|---|---|
 | 1 | Proyecto Next.js y acceso administrativo | **HECHO Y VERIFICADO** |
 | 2 | Servidor: auditoria y bloqueo de cuentas | **HECHO Y VERIFICADO** |
-| 3 | Tablero con los servicios en curso | Pendiente |
+| 3 | Tablero con los servicios en curso | **HECHO Y VERIFICADO** |
 | 4 | Gestion de conductores: alta, edicion, bloqueo, documentos | Pendiente |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | Pendiente |
 | 6 | Lugares, tarifas urbanas y rurales, tipos de carga (con D229) | Pendiente |
@@ -4432,15 +4440,104 @@ su paso y **ya tienen la base**: una llamada a `log_admin_action` dentro de su p
 
 ---
 
+### Lo que se hizo: paso 3, el tablero de servicios en curso (2026-08-26)
+
+**Nueva implementacion.** `supabase/migrations/20260826200000_admin_active_services.sql`,
+`supabase/dev-tools/prueba_tablero.sql` (11 comprobaciones), las dos herramientas
+`seed_active_service.sql` / `remove_active_service.sql`, y en el panel el modulo
+`admin/src/features/dashboard/` (cinco archivos) mas la pagina de inicio, que deja de ser un
+marcador de posicion.
+
+**`admin_list_active_services`**, una funcion de lectura. En curso son los tres estados vivos de
+`ride_request_status`: `searching`, `assigned` e `in_progress`. Lo terminado, cancelado y
+caducado es del listado de servicios del paso 8.
+
+**Se hace con funcion y no con consultas desde el navegador** aunque la RLS ya lo permitiria: por
+lo mismo que el historial de la Fase 16, la forma del dato se decide en un sitio, el panel no
+tiene que saber que un servicio vive repartido entre `ride_requests` y `rides`, y se evitan cinco
+consultas anidadas por fila.
+
+**Pero es `security invoker`, al reves que las funciones que escriben**, y esa es la decision
+que mas importa de este paso (D242). Con `security definer` un pasajero que llamara a la funcion
+—esta concedida a `authenticated`— **habria visto el tablero entero de la empresa**. Siendo
+invoker, las politicas se aplican con su identidad y ve lo suyo. **Las comprobaciones 9 y 10 lo
+miden en pareja**: la 9 confirma que no ve el servicio de otro y la 10 que SI ve el suyo, porque
+sin la segunda la primera podria estar en verde por devolver cero a todo el mundo.
+
+Tres datos que la funcion calcula y que no estaban en ninguna tabla:
+
+- **`waiting_seconds`**, cuanto lleva vivo el servicio. Se calcula en el servidor por D154: el
+  reloj del ordenador que abre el panel lo cambia cualquiera. **`searching` es el estado que mas
+  importa del tablero** aunque parezca el menos interesante, porque un servicio que lleva rato
+  sin encontrar motorraton es el problema que la empresa quiere ver antes de que el pasajero se
+  canse
+- **`pending_offers`**, cuantos conductores tienen la oferta delante ahora mismo. Distingue "no
+  hay nadie cerca" de "la han visto cinco y ninguno la coge", que son dos problemas distintos
+- **`driver_location_age_seconds`**, hace cuanto se supo donde estaba el conductor. Un tablero
+  que muestra un servicio en marcha con una posicion de hace veinte minutos esta mintiendo, y es
+  justo la alerta de R10 que espera el paso 11
+
+**El `left join` a `rides` excluye los cancelados**, y no es un detalle: un servicio puede tener
+un viaje cancelado —el conductor se echo atras— y haber vuelto a `searching` esperando otro. Sin
+ese filtro el tablero mostraria el conductor que ya no viene.
+
+**En el panel**, `useActiveServices` **consulta cada diez segundos en vez de suscribirse a
+tiempo real** (D243), aunque la Fase 13 ya publico `ride_requests` y `rides` en realtime. El
+motivo esta escrito en el codigo: **tres de los datos que muestra —la espera, la antiguedad de la
+posicion y las ofertas vivas— cambian con el paso del tiempo aunque no cambie ninguna fila**, asi
+que una suscripcion no evitaria refrescar igual. Si hace falta inmediatez, se anade encima sin
+tirar esto.
+
+**Si falla la consulta, el listado anterior se conserva** y se avisa aparte. Un corte de red no
+tiene por que vaciar la pantalla que el despachador esta mirando.
+
+**El color del estado de espera nunca es la unica senal**: va con el numero de minutos y con su
+icono. Es D202 de la aplicacion movil aplicado al panel, por el mismo motivo del hallazgo H14.
+
+**Tres tropiezos, los tres diagnosticados contra el servidor y no adivinados:**
+
+1. **La migracion no aplicaba y el error no decia por que.** Se ejecuto el cuerpo como consulta
+   suelta para que Postgres diera el mensaje real: **`ride_offers` no tiene columna `status`**,
+   tiene `response`, y su enum es `ride_offer_response`. Una oferta no tiene estado propio, tiene
+   la respuesta que dio el conductor
+2. **Dos errores de montaje de la prueba, los dos por restricciones vivas del proyecto.** La
+   regla R6 (`rr_one_active_per_passenger`) no admite dos servicios activos del mismo pasajero,
+   asi que hacen falta tres personas para tres servicios; y `ro_response_coherence` exige
+   `responded_at` en toda respuesta distinta de `pending`, asi que una oferta caducada sin fecha
+   de respuesta no entra
+3. **El lint volvio a marcar `react-hooks/set-state-in-effect`**, ahora por la consulta inicial.
+   Tercera vez en el proyecto, y tampoco se silencio: **la primera consulta se programa con un
+   temporizador igual que las demas**, y el cuerpo del efecto solo programa
+
+**Verificado, y separado por quien lo verifico:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| La funcion, contra el servidor | `prueba_tablero.sql` | **11 de 11**, tres de ellas de privacidad |
+| Regresion completa | Los trece archivos de `dev-tools/` | **291 comprobaciones, 0 fallando** |
+| El panel compila para produccion | `npm run build` | Compila, y el proxy queda registrado |
+| Calidad del panel | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| La aplicacion movil no se rompe | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| **El tablero en pantalla** | **El usuario, en su navegador** | **Los dos servicios se ven bien** |
+
+**Para poder mirarlo hizo falta sembrar datos**, porque al empezar el paso las 57 solicitudes de
+la base estaban **todas** terminadas, canceladas o caducadas: no habia ni una viva. De ahi salen
+las dos herramientas nuevas. **`seed_active_service.sql` es el unico archivo de `dev-tools/` que
+deja filas**, a diferencia de los `prueba_*.sql`, y por eso viene con su archivo de limpieza;
+conviene ejecutarlo al terminar, porque un servicio en `searching` deja al pasajero de prueba sin
+poder pedir otro por la regla R6. Se limpio al terminar y se comprobo: cero.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20, paso 3 de once: el tablero con los servicios en curso. Los pasos 1
-  —proyecto Next.js y acceso administrativo— y 2 —auditoria y bloqueo de cuentas— estan
-  **hechos, verificados y cerrados** (seccion 15.22). **El arbol de trabajo NO esta limpio**:
-  falta comitear lo del paso 2, listado en la cabecera
+- **Paso actual:** Fase 20, paso 4 de once: gestion de conductores. Los pasos 1 —proyecto Next.js
+  y acceso administrativo—, 2 —auditoria y bloqueo de cuentas— y 3 —el tablero de servicios en
+  curso— estan **hechos, verificados y cerrados** (seccion 15.22). **El arbol de trabajo NO esta
+  limpio**: falta comitear lo del paso 3, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)
