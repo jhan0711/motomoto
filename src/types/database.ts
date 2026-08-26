@@ -4,7 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.5';
+    PostgrestVersion: '14.17';
   };
   graphql_public: {
     Tables: {
@@ -99,6 +99,47 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: 'app_settings_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      cargo_types: {
+        Row: {
+          amount: number;
+          created_at: string;
+          id: string;
+          is_active: boolean;
+          name: string;
+          sort_order: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name: string;
+          sort_order?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          id?: string;
+          is_active?: boolean;
+          name?: string;
+          sort_order?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'cargo_types_updated_by_fkey';
             columns: ['updated_by'];
             isOneToOne: false;
             referencedRelation: 'profiles';
@@ -657,6 +698,48 @@ export type Database = {
           },
         ];
       };
+      ride_request_cargo: {
+        Row: {
+          cargo_type_id: string;
+          created_at: string;
+          id: string;
+          quantity: number;
+          request_id: string;
+          unit_amount: number;
+        };
+        Insert: {
+          cargo_type_id: string;
+          created_at?: string;
+          id?: string;
+          quantity?: number;
+          request_id: string;
+          unit_amount: number;
+        };
+        Update: {
+          cargo_type_id?: string;
+          created_at?: string;
+          id?: string;
+          quantity?: number;
+          request_id?: string;
+          unit_amount?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'ride_request_cargo_cargo_type_id_fkey';
+            columns: ['cargo_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'cargo_types';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'ride_request_cargo_request_id_fkey';
+            columns: ['request_id'];
+            isOneToOne: false;
+            referencedRelation: 'ride_requests';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       ride_requests: {
         Row: {
           assigned_at: string | null;
@@ -670,14 +753,22 @@ export type Database = {
           destination_label: string;
           destination_place_id: string | null;
           expires_at: string;
+          fare_amount: number | null;
+          fare_cargo_amount: number | null;
+          fare_is_night: boolean | null;
+          fare_is_rural: boolean | null;
+          fare_reference: string | null;
+          fare_trip_amount: number | null;
           id: string;
           origin: unknown;
           origin_label: string;
           origin_place_id: string | null;
+          parcel_description: string | null;
           passenger_count: number;
           passenger_id: string;
           pickup_reference: string | null;
           requested_at: string;
+          service_type: Database['public']['Enums']['service_type'];
           started_at: string | null;
           status: Database['public']['Enums']['ride_request_status'];
           updated_at: string;
@@ -694,14 +785,22 @@ export type Database = {
           destination_label: string;
           destination_place_id?: string | null;
           expires_at: string;
+          fare_amount?: number | null;
+          fare_cargo_amount?: number | null;
+          fare_is_night?: boolean | null;
+          fare_is_rural?: boolean | null;
+          fare_reference?: string | null;
+          fare_trip_amount?: number | null;
           id?: string;
           origin: unknown;
           origin_label: string;
           origin_place_id?: string | null;
+          parcel_description?: string | null;
           passenger_count: number;
           passenger_id: string;
           pickup_reference?: string | null;
           requested_at?: string;
+          service_type?: Database['public']['Enums']['service_type'];
           started_at?: string | null;
           status?: Database['public']['Enums']['ride_request_status'];
           updated_at?: string;
@@ -718,14 +817,22 @@ export type Database = {
           destination_label?: string;
           destination_place_id?: string | null;
           expires_at?: string;
+          fare_amount?: number | null;
+          fare_cargo_amount?: number | null;
+          fare_is_night?: boolean | null;
+          fare_is_rural?: boolean | null;
+          fare_reference?: string | null;
+          fare_trip_amount?: number | null;
           id?: string;
           origin?: unknown;
           origin_label?: string;
           origin_place_id?: string | null;
+          parcel_description?: string | null;
           passenger_count?: number;
           passenger_id?: string;
           pickup_reference?: string | null;
           requested_at?: string;
+          service_type?: Database['public']['Enums']['service_type'];
           started_at?: string | null;
           status?: Database['public']['Enums']['ride_request_status'];
           updated_at?: string;
@@ -836,6 +943,45 @@ export type Database = {
           },
         ];
       };
+      rural_fares: {
+        Row: {
+          amount: number;
+          is_active: boolean;
+          place_id: string;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          amount: number;
+          is_active?: boolean;
+          place_id: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          amount?: number;
+          is_active?: boolean;
+          place_id?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'rural_fares_place_id_fkey';
+            columns: ['place_id'];
+            isOneToOne: true;
+            referencedRelation: 'places';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'rural_fares_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       service_area: {
         Row: {
           boundary: unknown;
@@ -859,6 +1005,38 @@ export type Database = {
           updated_at?: string;
         };
         Relationships: [];
+      };
+      urban_fares: {
+        Row: {
+          amount: number;
+          is_night: boolean;
+          passenger_count: number;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          amount: number;
+          is_night: boolean;
+          passenger_count: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          amount?: number;
+          is_night?: boolean;
+          passenger_count?: number;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'urban_fares_updated_by_fkey';
+            columns: ['updated_by'];
+            isOneToOne: false;
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       vehicles: {
         Row: {
@@ -982,16 +1160,24 @@ export type Database = {
           driver_phone: string;
           driver_rating: number;
           expires_at: string;
+          fare_amount: number;
+          fare_cargo_amount: number;
+          fare_is_night: boolean;
+          fare_is_rural: boolean;
+          fare_reference: string;
+          fare_trip_amount: number;
           id: string;
           origin_label: string;
           origin_lat: number;
           origin_lng: number;
+          parcel_description: string;
           passenger_count: number;
           pickup_reference: string;
           requested_at: string;
           ride_id: string;
           ride_status: Database['public']['Enums']['ride_status'];
           seconds_remaining: number;
+          service_type: Database['public']['Enums']['service_type'];
           status: Database['public']['Enums']['ride_request_status'];
           vehicle_plate: string;
           vehicle_unit_number: number;
@@ -1019,6 +1205,12 @@ export type Database = {
           distance_m: number;
           driver_arrived_at: string;
           duration_s: number;
+          fare_amount: number;
+          fare_cargo_amount: number;
+          fare_is_night: boolean;
+          fare_is_rural: boolean;
+          fare_reference: string;
+          fare_trip_amount: number;
           my_comment: string;
           my_stars: number;
           offer_expires_at: string;
@@ -1026,6 +1218,7 @@ export type Database = {
           offered_at: string;
           origin_label: string;
           outcome: string;
+          parcel_description: string;
           passenger_count: number;
           passenger_name: string;
           pickup_distance_m: number;
@@ -1034,6 +1227,7 @@ export type Database = {
           requested_at: string;
           responded_at: string;
           ride_id: string;
+          service_type: Database['public']['Enums']['service_type'];
           started_at: string;
         }[];
       };
@@ -1125,6 +1319,20 @@ export type Database = {
           status: Database['public']['Enums']['ride_status'];
         }[];
       };
+      list_driver_earnings: {
+        Args: { p_from_date?: string; p_period?: string; p_to_date?: string };
+        Returns: {
+          completed_at: string;
+          destination_label: string;
+          fare_amount: number;
+          origin_label: string;
+          parcel_description: string;
+          passenger_count: number;
+          request_id: string;
+          ride_id: string;
+          service_type: Database['public']['Enums']['service_type'];
+        }[];
+      };
       list_driver_history: {
         Args: { p_limit?: number; p_offset?: number };
         Returns: {
@@ -1133,6 +1341,9 @@ export type Database = {
           destination_label: string;
           distance_m: number;
           duration_s: number;
+          fare_amount: number;
+          fare_is_rural: boolean;
+          fare_reference: string;
           finished_at: string;
           offer_id: string;
           offered_at: string;
@@ -1144,6 +1355,7 @@ export type Database = {
           request_id: string;
           responded_at: string;
           ride_id: string;
+          service_type: Database['public']['Enums']['service_type'];
         }[];
       };
       list_driver_offers: {
@@ -1202,6 +1414,30 @@ export type Database = {
       };
       owns_request: { Args: { p_request_id: string }; Returns: boolean };
       participates_in_ride: { Args: { p_ride_id: string }; Returns: boolean };
+      quote_fare: {
+        Args: {
+          p_at?: string;
+          p_cargo_quantities?: number[];
+          p_cargo_type_ids?: string[];
+          p_destination_lat: number;
+          p_destination_lng: number;
+          p_destination_place_id?: string;
+          p_origin_lat: number;
+          p_origin_lng: number;
+          p_origin_place_id?: string;
+          p_passenger_count: number;
+          p_service_type: Database['public']['Enums']['service_type'];
+        };
+        Returns: {
+          cargo_amount: number;
+          is_night: boolean;
+          is_rural: boolean;
+          reference: string;
+          reference_m: number;
+          total_amount: number;
+          trip_amount: number;
+        }[];
+      };
       rate_ride: {
         Args: { p_comment?: string; p_ride_id: string; p_stars: number };
         Returns: string;
@@ -1209,6 +1445,8 @@ export type Database = {
       reject_ride_offer: { Args: { p_offer_id: string }; Returns: undefined };
       request_ride: {
         Args: {
+          p_cargo_quantities?: number[];
+          p_cargo_type_ids?: string[];
           p_destination_label: string;
           p_destination_lat: number;
           p_destination_lng: number;
@@ -1217,8 +1455,10 @@ export type Database = {
           p_origin_lat: number;
           p_origin_lng: number;
           p_origin_place_id?: string;
+          p_parcel_description?: string;
           p_passenger_count: number;
           p_pickup_reference?: string;
+          p_service_type?: Database['public']['Enums']['service_type'];
         };
         Returns: string;
       };
@@ -1229,6 +1469,14 @@ export type Database = {
           p_ride_status: Database['public']['Enums']['ride_status'];
         };
         Returns: string;
+      };
+      rural_fare_for_point: {
+        Args: { p_lat: number; p_lng: number; p_place_id?: string };
+        Returns: {
+          amount: number;
+          distance_m: number;
+          place_name: string;
+        }[];
       };
       send_push_notification: {
         Args: {
@@ -1262,6 +1510,7 @@ export type Database = {
         | 'in_progress'
         | 'completed'
         | 'cancelled';
+      service_type: 'passenger' | 'parcel';
       user_role: 'passenger' | 'driver' | 'admin';
       user_status: 'active' | 'blocked';
       vehicle_status: 'active' | 'maintenance' | 'retired';
@@ -1410,6 +1659,7 @@ export const Constants = {
         'completed',
         'cancelled',
       ],
+      service_type: ['passenger', 'parcel'],
       user_role: ['passenger', 'driver', 'admin'],
       user_status: ['active', 'blocked'],
       vehicle_status: ['active', 'maintenance', 'retired'],

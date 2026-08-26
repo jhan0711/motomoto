@@ -4,10 +4,13 @@ import {
   CircleHelp,
   CircleSlash,
   MapPin,
+  Package,
   SearchX,
   TimerOff,
   UserCheck,
+  Wallet,
 } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
@@ -18,6 +21,8 @@ import { Header } from '@/components/ui/header';
 import { Screen } from '@/components/ui/screen';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
+import { fetchRequestCargo, type RequestCargoLine } from '@/features/fare/fare-service';
+import { formatAmount } from '@/features/fare/format-amount';
 import { formatWhen } from '@/features/history/format-when';
 import { StarPicker } from '@/features/rating/star-picker';
 import { fetchDriverJob, type DriverJobDetail } from '@/features/history/history-service';
@@ -90,6 +95,32 @@ function Contenido({ job }: { job: DriverJobDetail }) {
   const router = useRouter();
   const { icon: Icon, color, titulo } = presentacionDe(job);
 
+  /**
+   * El detalle de la carga, si lleva. Igual criterio que en el resumen del
+   * pasajero (`passenger/index.tsx`): `get_driver_job` devuelve como mucho
+   * una fila y un servicio puede llevar varias cargas, asi que se relee
+   * aparte, una vez por cada oferta distinta.
+   */
+  const [cargaDelServicio, setCargaDelServicio] = useState<RequestCargoLine[]>([]);
+
+  useEffect(() => {
+    let vigente = true;
+
+    const id = setTimeout(() => {
+      void fetchRequestCargo(job.requestId).then((resultado) => {
+        if (!vigente) return;
+        if (resultado.ok) {
+          setCargaDelServicio(resultado.data);
+        }
+      });
+    }, 0);
+
+    return () => {
+      vigente = false;
+      clearTimeout(id);
+    };
+  }, [job.requestId]);
+
   return (
     <View style={styles.cuerpo}>
       <View style={styles.cabecera}>
@@ -156,16 +187,72 @@ function Contenido({ job }: { job: DriverJobDetail }) {
         <Text variant="label" color="textSecondary" style={styles.tituloBloque}>
           LA SOLICITUD
         </Text>
-        <Dato
-          etiqueta="Pasajeros"
-          valor={job.passengerCount === 1 ? '1 pasajero' : `${job.passengerCount} pasajeros`}
-        />
+        {job.serviceType === 'parcel' ? (
+          <Dato etiqueta="Servicio" valor={job.parcelDescription ?? 'Encomienda'} />
+        ) : (
+          <Dato
+            etiqueta="Pasajeros"
+            valor={job.passengerCount === 1 ? '1 pasajero' : `${job.passengerCount} pasajeros`}
+          />
+        )}
         {job.passengerName !== null && <Dato etiqueta="Pasajero" valor={job.passengerName} />}
         <Dato
           etiqueta="Estabas a"
           valor={job.pickupMeters !== null ? formatDistance(job.pickupMeters) : 'Sin registro'}
         />
       </Card>
+
+      {/* El valor, solo cuando hay uno que mostrar. Nulo en las solicitudes de
+          antes de D217, que no tenian tarifa calculada. */}
+      {job.fareAmount !== null && (
+        <Card padding="lg">
+          <Text variant="label" color="textSecondary" style={styles.tituloBloque}>
+            EL VALOR
+          </Text>
+          <View style={styles.valorCabecera}>
+            <Wallet size={iconSize.lg} color={colors.brand} strokeWidth={iconStrokeWidth} />
+            <View style={styles.valorTextos}>
+              <Text variant="heading">{formatAmount(job.fareAmount)}</Text>
+              {job.fareReference !== null && (
+                <Text variant="caption" color="textSecondary">
+                  Tarifa de {job.fareReference}
+                </Text>
+              )}
+              {job.fareIsNight === true && (
+                <Text variant="caption" color="textSecondary">
+                  Con recargo nocturno
+                </Text>
+              )}
+            </View>
+          </View>
+          {job.serviceType === 'passenger' &&
+            job.fareCargoAmount !== null &&
+            job.fareCargoAmount > 0 && (
+              <>
+                <Dato etiqueta="Viaje" valor={formatAmount(job.fareTripAmount ?? 0)} />
+                <Dato etiqueta="Carga" valor={formatAmount(job.fareCargoAmount)} />
+              </>
+            )}
+          {cargaDelServicio.length > 0 && (
+            <View style={styles.carga}>
+              <Package
+                size={iconSize.xs}
+                color={colors.textTertiary}
+                strokeWidth={iconStrokeWidth}
+              />
+              <Text variant="caption" color="textSecondary" style={styles.cargaTexto}>
+                {cargaDelServicio
+                  .map((linea) =>
+                    linea.quantity > 1
+                      ? `${linea.cargoTypeName} ×${linea.quantity}`
+                      : linea.cargoTypeName,
+                  )
+                  .join(', ')}
+              </Text>
+            </View>
+          )}
+        </Card>
+      )}
 
       {job.rideId !== null && (
         <Card padding="lg">
@@ -312,4 +399,9 @@ const styles = StyleSheet.create({
   dato: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.xs },
   motivo: { marginTop: spacing.sm },
   calificacion: { alignItems: 'flex-start', gap: spacing.md },
+
+  valorCabecera: { alignItems: 'center', flexDirection: 'row', gap: spacing.md },
+  valorTextos: { gap: spacing.xxs },
+  carga: { flexDirection: 'row', gap: spacing.xs, marginTop: spacing.sm },
+  cargaTexto: { flex: 1 },
 });

@@ -1,10 +1,10 @@
 import { Tabs } from 'expo-router';
-import { History, House, UserRound } from 'lucide-react-native';
+import { History, House, UserRound, Wallet } from 'lucide-react-native';
 
 import { fontSize, fontWeight, iconSize, iconStrokeWidth, useTheme } from '@/theme';
 
 /**
- * Las tres pestanas del conductor.
+ * Las cuatro pestanas del conductor.
  *
  * A diferencia de la zona del pasajero, esta si tiene barra abajo: la pantalla
  * del conductor no lleva una hoja peleando por el borde inferior, y el conductor
@@ -49,6 +49,15 @@ export default function DriverTabsLayout() {
           title: 'Servicios',
           tabBarIcon: ({ color }) => (
             <History size={iconSize.lg} color={color} strokeWidth={iconStrokeWidth} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="earnings"
+        options={{
+          title: 'Recaudo',
+          tabBarIcon: ({ color }) => (
+            <Wallet size={iconSize.lg} color={color} strokeWidth={iconStrokeWidth} />
           ),
         }}
       />

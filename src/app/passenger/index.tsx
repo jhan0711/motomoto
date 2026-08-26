@@ -11,6 +11,7 @@ import {
   LocateFixed,
   MapPin,
   Navigation,
+  Package,
   Phone,
   RotateCw,
   Route as RouteIcon,
@@ -43,10 +44,20 @@ import { useSession } from '@/features/auth/session';
 import { describePoint } from '@/features/destination/describe-point';
 import type { ChosenPoint, Place } from '@/features/destination/types';
 import { usePlaces } from '@/features/destination/use-places';
+import { CargoPicker } from '@/features/fare/cargo-picker';
+import { ChosenCargoList } from '@/features/fare/chosen-cargo-list';
+import { fetchRequestCargo, type RequestCargoLine } from '@/features/fare/fare-service';
+import { FareRow } from '@/features/fare/fare-row';
+import { formatAmount } from '@/features/fare/format-amount';
+import { ServiceTypeToggle } from '@/features/fare/service-type-toggle';
+import type { CargoItem, CargoType, FareQuote, ServiceType } from '@/features/fare/types';
+import { useCargoTypes } from '@/features/fare/use-cargo-types';
+import { useFareQuote, type FareQuotePending } from '@/features/fare/use-fare-quote';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
 import { Map, type MapHandle, type MapMarker, type MapRoute } from '@/features/map/map';
 import { AMALFI_REGION, regionAround } from '@/features/map/region';
 import { useLocation } from '@/features/map/use-location';
+import { messageForCode } from '@/features/ride/errors';
 import { PassengerCount } from '@/features/ride/passenger-count';
 import { useRideDraft } from '@/features/ride/ride-draft';
 import {
@@ -59,6 +70,7 @@ import {
   type AssignedDriver,
   type DriverCancelledNotice,
   type FinishedRequest,
+  type RequestFare,
   type RideStatus,
 } from '@/features/ride/ride-service';
 import {
@@ -112,13 +124,25 @@ export default function PassengerHome() {
     destination,
     passengerCount,
     pickupReference,
+    serviceType,
+    parcelDescription,
+    cargoItems,
     setDestination,
     setPassengerCount,
     setPickupReference,
+    setServiceType,
+    setParcelDescription,
+    setCargoItemQuantity,
     clear: limpiarBorrador,
   } = useRideDraft();
   const { places } = usePlaces();
   const maxPasajeros = useMaxPassengers();
+  const { cargoTypes } = useCargoTypes();
+
+  /** Cuantos van de verdad. En una encomienda son cero, sin importar lo que
+   * quedara guardado en el borrador de la ultima vez que fue un viaje de
+   * pasajeros (D220). */
+  const pasajerosEfectivos = serviceType === 'parcel' ? 0 : passengerCount;
 
   /**
    * La solicitud ya enviada, cuando la hay.
@@ -235,6 +259,29 @@ export default function PassengerHome() {
   const origenLng = origin?.longitude ?? coords?.longitude ?? null;
   const destinoLat = destination?.latitude ?? null;
   const destinoLng = destination?.longitude ?? null;
+
+  /**
+   * Cuanto va a costar, mientras el pasajero decide (D217).
+   *
+   * Solo aplica al resumen: la solicitud ya enviada guarda su propio valor
+   * congelado (D225) y lo trae `get_active_request`, asi que no hace falta
+   * volver a cotizar nada mientras se espera un conductor.
+   */
+  const tarifa = useFareQuote({
+    serviceType,
+    passengerCount: pasajerosEfectivos,
+    // D233: hace falta el origen ademas del destino. `origenLat`/`origenLng`
+    // ya resuelven "mi ubicacion actual" contra el GPS (D137); si no hay ni
+    // punto elegido ni GPS, quedan en null y el hook lo trata como "falta
+    // saber de donde sale", no como un error.
+    originLatitude: origenLat,
+    originLongitude: origenLng,
+    originPlaceId: origin?.placeId ?? null,
+    destinationLatitude: destinoLat,
+    destinationLongitude: destinoLng,
+    destinationPlaceId: destination?.placeId ?? null,
+    cargo: cargoItems,
+  });
 
   const [ruta, setRuta] = useState<Route | null>(null);
   const [estimando, setEstimando] = useState(false);
@@ -380,6 +427,23 @@ export default function PassengerHome() {
       return;
     }
 
+    // Las dos reglas de la encomienda, comprobadas antes de llamar al servidor.
+    // No es desconfianza de `request_ride`, que las vuelve a exigir de todos
+    // modos: es que las dos son cosas que la propia pantalla ya sabe sin
+    // necesidad de un viaje de red, y esperar a que el servidor las rechace
+    // seria una espera sin sentido para algo que ya se podia decir aqui.
+    if (serviceType === 'parcel') {
+      const descripcion = parcelDescription.trim();
+      if (descripcion.length < 3 || descripcion.length > 120) {
+        setErrorSolicitud(messageForCode('PARCEL_DESCRIPTION_LENGTH'));
+        return;
+      }
+      if (cargoItems.length === 0) {
+        setErrorSolicitud(messageForCode('PARCEL_NEEDS_CARGO'));
+        return;
+      }
+    }
+
     setEnviando(true);
     setErrorSolicitud(null);
 
@@ -424,8 +488,11 @@ export default function PassengerHome() {
         label: destination.label,
         placeId: destination.placeId,
       },
-      passengerCount,
+      passengerCount: pasajerosEfectivos,
       pickupReference,
+      serviceType,
+      parcelDescription: serviceType === 'parcel' ? parcelDescription : null,
+      cargo: cargoItems,
     });
 
     if (!creada.ok) {
@@ -456,12 +523,30 @@ export default function PassengerHome() {
       origen: { latitude: origenLat, longitude: origenLng },
       destino: { latitude: destination.latitude, longitude: destination.longitude },
       destinoLabel: destination.label,
-      pasajeros: passengerCount,
+      pasajeros: pasajerosEfectivos,
       segundosRestantes: null,
       // Acaba de crearse, asi que por fuerza no hay conductor todavia.
       conductor: null,
+      tipoServicio: serviceType,
+      descripcionEncomienda: serviceType === 'parcel' ? parcelDescription.trim() : null,
+      // El valor real lo tiene el servidor, congelado en la fila que se acaba
+      // de insertar. Esta rama existe justo porque no se pudo releer esa fila,
+      // asi que aqui no hay nada honesto que ensenar: se deja en null y la
+      // pantalla de espera no pinta el precio, en lugar de inventarselo.
+      tarifa: null,
     });
-  }, [destination, origin, origenLat, origenLng, passengerCount, pickupReference, places]);
+  }, [
+    destination,
+    origin,
+    origenLat,
+    origenLng,
+    pasajerosEfectivos,
+    pickupReference,
+    places,
+    serviceType,
+    parcelDescription,
+    cargoItems,
+  ]);
 
   /**
    * Cancela la solicitud enviada.
@@ -989,6 +1074,17 @@ export default function PassengerHome() {
             }
             onEditarDestino={abrirBuscador}
             onConfirmar={() => void confirmar()}
+            tipoServicio={serviceType}
+            onCambiarTipoServicio={setServiceType}
+            descripcionEncomienda={parcelDescription}
+            onCambiarDescripcionEncomienda={setParcelDescription}
+            tiposDeCarga={cargoTypes}
+            carga={cargoItems}
+            onCambiarCantidadDeCarga={setCargoItemQuantity}
+            tarifa={tarifa.quote}
+            calculandoTarifa={tarifa.loading}
+            errorTarifa={tarifa.error}
+            tarifaPendiente={tarifa.pending}
           />
         )}
 
@@ -1061,6 +1157,17 @@ interface SolicitudEnCurso {
   segundosRestantes: number | null;
   /** Quien viene a recogerlo. Nulo mientras nadie ha aceptado. */
   conductor: AssignedDriver | null;
+  /** Pasajero solo o con carga, contra encomienda sola. */
+  tipoServicio: ServiceType;
+  /** Que es la encomienda. Nulo en un viaje de pasajeros. */
+  descripcionEncomienda: string | null;
+  /**
+   * El valor ya congelado del servicio. Nulo en las solicitudes de antes de
+   * D217, y tambien en la rama de `confirmar` que no pudo releer del servidor
+   * justo despues de crear: en ese caso no hay nada honesto que mostrar, y es
+   * mejor no pintar precio que inventarlo.
+   */
+  tarifa: RequestFare | null;
 }
 
 /** Traduce lo que devuelve el servidor a lo que pinta el panel. */
@@ -1075,6 +1182,9 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
     pasajeros: activa.passengerCount,
     segundosRestantes: activa.secondsRemaining,
     conductor: activa.driver,
+    tipoServicio: activa.serviceType,
+    descripcionEncomienda: activa.parcelDescription,
+    tarifa: activa.fare,
   };
 }
 
@@ -1260,6 +1370,18 @@ interface ResumenDelViajeProps {
   onEditarOrigen: () => void;
   onEditarDestino: () => void;
   onConfirmar: () => void;
+  // El bloque especial: tipo de servicio, encomienda y carga.
+  tipoServicio: ServiceType;
+  onCambiarTipoServicio: (valor: ServiceType) => void;
+  descripcionEncomienda: string;
+  onCambiarDescripcionEncomienda: (valor: string) => void;
+  tiposDeCarga: CargoType[];
+  carga: CargoItem[];
+  onCambiarCantidadDeCarga: (cargoTypeId: string, cantidad: number) => void;
+  tarifa: FareQuote | null;
+  calculandoTarifa: boolean;
+  errorTarifa: string | null;
+  tarifaPendiente: FareQuotePending | null;
 }
 
 /**
@@ -1284,11 +1406,33 @@ function ResumenDelViaje({
   onEditarOrigen,
   onEditarDestino,
   onConfirmar,
+  tipoServicio,
+  onCambiarTipoServicio,
+  descripcionEncomienda,
+  onCambiarDescripcionEncomienda,
+  tiposDeCarga,
+  carga,
+  onCambiarCantidadDeCarga,
+  tarifa,
+  calculandoTarifa,
+  errorTarifa,
+  tarifaPendiente,
 }: ResumenDelViajeProps) {
   const { colors } = useTheme();
+  const esEncomienda = tipoServicio === 'parcel';
+
+  /**
+   * El selector de carga es un dialogo propio, y vive aqui y no en la pantalla
+   * que contiene a esta: mismo criterio que la confirmacion de cancelar de
+   * `BuscandoConductor`, mas abajo en este archivo. Solo esta pantalla necesita
+   * saber si esta abierto.
+   */
+  const [selectorDeCargaVisible, setSelectorDeCargaVisible] = useState(false);
 
   return (
     <>
+      <ServiceTypeToggle value={tipoServicio} onChange={onCambiarTipoServicio} />
+
       {/* Ruta y pasajeros en una sola tarjeta y no en tres bloques sueltos. Son
           tres decisiones del mismo viaje, y separarlas en cajas distintas
           gastaba dos huecos y un borde de mas en una hoja donde cada pixel se
@@ -1342,7 +1486,41 @@ function ResumenDelViaje({
 
         <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
 
-        <PassengerCount value={pasajeros} onChange={onCambiarPasajeros} max={maxPasajeros} />
+        {/* Pasajero contra encomienda cambian que se pide aqui debajo, no solo
+            un texto: uno pide cuantos van, el otro pide que es lo que se
+            manda. Los dos casos no se confunden (D224). */}
+        {esEncomienda ? (
+          <Input
+            value={descripcionEncomienda}
+            onChangeText={onCambiarDescripcionEncomienda}
+            placeholder="Qué es la encomienda (ej. Caja con documentos)"
+            maxLength={120}
+            autoCapitalize="sentences"
+            autoCorrect={false}
+            returnKeyType="done"
+          />
+        ) : (
+          <PassengerCount value={pasajeros} onChange={onCambiarPasajeros} max={maxPasajeros} />
+        )}
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <ChosenCargoList
+          cargoTypes={tiposDeCarga}
+          items={carga}
+          onOpenPicker={() => setSelectorDeCargaVisible(true)}
+          onRemove={(cargoTypeId) => onCambiarCantidadDeCarga(cargoTypeId, 0)}
+          required={esEncomienda}
+        />
+
+        <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+
+        <FareRow
+          quote={tarifa}
+          loading={calculandoTarifa}
+          error={errorTarifa}
+          pending={tarifaPendiente}
+        />
 
         {/* La estimacion solo ocupa sitio cuando existe. Si Mapbox no responde
             no se pinta nada, en lugar de ensenar un numero fabricado (D149). */}
@@ -1378,7 +1556,22 @@ function ResumenDelViaje({
         iconPosition="right"
         fullWidth
         loading={enviando}
+        // D217: el pasajero tiene que VER el valor antes de confirmar, no solo
+        // poder confirmar mientras se calcula. Mientras no hay un numero valido
+        // -cargando, sin cotizar todavia, o rechazado por el servidor, como una
+        // encomienda sin carga o un destino sin tarifa- el boton espera. La
+        // misma llamada que hace esta fila es la que hara `request_ride`, asi
+        // que si aqui no hay precio, confirmar tampoco lo tendria.
+        disabled={calculandoTarifa || tarifa === null || errorTarifa !== null}
         onPress={onConfirmar}
+      />
+
+      <CargoPicker
+        visible={selectorDeCargaVisible}
+        onRequestClose={() => setSelectorDeCargaVisible(false)}
+        cargoTypes={tiposDeCarga}
+        items={carga}
+        onChangeQuantity={onCambiarCantidadDeCarga}
       />
     </>
   );
@@ -1447,6 +1640,34 @@ function BuscandoConductor({
   const conductor = solicitud.conductor;
 
   /**
+   * El detalle de la carga, si lleva. `SolicitudEnCurso` no la trae porque
+   * `get_active_request` devuelve como mucho una fila y un servicio puede
+   * llevar varias cargas (ver el comentario de la migracion que extendio esa
+   * funcion). Se relee aparte, una vez por cada solicitud distinta.
+   */
+  const [cargaDelServicio, setCargaDelServicio] = useState<RequestCargoLine[]>([]);
+
+  useEffect(() => {
+    let vigente = true;
+
+    // Diferido, mismo motivo de siempre: el compilador de React rechaza un
+    // setState alcanzable sincronamente desde un efecto.
+    const id = setTimeout(() => {
+      void fetchRequestCargo(solicitud.id).then((resultado) => {
+        if (!vigente) return;
+        if (resultado.ok) {
+          setCargaDelServicio(resultado.data);
+        }
+      });
+    }, 0);
+
+    return () => {
+      vigente = false;
+      clearTimeout(id);
+    };
+  }, [solicitud.id]);
+
+  /**
    * Confirmacion antes de cancelar (Fase 18).
    *
    * Antes se cancelaba al primer toque. Es la unica accion irreversible de
@@ -1505,6 +1726,48 @@ function BuscandoConductor({
             </Text>
           )}
         </View>
+
+        {/* Que es y cuanto vale, mientras se espera. `solicitud.tarifa` es nulo
+            en las solicitudes de antes de D217 y en la rama de `confirmar` que
+            no pudo releer del servidor: en los dos casos no hay nada honesto
+            que ensenar, y la fila simplemente no aparece. */}
+        {(solicitud.tipoServicio === 'parcel' || solicitud.tarifa !== null) && (
+          <>
+            <View style={[styles.separadorViaje, { backgroundColor: colors.border }]} />
+            <View style={styles.filaBuscando}>
+              <Package
+                size={iconSize.sm}
+                color={colors.textTertiary}
+                strokeWidth={iconStrokeWidth}
+              />
+              <View style={styles.filaLugarTextos}>
+                {solicitud.tipoServicio === 'parcel' &&
+                  solicitud.descripcionEncomienda !== null && (
+                    <Text variant="body">{solicitud.descripcionEncomienda}</Text>
+                  )}
+                {solicitud.tarifa !== null && (
+                  <Text variant="caption" color="textSecondary">
+                    {formatAmount(solicitud.tarifa.amount)}
+                    {solicitud.tarifa.reference !== null
+                      ? ` · Tarifa de ${solicitud.tarifa.reference}`
+                      : ''}
+                  </Text>
+                )}
+                {cargaDelServicio.length > 0 && (
+                  <Text variant="caption" color="textTertiary">
+                    {cargaDelServicio
+                      .map((linea) =>
+                        linea.quantity > 1
+                          ? `${linea.cargoTypeName} ×${linea.quantity}`
+                          : linea.cargoTypeName,
+                      )
+                      .join(', ')}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </>
+        )}
 
         {conductor !== null && (
           <>

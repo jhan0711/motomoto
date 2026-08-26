@@ -44,6 +44,40 @@ const MESSAGES: Record<string, string> = {
   PICKUP_REFERENCE_TOO_LONG: 'La referencia del punto de recogida es demasiado larga.',
   PHONE_REQUIRED: 'Necesitas registrar un teléfono antes de pedir un servicio.',
 
+  // El bloque especial: encomiendas, carga y tarifas (2026-08-25 en adelante).
+  //
+  // La pantalla evita casi todos estos ensenandole al pasajero solo lo que
+  // puede elegir, asi que llegar hasta aqui suele significar que dos toques
+  // seguidos alcanzaron al servidor con datos que ya no cuadran entre si.
+  PARCEL_DESCRIPTION_REQUIRED: 'Cuéntanos qué es la encomienda.',
+  PARCEL_DESCRIPTION_LENGTH: 'La descripción de la encomienda debe tener entre 3 y 120 caracteres.',
+  PARCEL_HAS_NO_PASSENGERS: 'Una encomienda no lleva pasajeros.',
+  PARCEL_NEEDS_CARGO: 'Agrega al menos una carga para enviar la encomienda.',
+  PARCEL_DESCRIPTION_NOT_ALLOWED: 'La descripción de encomienda no aplica a un viaje de pasajeros.',
+  CARGO_ARRAYS_MISMATCH: 'Hubo un problema con la carga elegida. Vuelve a intentarlo.',
+  CARGO_TYPE_REPEATED:
+    'Ese tipo de carga ya está en la lista. Cambia la cantidad en vez de agregarlo otra vez.',
+  CARGO_TYPE_NOT_AVAILABLE: 'Uno de los tipos de carga elegidos ya no está disponible.',
+  CARGO_QUANTITY_OUT_OF_RANGE: 'La cantidad de cada carga debe estar entre 1 y 20.',
+  /**
+   * D219. No es un fallo del pasajero: es un destino que la empresa no ha
+   * puesto en su lista de precios todavia. El mensaje dice que hacer -elegir
+   * uno de la lista- en lugar de solo negarse.
+   */
+  DESTINATION_NOT_PRICED: 'Ese destino no tiene tarifa. Elige uno de la lista de lugares.',
+  /**
+   * D233, hermano de DESTINATION_NOT_PRICED de arriba: el punto de recogida
+   * -no el destino- es el que quedo lejos de todo lo que tiene precio.
+   */
+  ORIGIN_NOT_PRICED: 'Ese punto de recogida no tiene tarifa. Elige uno de la lista de lugares.',
+  /**
+   * No deberia llegar nunca en uso normal: significa que la rejilla de tarifas
+   * urbanas no cubre la cantidad de pasajeros que se esta pidiendo, que es un
+   * hueco de configuracion y no algo que el pasajero pueda arreglar.
+   */
+  URBAN_FARE_NOT_CONFIGURED:
+    'No pudimos calcular el valor de este servicio. Inténtalo de nuevo en un momento.',
+
   // Situaciones normales de la operación. No son fallos de nadie, y por eso el
   // texto no pide disculpas ni sugiere reintentar sin sentido.
   NO_DRIVERS_AVAILABLE: 'No hay motorratones disponibles en este momento.',
@@ -157,6 +191,19 @@ const NETWORK_HINTS = [
  * declarado y leer `.hint` directamente provocaria un fallo dentro del propio
  * manejador de errores, que es el peor sitio posible.
  */
+/**
+ * El mismo mensaje que daria el servidor, sin llamarlo.
+ *
+ * Existe para las comprobaciones que la pantalla puede hacer antes de enviar
+ * nada -la descripcion de la encomienda, que haya carga elegida- y que por eso
+ * no tienen por que esperar a un viaje de red para decir lo mismo que
+ * `request_ride` diria de todos modos. Un solo texto para las dos rutas evita
+ * que el mensaje del cliente y el del servidor se desincronicen con el tiempo.
+ */
+export function messageForCode(code: string): string {
+  return MESSAGES[code] ?? UNKNOWN_MESSAGE;
+}
+
 export function toRideFailure(error: unknown): RideFailure {
   if (typeof error !== 'object' || error === null) {
     return { code: UNKNOWN_CODE, message: UNKNOWN_MESSAGE };
@@ -198,6 +245,11 @@ export const RIDE_ERROR_CODES = {
   destinationOutOfArea: 'DESTINATION_OUT_OF_AREA',
   accountBlocked: 'ACCOUNT_BLOCKED',
   phoneRequired: 'PHONE_REQUIRED',
+
+  // El bloque especial. La pantalla la usa para distinguir "no se pudo cobrar
+  // este destino" -que ofrece elegir de la lista- de cualquier otro error.
+  destinationNotPriced: 'DESTINATION_NOT_PRICED',
+  originNotPriced: 'ORIGIN_NOT_PRICED',
 
   // El conductor perdio la carrera. La pantalla lo trata distinto que a un
   // error: retira la tarjeta sin alarma y sigue esperando la siguiente.

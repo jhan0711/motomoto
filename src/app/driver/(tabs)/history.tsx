@@ -4,12 +4,14 @@ import {
   CircleSlash,
   History,
   MapPin,
+  Package,
   Route as RouteIcon,
   Star,
   TimerOff,
   User,
   UserCheck,
   Users,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -28,6 +30,7 @@ import { Text } from '@/components/ui/text';
 import { formatWhen } from '@/features/history/format-when';
 import { fetchDriverHistory, type DriverJob } from '@/features/history/history-service';
 import { useHistory } from '@/features/history/use-history';
+import { formatAmount } from '@/features/fare/format-amount';
 import { formatDistance, formatDuration } from '@/features/ride/route-service';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme, type ThemeColors } from '@/theme';
 
@@ -282,10 +285,25 @@ function JobCard({ job, onPress }: { job: DriverJob; onPress: () => void }) {
 
       <View style={styles.pieDatos}>
         <View style={styles.pieLinea}>
-          <Users size={iconSize.xs} color={colors.textTertiary} strokeWidth={iconStrokeWidth} />
-          <Text variant="caption" color="textSecondary">
-            {job.passengerCount === 1 ? '1 pasajero' : `${job.passengerCount} pasajeros`}
-          </Text>
+          {job.serviceType === 'parcel' ? (
+            <>
+              <Package
+                size={iconSize.xs}
+                color={colors.textTertiary}
+                strokeWidth={iconStrokeWidth}
+              />
+              <Text variant="caption" color="textSecondary">
+                Encomienda
+              </Text>
+            </>
+          ) : (
+            <>
+              <Users size={iconSize.xs} color={colors.textTertiary} strokeWidth={iconStrokeWidth} />
+              <Text variant="caption" color="textSecondary">
+                {job.passengerCount === 1 ? '1 pasajero' : `${job.passengerCount} pasajeros`}
+              </Text>
+            </>
+          )}
 
           {recorrido.length > 0 && (
             <>
@@ -316,6 +334,18 @@ function JobCard({ job, onPress }: { job: DriverJob; onPress: () => void }) {
             <Text variant="caption" color="textSecondary" style={styles.pieTexto} numberOfLines={1}>
               {aparte}
             </Text>
+          </View>
+        )}
+
+        {job.outcome === 'completed' && job.fareAmount !== null && (
+          <View style={styles.pieLinea}>
+            <Wallet size={iconSize.xs} color={colors.textTertiary} strokeWidth={iconStrokeWidth} />
+            <Text variant="bodyStrong">{formatAmount(job.fareAmount)}</Text>
+            {job.fareReference !== null && (
+              <Text variant="caption" color="textSecondary">
+                · Tarifa de {job.fareReference}
+              </Text>
+            )}
           </View>
         )}
 

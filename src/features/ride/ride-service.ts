@@ -1,3 +1,4 @@
+import type { CargoItem, ServiceType } from '@/features/fare/types';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -108,6 +109,26 @@ export interface ActiveRequest {
    * se propague al resto de la aplicacion.
    */
   secondsRemaining: number | null;
+  /** Pasajero solo o con carga, contra encomienda sola. */
+  serviceType: ServiceType;
+  /** Que es la encomienda. Nulo en un viaje de pasajeros. */
+  parcelDescription: string | null;
+  /**
+   * El valor del servicio, ya congelado. Nulo en las solicitudes de antes de
+   * D217, que se pidieron cuando la aplicacion todavia no calculaba nada.
+   */
+  fare: RequestFare | null;
+}
+
+/** El valor de un servicio ya pedido, con su desglose y de donde salio. */
+export interface RequestFare {
+  amount: number;
+  tripAmount: number;
+  cargoAmount: number;
+  isNight: boolean;
+  isRural: boolean;
+  /** Nombre del destino rural que puso el precio. Nulo si es urbano. */
+  reference: string | null;
 }
 
 /**
@@ -143,6 +164,12 @@ export interface CreateRequestInput {
    * lo mismo, y el dia que uno cambiara el otro seguiria con la regla vieja.
    */
   pickupReference?: string | null;
+  /** Pasajero solo o con carga, contra encomienda sola. Por defecto, pasajero. */
+  serviceType?: ServiceType;
+  /** Que es la encomienda. Solo aplica cuando `serviceType` es `'parcel'`. */
+  parcelDescription?: string | null;
+  /** Lo que lleva el servicio, sea un pasajero con carga o una encomienda sola. */
+  cargo?: CargoItem[];
 }
 
 /**
@@ -173,6 +200,20 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
     // en el servidor, asi que omitirlo es exactamente lo mismo que enviar nulo.
     ...(input.pickupReference != null && input.pickupReference.trim() !== ''
       ? { p_pickup_reference: input.pickupReference }
+      : {}),
+    // Los cuatro del bloque especial. Omitirlos deja el valor por defecto del
+    // servidor, que es 'passenger' sin carga: un viaje de pasajeros normal
+    // sigue enviandose exactamente igual que antes de que estos parametros
+    // existieran.
+    ...(input.serviceType != null ? { p_service_type: input.serviceType } : {}),
+    ...(input.parcelDescription != null && input.parcelDescription.trim() !== ''
+      ? { p_parcel_description: input.parcelDescription }
+      : {}),
+    ...(input.cargo != null && input.cargo.length > 0
+      ? {
+          p_cargo_type_ids: input.cargo.map((c) => c.cargoTypeId),
+          p_cargo_quantities: input.cargo.map((c) => c.quantity),
+        }
       : {}),
   });
 
@@ -409,8 +450,48 @@ export async function fetchActiveRequest(): Promise<Result<ActiveRequest | null>
       typeof row.seconds_remaining === 'number' && Number.isFinite(row.seconds_remaining)
         ? row.seconds_remaining
         : null,
+    serviceType: row.service_type,
+    parcelDescription: row.parcel_description,
+    fare: aValorDelServicio(row),
     driver: aConductorAsignado(row),
   });
+}
+
+/**
+ * Arma el valor del servicio a partir de las columnas sueltas.
+ *
+ * Igual que con el conductor: basta con mirar `fare_amount`, porque la
+ * restriccion `rr_fare_all_or_nothing` del servidor garantiza que las cinco
+ * columnas de valor llegan juntas o ninguna llega. Se comprueban las cinco de
+ * todos modos por el mismo motivo de siempre: el tipo generado las declara como
+ * no nulas y no lo son.
+ */
+function aValorDelServicio(row: {
+  fare_amount: number | null;
+  fare_trip_amount: number | null;
+  fare_cargo_amount: number | null;
+  fare_is_night: boolean | null;
+  fare_is_rural: boolean | null;
+  fare_reference: string | null;
+}): RequestFare | null {
+  if (
+    row.fare_amount === null ||
+    row.fare_trip_amount === null ||
+    row.fare_cargo_amount === null ||
+    row.fare_is_night === null ||
+    row.fare_is_rural === null
+  ) {
+    return null;
+  }
+
+  return {
+    amount: row.fare_amount,
+    tripAmount: row.fare_trip_amount,
+    cargoAmount: row.fare_cargo_amount,
+    isNight: row.fare_is_night,
+    isRural: row.fare_is_rural,
+    reference: row.fare_reference,
+  };
 }
 
 /**

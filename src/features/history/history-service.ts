@@ -35,6 +35,7 @@ export const HISTORY_PAGE_SIZE = 20;
 
 export type PassengerTripStatus = Database['public']['Enums']['ride_request_status'];
 export type Actor = Database['public']['Enums']['actor_type'];
+export type ServiceType = Database['public']['Enums']['service_type'];
 
 /**
  * Un servicio cerrado, tal y como se le ensena al pasajero.
@@ -166,6 +167,15 @@ export interface DriverJob {
   passengerName: string | null;
   /** Ver el gemelo en `PassengerTrip`: nulo cuando no hubo viaje. */
   alreadyRated: boolean | null;
+  /**
+   * El valor del servicio, desde D217/paso 7. Viaja aunque no haya viaje -una
+   * oferta rechazada tambien tiene su solicitud con valor calculado-, y es la
+   * pantalla quien decide mostrarlo solo cuando `outcome` es `completed`.
+   */
+  serviceType: ServiceType;
+  fareAmount: number | null;
+  fareIsRural: boolean | null;
+  fareReference: string | null;
 }
 
 /** Una pagina del historial del conductor, de la mas reciente a la mas antigua. */
@@ -203,6 +213,10 @@ export async function fetchDriverHistory(
       cancelledBy: texto(row.cancelled_by) as Actor | null,
       passengerName: texto(row.passenger_name),
       alreadyRated: typeof row.already_rated === 'boolean' ? row.already_rated : null,
+      serviceType: row.service_type,
+      fareAmount: numero(row.fare_amount),
+      fareIsRural: typeof row.fare_is_rural === 'boolean' ? row.fare_is_rural : null,
+      fareReference: texto(row.fare_reference),
     })),
   );
 }
@@ -324,6 +338,16 @@ export interface DriverJobDetail extends DriverJob {
   completedAt: string | null;
   cancelledAt: string | null;
   cancellationReason: string | null;
+  /**
+   * El desglose del valor, desde D217/paso 7. El detalle trae mas que la
+   * lista -viaje y carga por separado, no solo el total- porque aqui es donde
+   * el conductor entiende el numero, igual que `FareRow` del lado del
+   * pasajero.
+   */
+  parcelDescription: string | null;
+  fareTripAmount: number | null;
+  fareCargoAmount: number | null;
+  fareIsNight: boolean | null;
 }
 
 /** Una oferta cerrada del conductor. Devolver null es "no es tuya o no existe". */
@@ -373,5 +397,13 @@ export async function fetchDriverJob(offerId: string): Promise<Result<DriverJobD
     // Mismo criterio que en el pasajero: solo lo terminado se puede calificar, y
     // el detalle del conductor lo sabe por la hora de finalizacion.
     alreadyRated: texto(row.completed_at) !== null ? numero(row.my_stars) !== null : null,
+    serviceType: row.service_type,
+    fareAmount: numero(row.fare_amount),
+    fareIsRural: typeof row.fare_is_rural === 'boolean' ? row.fare_is_rural : null,
+    fareReference: texto(row.fare_reference),
+    parcelDescription: texto(row.parcel_description),
+    fareTripAmount: numero(row.fare_trip_amount),
+    fareCargoAmount: numero(row.fare_cargo_amount),
+    fareIsNight: typeof row.fare_is_night === 'boolean' ? row.fare_is_night : null,
   });
 }

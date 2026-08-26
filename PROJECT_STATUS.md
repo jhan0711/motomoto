@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-21
+- **Ultima actualizacion:** 2026-08-25
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -31,17 +31,26 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **Fase 18 APROBADA Y COMPROMETIDA POR EL USUARIO EL 2026-08-21.** Cancelaciones de las dos
   partes, con confirmacion, sin el boton en `in_progress`, y D187 resuelto para las dos ramas
   de la cancelacion del conductor. Detalle en la seccion 15.19
-- **FASE 19 PROBADA DE PUNTA A PUNTA EL 2026-08-25.** Notificaciones push para los dos avisos
-  que pide el flujo, **los dos vistos llegar a la bandeja del sistema en aparatos distintos**:
-  "Nueva solicitud de servicio" al conductor en el emulador, "Tu motorratón llegó" al pasajero
-  en la tablet. Backend con 7 comprobaciones en verde. **Hizo falta un proyecto de Firebase
-  ademas del de Expo**, un costo que el asistente no advirtio al ofrecer esta opcion; detalle
-  en la seccion 15.20. Pendiente de tu aprobacion y del commit
-- **Trabajo siguiente:** que apruebes la Fase 19 y la comitees. Despues sigue la **Fase 20,
-  panel administrativo**, que ademas desbloquea R10 y el bloqueo de conductor que la Fase 18
-  dejo pendientes (D215, D216)
-- **Ultimo commit:** el usuario confirmo haber comiteado la Fase 18 el 2026-08-21, hash sin
-  registrar aqui. **Pendiente de confirmar: toda la Fase 19**
+- **Fase 19 terminada, aprobada y comiteada el 2026-08-25.** Notificaciones push para los dos
+  avisos que pide el flujo, **los dos vistos llegar a la bandeja del sistema en aparatos
+  distintos, sonando y flotando**. Hizo falta un proyecto de Firebase ademas del de Expo, y el
+  canal de Android costo tres intentos. Detalle en la seccion 15.20
+- **AHORA VIENE UN BLOQUE ESPECIAL ENTRE LA 19 Y LA 20**, pedido por los duenos de la empresa
+  el 2026-08-25: encomiendas, pasajero con carga, tarifas, recaudo. **Cambia el alcance del
+  MVP: la aplicacion pasa a calcular y mostrar valores** (D217, que modifica a D8). No empieza
+  la Fase 20 hasta terminarlo. Alcance completo y matriz de auditoria en la seccion 15.21
+- **El bloque especial esta TERMINADO, los ocho pasos.** Servidor, pantalla del pasajero,
+  historial y recaudo del conductor, y la regresion de las fases 11 a 19, **HECHOS Y
+  VERIFICADOS**, incluidas las correcciones D233/D234 encontradas probando con datos reales.
+  **Once archivos de pruebas automaticas en verde**, y una prueba en vivo con la tablet real
+  como pasajero y el emulador como conductor. Detalle en la seccion 15.21
+- **Trabajo siguiente:** la Fase 20, el panel administrativo
+- **Ultimo commit:** la Fase 19 quedo comiteada por el usuario el 2026-08-25, hash sin
+  registrar aqui. **SIN COMITEAR: las doce migraciones del bloque especial, sus seis
+  scripts de pruebas, los modulos `src/features/fare/` y `src/features/earnings/` completos,
+  los cambios en las pantallas del pasajero y del conductor y en los servicios de solicitudes
+  e historial, la pestana nueva "Recaudo", los tipos regenerados, la plantilla de destinos
+  rurales y la actualizacion de este archivo**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -91,13 +100,37 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue: la Fase 18, cancelaciones y errores operativos.**
+**Por donde se sigue: la Fase 20, el panel administrativo.** Las fases 0 a 19 estan terminadas,
+aprobadas y comiteadas, y el **bloque especial pedido por los duenos de la empresa el
+2026-08-25** -encomiendas, pasajero con carga, tarifas y recaudo, que iba antes del panel- **esta
+TERMINADO, los ocho pasos, con verificacion en vivo incluida.** Incluye las correcciones D233 -la
+tarifa rural cuenta en los dos sentidos- y D234 -"tu ubicacion actual" ya no se pega a un rural
+vecino-, encontradas probando con datos reales, y la regresion de las fases 11 a 19 sin hallar
+nada roto. El alcance completo, la matriz de auditoria, las decisiones y todo lo hecho estan en
+la seccion 15.21, **y hay que leerla antes de empezar la Fase 20**, porque varias de las cosas
+que construyo -tarifas, destinos rurales, tipos de carga, recaudo- son justo lo que el panel
+tiene que gestionar.
 
-La Fase 16 esta terminada y pendiente de tu aprobacion, con su registro en la seccion 15.17.
-Dos cosas de ella que conviene saber antes de tocar nada: **el historial del conductor sale
-de `ride_offers`, no de `rides`**, porque las ofertas que rechazo tienen que estar; y **el
-nombre del pasajero y la referencia del punto de recogida solo viajan si acepto**, y eso se
-aplica dentro de las funciones, no en la pantalla.
+Cuatro cosas de ese bloque que conviene saber ya:
+
+- **Cambia una decision aprobada.** D217 modifica a D8 y al parrafo de la seccion 1: la
+  aplicacion pasa a **calcular y mostrar** el valor del servicio. Lo que no cambia es que **no
+  procesa pagos**: cobra el conductor, en efectivo, fuera de la aplicacion
+- **Dos de los trece requisitos ya estaban hechos** —el historial del conductor (Fase 16) y
+  las calificaciones con comentario en los dos sentidos (Fase 17)—, y **la auditoria contra el
+  codigo lo confirmo**: no se vuelven a construir. El historial si necesita ampliarse con el
+  valor y el tipo de servicio
+- **Lo que hace rural a un destino es tener tarifa, no estar lejos** (D218). No hay perimetro
+  urbano ni radio. Si el destino no tiene tarifa y esta lejos, no se deja pedir (D219)
+- **28 de 36 destinos rurales ya estan cargados y verificados** (D230 a D232). Faltan 8, todos
+  sin coordenada: Sorrento, Entrada a la Mina, Los Tanques, La Mina, La Aguacatera, Cajamarca,
+  Palmitas, La Blanquita. El radio de D230 ya no es provisional: 3 km, medido contra la
+  separacion real
+
+Del historial del conductor, dos detalles que siguen valiendo: **sale de `ride_offers`, no de
+`rides`**, porque las ofertas que rechazo tienen que estar; y **el nombre del pasajero y la
+referencia del punto de recogida solo viajan si acepto**, aplicado dentro de las funciones y
+no en la pantalla.
 
 Antes de ella se hizo un trabajo fuera del plan de fases: **el mapa paso de Google a Mapbox**,
 para cerrar el hallazgo H18. Esta terminado y verificado, con su registro en la seccion 15.16.
@@ -235,9 +268,15 @@ Plataforma movil para solicitar servicios de transporte en motorratones (vehicul
 ruedas tipo tuk-tuk). Prueba piloto en el municipio de Amalfi, Antioquia, Colombia, con
 expansion posterior a empresas de otros municipios mediante instalaciones separadas.
 
-La plataforma NO procesa pagos y NO calcula tarifas. El pago se acuerda y se realiza fuera
-de la aplicacion. La arquitectura debe permitir incorporar pagos en el futuro sin reconstruir
-el sistema.
+**La plataforma NO procesa pagos.** El cobro lo hace el conductor directamente al usuario,
+fuera de la aplicacion. La arquitectura debe permitir incorporar pagos en el futuro sin
+reconstruir el sistema.
+
+**SI calcula y muestra el valor del servicio, desde el 2026-08-25 (D217).** Hasta esa fecha
+este parrafo decia tambien "NO calcula tarifas", y era cierto: D8 dejaba el MVP sin ningun
+dato monetario. Los duenos de la empresa pidieron la tarifa como funcion y el usuario lo
+aprobo. Lo que no cambia es lo de arriba: **calcular y cobrar son dos cosas distintas**, y la
+aplicacion sigue sin tocar dinero.
 
 ---
 
@@ -252,7 +291,7 @@ el sistema.
 | D5 | Vehiculos por solicitud | Uno en el MVP. Modelo de datos preparado para varios |
 | D6 | Autenticacion | Correo y contrasena mediante Supabase Auth |
 | D7 | Asignacion de conductor | Automatica por cercania, con anulacion manual del administrador |
-| D8 | Dinero | Ningun dato monetario en el MVP |
+| D8 | Dinero | **MODIFICADA POR D217 el 2026-08-25.** Decia "ningun dato monetario en el MVP". Hoy la aplicacion calcula, muestra y registra el valor del servicio. Lo que sigue en pie es que **no procesa pagos**: cobra el conductor, en efectivo, fuera de la aplicacion |
 | D9 | Multi-empresa | Instalaciones separadas por empresa. SIN columna company_id |
 | D10 | Seleccion de destino | Lugares frecuentes, punto en el mapa, buscador de direcciones |
 | D11 | Cobertura | Todo el municipio, sin radio de corte |
@@ -510,8 +549,29 @@ el sistema.
 | D215 | R10 (conductor sin senal, alerta al administrador) queda fuera de este paso | No hay panel todavia donde mostrar esa alerta (Fase 20). Implementarla ahora seria una alerta que nadie puede leer, mismo criterio que D204 con los reportes |
 | D216 | La Fase 18 se cierra sin construir mas "errores operativos" | Decision del usuario, 2026-08-21. Lo unico que quedaba de la lista de la seccion 8 —R10 y que el administrador bloquee a un conductor a mitad de operacion— depende del panel entero, no de una funcion suelta. Escribirlo antes que el panel seria adivinar su forma dos veces. Se revisa en la Fase 20 |
 
+### Decision del bloque especial entre la Fase 19 y la 20
+
+| # | Decision | Valor |
+|---|---|---|
+| D217 | **La aplicacion calcula y muestra el valor del servicio. MODIFICA A D8** | Pedido de los duenos de la empresa, aprobado por el usuario el 2026-08-25. D8 dejaba el MVP sin ningun dato monetario y la seccion 1 decia "NO calcula tarifas"; las dos cosas quedan modificadas aqui en lugar de contradecirse en silencio, que es como se pudre un documento de continuidad. **Lo que NO cambia: la aplicacion no procesa pagos.** Cobra el conductor, en efectivo, fuera de la aplicacion. El sistema calcula el valor, se lo ensena al pasajero ANTES de que confirme, y lo registra con el servicio. Que el pasajero sepa cuanto va a pagar antes de pedir es justo lo que hoy se resuelve preguntando por telefono |
+| D218 | **Que hace rural a un destino: tener tarifa, no estar lejos** | Decidido con el usuario el 2026-08-25. Un destino es rural si y solo si tiene fila activa en `rural_fares`. Se descarto dibujar un perimetro urbano y se descarto un radio desde el parque, **y no por gusto sino por un dato**: de los 36 lugares que ya estan en `places`, 34 caen a menos de 2 km del parque, o sea que la lista actual es practicamente toda urbana y un perimetro no separaria nada que la empresa no haya separado ya al ponerle precio. Ademas evita repetir el error que D150 ya habia razonado con el circulo |
+| D219 | **Un destino sin tarifa y lejos no se deja pedir** | Decidido con el usuario el 2026-08-25. El destino puede venir de la lista, del buscador de Mapbox o de una chincheta en el mapa, y en los dos ultimos casos `destination_place_id` es nulo. Con D218 esos pagarian tarifa urbana, o sea que una chincheta a 20 km por una vereda mostraria $4.000. **Un valor falso en la pantalla es peor que no dejar pedir**, que es el fondo de D217. Si el destino no tiene tarifa y esta a mas de una distancia configurable, la aplicacion pide elegir uno de la lista. **El umbral NO aplica a los destinos de `places`**: los curo la empresa, y aplicarselo dejaria fuera a Vereda Guayabito, que esta a 6,3 km y hoy funciona |
+| D220 | **Ni la carga ni la encomienda ocupan puesto** | Aclarado por el usuario el 2026-08-25. Se llego a proponer una columna de puestos por tipo de carga, razonando que lo delicado viaja dentro del motorraton. El usuario lo corrigio: los seis tipos van en la parrilla de arriba o en los huecos de adelante y de atras. Se retiro la columna antes de escribirla. **Consecuencia: una encomienda va con cero pasajeros**, asi que `rr_passenger_count_range` y `rides_passenger_count_range` tendran que admitir el cero **solo cuando el servicio sea encomienda**, y el conductor que lleva una podra seguir recogiendo sus tres pasajeros en ruta |
+| D221 | **La formula del valor** | Cerrada con el usuario el 2026-08-25 tras seis reglas que entrego la empresa. Tarifa del viaje: rural, la fija del destino, **plana, sin importar cuantos van**; urbana, por cantidad de pasajeros. Valor: si va un pasajero, con carga o sin ella, **tarifa mas cargas**; si va solo la carga, **la mayor entre la tarifa y las cargas**. En encomienda urbana la tarifa base es la de una persona. **Pendiente de una sola respuesta:** si una encomienda urbana de noche cuesta $7.000, que es lo que se desprende de la formula, o se queda en $4.000 |
+| D222 | **La franja nocturna sustituye, no se suma, y no llega al campo** | Confirmado por el usuario el 2026-08-25. De noche un pasajero paga $7.000 y no $4.000 mas $7.000. Y los destinos rurales cuestan lo mismo a cualquier hora: la empresa entrego valores nocturnos de uno, dos y tres pasajeros, que es la forma de la tarifa urbana, y para lo rural no dio ninguno. Inventar un recargo rural seria inventar un precio |
+| D223 | **Las tarifas estrenan tablas; la trazabilidad no** | `app_settings` ya existe y fue la primera idea, pero es clave/valor jsonb, sin activo/inactivo y sin forma de decir "este destino ya no se atiende", y las 36 rurales no caben en una fila sin volverse un documento que nadie puede consultar por partes. Se crean `urban_fares`, `rural_fares` y `cargo_types`. **La auditoria NO estrena tabla**: ya existe `admin_audit_logs` con actor, entidad y estado anterior y posterior, y el panel escribira ahi en la Fase 20. Lo que si sigue en `app_settings` son la zona horaria y las dos horas de la franja, porque eso es parametro operativo y no precio |
+| D224 | **La carga de un servicio es una lista, no un dato** | Pedido del usuario el 2026-08-25: tiene que existir "agregar otra carga", tanto en pasajero con carga como en encomienda sola, y las cargas pueden ser de tipos distintos. Por eso `cargo_types` es solo el catalogo de precios y lo que lleva cada servicio va en una tabla hija aparte. Decidirlo antes de la primera migracion evito tener que rehacerla |
+| D226 | **La tarifa rural es la del destino mas cercano** | Lo pregunto el usuario el 2026-08-25 y destapo un hueco real: hasta entonces solo se sabia cobrar rural si el destino ERA EXACTAMENTE uno de los 36. Con sus palabras, "en la lista estan senalados el alto de Montanita y Guaico, en caso tal un pasajero vaya para un punto medio, como se calcularia el costo". Ese punto medio caia en tarifa urbana —$4.000 por un viaje de $20.000— o rebotaba por D219. **La regla la propuso el usuario y se aprobo**: se cobra la del destino rural mas cercano, si hay alguno dentro de un radio. Se eligio frente a redondear siempre al siguiente —que cobra de mas a quien se baja doscientos metros despues del punto— y frente a no cobrarlos —que devuelve ese pasajero al telefono— porque **usa unicamente tarifas que la empresa ya autorizo, sin inventar ninguna** |
+| D227 | **El radio de D226 sale del dato, no del ojo** | La distancia se mide en LINEA RECTA y los 36 destinos salen del pueblo por vias distintas, asi que sin radio un punto a 15 km por un camino sin nombre se pegaria a algo que queda cerca en el mapa y lejos por carretera. **El valor esta provisionalmente en 2 km y esta puesto corto a proposito**: falta medir la separacion real entre los 36 destinos, y eso no se puede hacer hasta que lleguen las coordenadas. Corto es el lado seguro, porque lo que no alcanza a pegarse cae en D219 y se rechaza en vez de cobrarse barato. Es un UPDATE de una fila el dia que se afine, no una migracion |
+| D228 | **El valor dice de donde salio** | Segunda mitad de D226. En lugar de "$15.000" a secas, "Tarifa de Montanita — $15.000". Cuesta una columna, `fare_reference`, y convierte un numero discutible en uno transparente: el pasajero ve de donde sale ANTES de confirmar y el conductor ve lo mismo, asi que una referencia equivocada se nota antes del viaje y no despues, con los dos discutiendo en la calle |
+| D229 | **El panel no dejara crear un lugar sin decidir su tarifa** | Decidido con el usuario el 2026-08-25, **para la Fase 20**. Sale de un hueco que dejaba D219: si el administrador agrega un destino lejano a la lista y se olvida de ponerle tarifa, ese destino cobraria urbano en silencio y nadie se enteraria hasta que el conductor volviera quejandose. Se eligio atajarlo donde nace —al crear el lugar— en vez de detectarlo despues |
+| D225 | **El precio de la carga se congela en el servicio** | Mismo criterio que `contact_phone` desde la Fase 5. Si la empresa sube el bulto de cafe manana, un servicio de hoy tiene que seguir diciendo lo que costo. Los valores se guardan como enteros en pesos, sin decimales: en Colombia nadie cobra centavos, y un entero no admite el error de redondeo que un decimal si permite |
+
+| D230 | **MODIFICA A D226 Y D227: gana el punto nombrado mas cercano, no solo el rural mas cercano** | Error de interpretacion del asistente, corregido el 2026-08-26 con las coordenadas reales de la empresa. El usuario dijo "si esta mas cerca de un lugar que de el otro, se cobre el del lugar mas cerca" y D226 lo estrecho sin querer a "del destino RURAL mas cercano". Con las coordenadas reales se vio el costo: Alto del Rio queda a 1.432 m del parque y 32 de los 36 lugares urbanos caian dentro del radio de un rural. **Nunca estuvo en produccion**: se detecto midiendo antes de cargar ninguna tarifa. La regla nueva compara contra TODOS los lugares activos, no solo los que tienen precio rural; un lugar urbano nunca pierde contra si mismo, a cero metros |
+| D231 | **El radio de D230 sube a 3 km, y esta vez con dato de verdad** | Medido contra las coordenadas reales: los 24 destinos rurales se separan 314 m como minimo, 979 m mediana, 4.273 m maximo. Un punto en mitad del tramo mas largo queda a 2,2 km de un extremo, asi que 3 km lo cubre con margen sin volver a caer en el problema de D227 (un radio grande que encarece el pueblo), porque con D230 pasarse de radio ya no le pone precio rural a un lugar urbano |
 ### Decisiones de la Fase 16
 
+| D232 | **Los dos nombres en duda se resuelven distinto, uno por uno** | Con las coordenadas exactas de la empresa, entregadas el 2026-08-26. **Manzanares SI es "Vereda Manzanares"**: la coordenada nueva cae a 288 m de la existente, que es ruido normal de GPS entre dos lecturas del mismo sitio; se le agrego la tarifa rural al lugar que ya habia, sin duplicar. **La Vibora NO es "La víbora"**: la coordenada nueva cae a 3.817 m de la existente, casi 4 km, son dos sitios distintos. Decidido por el usuario: el nombre "La víbora" pasa al sitio nuevo, y el urbano viejo se renombra a un nombre que no colisiona y se desactiva. No se borro: `places_name_unique` no tiene filtro por estado, asi que dos filas no pueden compartir nombre aunque una este apagada, y el proyecto no borra registros que puedan ser historial |
 | # | Decision | Valor |
 |---|---|---|
 | D196 | De donde sale cada historial | El del pasajero de `ride_requests`; el del conductor de `ride_offers`. No son la misma lista: el pasajero tiene solicitudes y el conductor tiene ofertas. Una que el rechazo no existe en el historial del pasajero, porque desde su lado no paso nada, su solicitud siguio buscando |
@@ -523,8 +583,10 @@ el sistema.
 | D202 | Donde vive el color del estado | En el icono, nunca en el texto, y cada desenlace con su propia forma. Es H14 aplicado: los pares de color de estado no llegan al contraste minimo, asi que un "Terminado" en verde seria dificil de leer. Ademas el color nunca es la unica senal |
 | D203 | Que se hace con H15 | Se cierra en la **Fase 22**, no ahora, y el plan queda escrito en la migracion `20260819223000_h15_comment_tells_the_truth.sql`. Hoy la base de datos deja de mentir sobre si misma: el comentario de la politica dice que el acceso al perfil de la contraparte **no caduca**. Arreglarlo de verdad obliga a que el telefono deje de ser una columna legible, y eso toca los caminos vivos de las fases 12 a 14, que no se pueden volver a verificar con un solo emulador y sin movimiento |
 
+| D233 | **La tarifa rural cuenta en los dos sentidos** | Error del asistente, encontrado por el usuario probando la aplicacion de verdad el 2026-08-26: `quote_fare` solo miraba el DESTINO. Un viaje del parque a Vereda Manzanares cobraba bien, 12.000; el mismo viaje al reves, de Manzanares al parque, cobraba 4.000 urbano, porque el destino era el parque y el origen no se miraba en absoluto. El conductor recorre la misma distancia en los dos sentidos. **La regla nueva**: se calcula si el origen es rural y si el destino es rural, cada uno por separado con la logica de D230; si ninguno lo es, urbano; si uno lo es, esa es la tarifa, sea origen o destino; **si los dos son rurales y distintos, gana el mas caro** -no hay tarifa de la empresa para un trayecto entre dos veredas, y cobrar de menos seria peor que cobrar de mas-. D219 se volvio simetrico con el mismo cambio: un origen sin lugar y lejos tampoco se puede cobrar, con su propio codigo, `ORIGIN_NOT_PRICED`, para que el mensaje no le diga "el destino" a quien penso en el punto de recogida |
 ### Decisiones de la Fase 15
 
+| D234 | **La busqueda del punto mas cercano vuelve a comparar contra TODOS los lugares** | Correccion de un error del asistente en D233, encontrado por el usuario probando en la tablet y en el emulador el 2026-08-26: al pedir un servicio con "Tu ubicacion actual" como origen -un punto sin `place_id`, a 800 m-1,4 km del parque, en pleno pueblo- la aplicacion cobraba tarifa rural (Alto del Rio, La vibora) en vez de urbana. La causa: D230 ya habia resuelto esto para el destino, comparando contra TODOS los lugares activos; al repartir esa logica entre origen y destino para D233, la funcion auxiliar nueva (`rural_fare_for_point`) volvio a buscar solo entre lugares que YA TIENEN tarifa rural, sin comparar contra los urbanos -deshizo D230 sin darse cuenta-. Con `place_id` -eligiendo de la lista- nunca fallaba, porque ese camino no busca nada. La correccion devuelve el `left join` de D230 dentro de la funcion compartida. De paso goteo un segundo hallazgo, no un error nuevo: la comprobacion 57 de `prueba_calculo_tarifa.sql` esperaba que apagar la tarifa del lugar mas cercano "cayera" al siguiente rural activo -eso nunca fue la regla real de D230, que dice "el mas cercano, punto", dejando a D219 (distancia al centro) la unica salida si el mas cercano se queda sin tarifa-. Se corrigio la expectativa de la prueba, no el codigo |
 | # | Decision | Valor |
 |---|---|---|
 | D181 | Terminar un servicio NO enciende la disponibilidad | `complete_ride` y `cancel_ride` acababan con `set is_available = true`, escrito en la Fase 5 cuando un viaje equivalia a estar ocupado. **D161 y D164 lo dejaron obsoleto y nadie volvio a mirarlo**: un conductor que apagaba el interruptor porque paraba de trabajar reaparecia disponible al cerrar su ultimo servicio, y con varios viajes encima quedaba "disponible" con el motorraton lleno. Se quito la linea en vez de recalcular: para encender con criterio habria que saber **quien** apago el interruptor, y ese dato no existe. Entre encender a quien no queria (invisible, y contra una decision aprobada) y dejar apagado a quien si (visible en la tarjeta mas grande de su pantalla, y a un toque), el segundo error es mucho mas barato |
@@ -543,6 +605,7 @@ el sistema.
 | D195 | La referencia del mapa conserva su forma | `animateToRegion` y `fitToCoordinates` siguen existiendo con la misma firma, traducidas por dentro a la camara de Mapbox. **Es lo que permitio que el cambio de proveedor no tocara ninguna pantalla**, que es justo para lo que se escribio D117 |
 | D192 | Una parada por vez, sin ruta multiparada | Cada parada se navega por separado. Una ruta con paradas intermedias obliga a Google Maps, porque **Waze no las admite desde un enlace**, y eso dejaria sin efecto el selector de aplicaciones de D178 |
 
+| D235 | **El historial gana el valor; el recaudo es pantalla nueva, propia, solo lo completado** | Paso 7 del bloque especial. Dos decisiones separadas. (1) `list_driver_history` y `get_driver_job` -que ya existian desde la Fase 16- ganan tipo de servicio, descripcion de encomienda y el valor calculado, sin rehacerse: Postgres no deja usar `create or replace` para anadir columnas a un `returns table`, asi que se borraron y se crearon de nuevo, mismo patron que D233 con `quote_fare`. (2) El recaudo -"servicios realizados, valor de cada uno, total acumulado, por periodo"- es una funcion y una pestana nuevas, `list_driver_earnings`, decidida con el usuario: **pestana propia**, no una tarjeta encima de "Servicios", porque esa pestana mezcla rechazos y expiraciones sin valor y el recaudo es dinero, no registro operativo. **Solo cuenta `rides.status = 'completed'`**, no reutiliza `list_driver_history`. **El periodo lo decide el servidor con su propio reloj (D154), nunca un rango de instantes que mande el telefono**: `'today'`/`'week'` se calculan con `fare_timezone` y medianoche local; un rango personalizado recibe FECHAS, no timestamptz, por el mismo motivo -una fecha no arrastra huso horario-. La pantalla de esta version solo ofrece "Hoy" y "Esta semana"; el servidor ya acepta `'custom'` para cuando haga falta un selector de rango, que no se construyo por no ser necesario todavia |
 ### Decisiones de la Fase 14
 
 | # | Decision | Valor |
@@ -926,8 +989,9 @@ Nunca confiar unicamente en validaciones del frontend.
 | 15 | Ciclo completo del servicio | COMPLETADA Y APROBADA |
 | 16 | Historial | COMPLETADA Y APROBADA |
 | 17 | Calificaciones | COMPLETADA Y APROBADA |
-| 18 | Cancelaciones y errores operativos | Pendiente |
-| 19 | Notificaciones | Pendiente |
+| 18 | Cancelaciones y errores operativos | COMPLETADA Y APROBADA |
+| 19 | Notificaciones | COMPLETADA Y APROBADA |
+| — | **BLOQUE ESPECIAL: tarifas, encomiendas y carga** (seccion 15.21) | **Pendiente. Va ANTES de la Fase 20** |
 | 20 | Panel administrativo | Pendiente |
 | 21 | Gestion de conductores y vehiculos | Pendiente |
 | 22 | Seguridad y auditoria | Pendiente |
@@ -1060,10 +1124,25 @@ PostgreSQL 17.6, organizacion propia (no gestionada por Vercel). PostGIS 3.3.
 20260805150842_driver_offers_and_realtime          ofertas del conductor y tiempo real (Fase 12)
 20260805153818_offer_to_all_available_drivers      D160, H12 y H13 (Fase 12)
 20260805180658_driver_active_rides                 viajes en curso con datos del pasajero (Fase 12)
+...
+20260825223000_fare_tables                         urban_fares, rural_fares, cargo_types (bloque especial)
+20260825234500_service_type_and_cargo              service_type, parcel_description, ride_request_cargo
+20260826010000_fare_calculation                    quote_fare y las cinco columnas de valor
+20260826024500_rural_fare_nearest_point            D226, la tarifa del destino rural mas cercano
+20260826040000_request_ride_with_fare              request_ride con valor, carga y encomienda
+20260826053000_nearest_place_wins                  D230, corrige D226: gana el nombre mas cercano
+20260826060000_seed_rural_fares_batch1              24 de 36 destinos rurales, verificados
+20260826070000_seed_rural_fares_batch2              La víbora, Manzanares, Cañada Honda, Finca Posada
 ```
 
-Totales, contados contra el servidor: **18 tablas, 47 politicas, 35 funciones**. Las 18 con
-seguridad de fila activa.
+**Esta lista no esta completa** y se quedo corta en la Fase 12; las 52 aplicadas se ven con
+`npx.cmd supabase migration list`. Las ocho ultimas si estan puestas porque es donde se
+sigue.
+
+Totales, contados contra el servidor el 2026-08-26: **22 tablas, 54 politicas, 48 funciones,
+63 lugares (62 activos mas 1 historico desactivado), 28 tarifas rurales cargadas**.
+Antes del bloque especial eran 18, 47 y 47. Lo nuevo son las cuatro tablas de tarifas y carga,
+sus siete politicas y `quote_fare`. **`request_ride` todavia no se ha tocado.**
 
 **Tiempo real activo** sobre `ride_offers`, la unica tabla nuestra publicada. Cada suscriptor
 recibe solo sus propias filas: las politicas de seguridad se aplican tambien ahi, comprobado
@@ -3239,30 +3318,863 @@ quedo como estaba, a proposito.
 
 ### Lo que falta
 
-1. Tu aprobacion
-2. Commit desde GitHub Desktop. `google-services.json` y `upload-debug.jks` **no apareceran en
-   la lista**: el primero lo ignora la plantilla y el segundo es una copia temporal del
-   keystore de depuracion que se puede borrar cuando quieras
+Las dos hechas: el usuario aprobo y comiteo la fase el 2026-08-25.
+`google-services.json` y `upload-debug.jks` **no aparecieron en la lista del commit**: el
+primero lo ignora la plantilla de Expo y el segundo es una copia temporal del keystore de
+depuracion, que se puede borrar cuando se quiera.
+
+---
+
+## 15.21 BLOQUE ESPECIAL: TARIFAS, ENCOMIENDAS Y CARGA (TERMINADO, IBA ANTES DE LA FASE 20)
+
+**EMPEZADO EL 2026-08-25, TERMINADO EL 2026-08-26.** Los ocho pasos hechos y verificados:
+servidor, pantalla del pasajero, historial y recaudo del conductor, y la regresion de las fases
+11 a 19. La auditoria formal contra el codigo esta hecha, las decisiones previas estan cerradas,
+y todo -servidor y pantallas- esta aplicado y verificado, con once archivos de pruebas
+automaticas en verde y verificacion en vivo en la tablet real y el emulador. El detalle esta al
+final de esta seccion, en los ocho bloques "Lo que se hizo" y las dos correcciones D233/D234.
+
+### De donde sale
+
+Peticion de los duenos de la empresa, entregada por el usuario el 2026-08-25. **Se coloca
+entre la Fase 19 y la Fase 20 a proposito**: varias de estas cosas —tarifas, destinos rurales,
+tipos de carga, recaudo— son datos que el panel administrativo tendra que gestionar, asi que
+construir el panel antes obligaria a rehacerlo.
+
+### Lo que cambia de fondo
+
+**D217: la aplicacion pasa a calcular y mostrar el valor del servicio.** Modifica a D8 y al
+parrafo de la seccion 1. La aplicacion **sigue sin procesar pagos**: cobra el conductor, en
+efectivo. Lo que se anade es que el pasajero vea cuanto va a costar **antes** de confirmar.
+
+### Los requisitos, tal como llegaron
+
+1. **Encomienda como servicio independiente**, con descripcion libre ("caja con documentos",
+   "bulto de café", "repuestos")
+2. **Pasajero con carga**, distinto de los otros dos casos. Los tres no se confunden entre si:
+   pasajero solo / pasajero + carga / encomienda sola
+3. **Tarifas administrables, NO escritas en el codigo.** Crear, consultar, modificar,
+   activar y desactivar
+4. **Tarifas iniciales**, que son un punto de partida y no valores permanentes:
+   - Urbano: 1 persona $4.000, 2 personas $6.200, 3 personas $8.500
+   - Recargo nocturno (10:00 p. m. a 5:00 a. m.): $7.000 / $12.000 / $17.000
+   - **36 destinos rurales** con precio fijo cada uno, de $10.800 (La Vibora, Alto del Rio) a
+     $100.000 (Cajamarca)
+   - Carga: caja pequena $1.700, caja grande $2.800, domicilios y encomiendas $3.800, bulto de
+     cemento $2.800, bulto de café $4.900, bicicleta $2.300
+5. **Historial del conductor** con fecha, hora, origen, destino, tipo de servicio, pasajeros,
+   carga, encomienda, tarifa, valor y estado
+6. **Recaudo del conductor**: servicios realizados, valor de cada uno, total acumulado, por
+   periodo
+7. **Calificaciones y comentarios** en los dos sentidos
+
+### Matriz de auditoria, PRIMERA LECTURA SIN VERIFICAR CONTRA EL CODIGO
+
+**ESTA MATRIZ SE QUEDA COMO ESTABA, y debajo va la corregida.** Era una lectura de memoria, y
+se conserva a proposito: comparar las dos es lo que ensena cuanto vale la regla 2 del proyecto
+("verificar, no suponer"). De trece filas, **una estaba equivocada** y otras cuatro escondian
+un problema que solo aparecio al mirar el codigo.
+
+| Requisito | Primera lectura | Por comprobar |
+|---|---|---|
+| Encomienda independiente | No existe | Que `ride_requests` no tenga ya un tipo de servicio |
+| Descripcion de encomienda | No existe | — |
+| Pasajero con carga | No existe | — |
+| Tipos de carga | No existe | — |
+| Tarifas configurables | **No existe, y contradecia a D8** | Si `app_settings` sirve de base o hace falta tabla propia |
+| Mostrar tarifa al usuario | No existe | Donde encaja en la pantalla de resumen (D147) |
+| Tarifas urbanas por pasajeros | No existe | Se apoya en `passenger_count`, que si existe |
+| Recargo nocturno | No existe | Con que reloj se decide: el del servidor, no el del telefono (D154) |
+| Tarifas rurales por destino | No existe | **Los 36 destinos contra las 36 filas de `places`**: hay que ver cuantos coinciden |
+| Historial del conductor | **YA EXISTE** (Fase 16) | Si hay que anadirle las columnas de valor y tipo de servicio |
+| Recaudo del conductor | No existe como pantalla | Si se puede calcular sobre el historial que ya hay |
+| Calificaciones | **YA EXISTE** (Fase 17) | Nada. Cubierto en los dos sentidos |
+| Comentarios | **YA EXISTE** (Fase 17) | Nada. Opcional, junto a las estrellas |
+
+**Dos de trece ya estan hechas** (historial y calificaciones con comentario), y una tercera
+—recaudo— probablemente se apoye en la que ya hay en vez de necesitar tabla nueva.
+
+### La matriz de verdad, contra el codigo (2026-08-25)
+
+Hecha leyendo las 45 migraciones aplicadas y `src` entero, no de memoria.
+
+| Requisito | Codigo real | Estado | Accion |
+|---|---|---|---|
+| Encomienda independiente | No hay tipo de servicio en ninguna parte: ni enum, ni columna, ni pantalla | No existe | Nueva |
+| Descripcion de encomienda | Lo unico parecido es `pickup_reference`, 80 caracteres, y es otra cosa | No existe | Nueva |
+| Pasajero con carga | Confirmado, nada | No existe | Nueva |
+| Tipos de carga | Confirmado, nada | No existe | Nueva |
+| Tarifas configurables | `app_settings` **no sirve**: clave/valor jsonb, sin activo/inactivo, sin trazabilidad | No existe | Tablas propias (D223) |
+| Mostrar tarifa al usuario | Confirmado. El sitio exacto es `ResumenDelViaje`, junto a la fila de distancia y tiempo | No existe | Nueva |
+| Tarifas urbanas por pasajeros | `passenger_count` existe y R11 ya lo valida en servidor | No existe, base si | Nueva |
+| Recargo nocturno | **Ninguna migracion menciona zonas horarias** y el servidor va en UTC | No existe | Nueva |
+| Tarifas rurales por destino | **La primera lectura estaba equivocada.** Los 36 destinos NO son los 36 lugares: solo coincide de nombre "La vibora", y esa coincidencia esta en duda | No existe, y faltan datos | Nueva + coordenadas |
+| Historial del conductor | `list_driver_history` da fecha, origen, destino, pasajeros y desenlace. **Le faltan tipo de servicio, carga y valor** | Existe, incompleto | Ampliar, no rehacer |
+| Recaudo del conductor | No hay pantalla ni funcion, pero `ride_offers` mas `rides` ya tienen todo menos el valor | No existe | Nueva, encima de lo que hay |
+| Calificaciones | Tabla `ratings`, `rate_ride`, los dos sentidos, una por parte y por viaje | **Cumple** | Ninguna |
+| Comentarios | Columna `comment`, hasta 1000 caracteres, opcional | **Cumple** | Ninguna |
+
+**Dos de trece cumplen, una esta a medias, diez son nuevas.** Coincide con la primera lectura
+salvo en las tarifas rurales.
+
+### Los cinco hallazgos que solo aparecieron al mirar el codigo
+
+1. **Los 36 destinos rurales no son los 36 lugares de `places`.** Son dos listas distintas.
+   Faltan las coordenadas de 34 sitios, y ese dato no esta en ningun sitio del proyecto: lo
+   tiene que dar quien conoce Amalfi. **Bloquea las tarifas rurales, nada mas**
+2. **No habia forma de saber si un viaje es urbano o rural.** `service_area` es el municipio
+   entero, 1206 km2, y `places` no marca zona. Resuelto con D218
+3. **El destino no siempre es un lugar de la lista.** Puede venir del buscador de Mapbox o de
+   una chincheta, y entonces `destination_place_id` es nulo. Resuelto con D219
+4. **La encomienda chocaba con dos restricciones vivas.** `rr_passenger_count_range` exige
+   minimo 1 pasajero y `enforce_ride_capacity` suma asientos. Resuelto con D220. Comprobado
+   ademas que `enforce_ride_capacity` usa `sum(...)`, asi que el cero no le molesta
+5. **`app_settings` no valia para las tarifas.** Resuelto con D223
+
+### El dato que decidio D218
+
+Se midio la distancia al parque de los 36 lugares de `places`. **34 estan a menos de 2 km.**
+Los dos que se salen son Vereda Guayabito, a 6,3 km, y Vereda Manzanares, a 3,5 km. Con la
+lista actual siendo practicamente toda urbana, un perimetro urbano no habria separado nada.
+
+Ese mismo calculo dejo una pregunta para la empresa: **la empresa cobra $10.800 por "La
+Vibora", y "La vibora" de `places` esta a 1,34 km del parque.** A esa distancia $10.800 no
+cuadra frente a los $4.000 urbanos. Probablemente son dos sitios distintos con el mismo
+nombre. **Sin confirmar.** El otro parecido, "Manzanares" a $12.000 contra "Vereda Manzanares"
+a 3,5 km, si cuadra.
+
+### Impacto previsible, tambien por comprobar
+
+- **Base de datos:** tabla o tablas de tarifas; tipo de servicio en `ride_requests`; carga y su
+  descripcion; el valor calculado guardado con el servicio. **Cuidado con `rides` y
+  `ride_requests`**, que las tocan casi todas las funciones de las fases 11 a 18
+- **`request_ride`:** es la funcion mas reescrita del proyecto y la que mas ha sufrido (ver el
+  aviso de E30 en `20260811184748_pickup_reference.sql`). Si hay que tocarla, **partir de su
+  ULTIMA version aplicada**, no de la primera que aparezca al buscar
+- **Aplicacion movil:** el resumen del viaje (D147) tiene que mostrar el valor; hace falta
+  elegir tipo de servicio antes o durante el flujo actual
+- **Tiempo real:** no deberia cambiar
+- **Fase 20:** el panel tendra que gestionar tarifas, destinos, tipos de carga y recaudo
+
+### Orden aprobado por el usuario el 2026-08-25
+
+1. ~~**Auditoria real contra el codigo** y matriz corregida~~ **HECHO**
+2. ~~Decidir la forma de las tarifas y de los tipos de servicio, **antes** de escribir la
+   primera migracion~~ **HECHO**, D218 a D225
+3. **Migracion de tarifas, con sus pruebas de romper — HECHO Y VERIFICADO**
+4. **Migracion de tipo de servicio y carga, con sus pruebas de romper — HECHO Y VERIFICADO**
+5. **Calculo del valor en el servidor — HECHO Y VERIFICADO**, incluida la tarifa del punto
+   mas cercano (D226), que no estaba prevista, y **`request_ride` ya lo usa**
+6. **Pantallas del pasajero: elegir tipo de servicio, anadir carga y ver el valor —
+   HECHO Y VERIFICADO EN EL EMULADOR**
+7. ~~Historial y recaudo del conductor, encima de lo que ya existe~~ **HECHO Y VERIFICADO EN EL
+   EMULADOR**
+8. ~~Regresion de las fases 11 a 19~~ **HECHO** (con una pieza sin cerrar en vivo, ver mas abajo)
+
+
+Las tarifas rurales entran como filas cuando lleguen las coordenadas, **sin tocar el esquema**:
+por eso no bloquean nada mas que a si mismas.
+
+### Lo que se hizo: paso 1, las tarifas (2026-08-25)
+
+**Nueva implementacion.** `supabase/migrations/20260825223000_fare_tables.sql`.
+
+Tres tablas, todas con RLS, lectura para cualquier autenticado y escritura solo para el
+administrador, igual que `places`:
+
+- **`urban_fares`** — la rejilla de cantidad de pasajeros por franja horaria. Clave compuesta,
+  6 filas cargadas. **Sin `is_active` a proposito**: apagar "dos pasajeros de noche" no
+  significa nada y dejaria un servicio sin precio a las once
+- **`rural_fares`** — el precio fijo por destino, apuntando a `places` con `on delete
+  restrict`. **Vacia**, esperando coordenadas. Se cobra plana, sin importar cuantos van
+- **`cargo_types`** — el catalogo, 6 filas. Nombre unico normalizado como en `places`
+
+En `app_settings`, tres parametros nuevos: `fare_timezone`, `night_fare_start_hour` y
+`night_fare_end_hour`.
+
+**31 comprobaciones automaticas, todas en verde**, en
+`supabase/dev-tools/prueba_tarifas.sql`: 16 intentos de romper restricciones, 6 sobre los
+datos que dio la empresa, 6 de politicas suplantando a un pasajero real y 3 sin sesion.
+
+Dos merecen mencion. **La 21 y la 22 miden la hora**: las 03:00 UTC tienen que ser las 22:00
+en Amalfi, inicio de la franja, y las 22:00 UTC tienen que ser las 17:00, todavia de dia. La
+segunda es la que importa: si alguien quitara la conversion, la primera seguiria en verde por
+casualidad. **La 16 se espera en verde ENTRANDO y no rechazando**: es el hallazgo H10 visto en
+la tabla nueva, "Caja  grande" con dos espacios en medio convive con "Caja grande". Queda
+medido para que no se descubra en la Fase 20.
+
+**Un error, y fue del script y no de la migracion:** al suplantar a `anon` la prueba se caia
+con un 42501 sobre la tabla temporal de resultados, porque el permiso solo se le habia
+concedido a `authenticated`. Una sola correccion.
+
+**Un tropiezo que no era del codigo.** `supabase db push` fallaba con
+`failed to parse environment file: .env`. La causa no tenia nada que ver con el proyecto: el
+`.env` tenia al final **siete lineas de PowerShell** (`$env:ANTHROPIC_...`), ajustes de Claude
+Code pegados en el archivo equivocado. Un `.env` espera `CLAVE=valor`, asi que el parser se
+rendia con el archivo entero y **ninguna** variable se leia. Se movieron a
+`.env.claude-code.ps1` (ignorado por git, como todo `.env.*`) con respaldo previo en
+`.env.backup-20260825`. Comprobado que el token nunca subio al repositorio: `.gitignore`
+lineas 36 y 37.
+
+**Resuelto por el usuario el 2026-08-25:** la encomienda urbana **si paga el recargo
+nocturno**, o sea $7.000 a partir de las diez. Con eso D221 queda cerrada del todo.
+
+### Lo que se hizo: paso 2, tipo de servicio y carga (2026-08-25)
+
+**Nueva implementacion.** `supabase/migrations/20260825234500_service_type_and_cargo.sql`.
+
+**Los tres casos se distinguen con dos datos y no con tres valores de un enum**, que es lo que
+pidio la empresa al decir "no confundir estos tres casos":
+
+```
+pasajero solo      service_type = 'passenger', sin filas de carga
+pasajero + carga   service_type = 'passenger', con filas de carga
+encomienda sola    service_type = 'parcel',    passenger_count = 0
+```
+
+Un tercer valor, `passenger_with_cargo`, habria sido un dato capaz de contradecir a otro: nada
+impediria guardarlo sin carga, ni guardar `passenger` con tres bultos. Asi la contradiccion no
+cabe.
+
+Lo que entro:
+
+- **`service_type`** en `ride_requests`, enum de dos valores, con `default 'passenger'`. **Las
+  45 solicitudes que ya existian quedaron clasificadas solas** y `request_ride` sigue
+  funcionando sin tocarla
+- **`parcel_description`**, obligatoria entre 3 y 120 caracteres si el servicio es encomienda y
+  **prohibida** si es viaje de pasajeros. El encargo decia "debe permitir una descripcion", que
+  es mas suave: **se apreto a proposito**, porque el conductor tiene que decidir si acepta
+  llevar algo sin nadie que se lo explique por el camino. Se afloja quitando media restriccion
+- **El cero pasajeros, atado al tipo de servicio.** `rr_passenger_count_range` se sustituyo por
+  `rr_passenger_count_matches_service`: cero exactamente en la encomienda, de 1 a 10 en el
+  viaje de pasajeros. **No se abrio el cero en general**, que era la forma facil y la
+  equivocada: un viaje de pasajeros vacio no ocuparia asiento y dejaria acumular viajes
+  fantasma
+- **`rides.passenger_count`** pasa a 0..10 sin atarlo al tipo, y **queda dicho por que**: esa
+  tabla no tiene `service_type` y un CHECK no puede mirar otra tabla. La regla vive donde nace
+  el dato
+- **`ride_request_cargo`**, la lista de carga (D224). Una linea por tipo, con cantidad y
+  `unit_amount` congelado (D225). `unique (request_id, cargo_type_id)`: dos lineas del mismo
+  tipo son una linea con cantidad dos
+
+**La carga la ve el conductor ANTES de aceptar**, y es una diferencia deliberada con el nombre
+y el telefono del pasajero, que desde la Fase 12 no viajan hasta que acepta (D172). El motivo
+es que no es lo mismo: quien es el pasajero no cambia la decision de aceptar; que lleve una
+bicicleta si la cambia. Un conductor que acepta a ciegas y descubre el bulto al llegar es un
+servicio cancelado en el sitio.
+
+**Sin politica de insercion, actualizacion ni borrado para nadie**, ni siquiera el
+administrador. Esas filas nacen dentro de `request_ride` en la misma transaccion que la
+solicitud. Dejar que el telefono escriba ahi permitiria carga anadida despues de que el
+conductor viera el precio que acepto.
+
+**29 comprobaciones automaticas, todas en verde**, en
+`supabase/dev-tools/prueba_encomiendas.sql`.
+
+**La 12 es la que justifica D220** y la que mas facil se habria dado por buena sin medirla: un
+conductor con una encomienda encima **todavia puede aceptar sus tres pasajeros**. Va con la 13
+vigilandola, que mete un pasajero mas y comprueba que el limite si rechaza: sin esa pareja, la
+12 podria estar en verde porque el control de capacidad no funciona en absoluto.
+
+**Dos errores, los dos del script y ninguno de la migracion.** El primero: la limpieza previa
+caducaba solo las solicitudes `searching`, y el primer pasajero de la base tenia una
+`in_progress`, asi que R6 tumbaba todas las inserciones. El segundo, mas interesante:
+`enforce_ride_capacity` **hace dos cosas y la primera no tiene que ver con los asientos** —si
+el conductor lleva un viaje con OTRO motorraton, rechaza con `DRIVER_VEHICLE_CONFLICT`—. El
+conductor 1 tenia un viaje vivo con la unidad 99 y el script elegia la 98, la de numero mas
+bajo, asi que saltaba ese conflicto y **la capacidad nunca llegaba a medirse**. Las dos
+comprobaciones que importaban estaban en rojo por algo que no era lo que probaban. Una
+correccion cada vez.
+
+De paso quedo escrito en el archivo que **los once pasajeros los atrapa el disparador y no la
+restriccion**: `enforce_ride_capacity` es BEFORE y corre antes, asi que rechaza por capacidad
+comparando 11 contra 3. La restriccion de 10 no llega a evaluarse mientras ningun vehiculo
+tenga mas de diez plazas.
+
+### Lo que se hizo: paso 3, el calculo del valor (2026-08-25)
+
+**Nueva implementacion.** `supabase/migrations/20260826010000_fare_calculation.sql`.
+
+**Se partio en dos a proposito.** Aqui va la formula, aislada y probada; enganchar
+`request_ride` va aparte. Esa funcion es la que produjo E30, y mezclar una formula sin
+verificar con su reescritura seria pedir el mismo error otra vez.
+
+**`quote_fare`**, una funcion que devuelve una fila con el desglose: `is_rural`, `is_night`,
+`trip_amount`, `cargo_amount` y `total_amount`. **La misma que usara `request_ride`**, y eso
+es lo unico que garantiza que el pasajero pague lo que vio: dos calculos separados se
+desincronizan el dia que alguien toque uno.
+
+El calculo vive en el servidor por D83 y por algo mas concreto: **el recargo nocturno depende
+de la hora, y la hora del telefono la cambia cualquiera desde los ajustes**. Un pasajero
+podria pagar tarifa de dia a medianoche adelantando el reloj.
+
+Tres parametros nuevos en `app_settings` para D219: `fare_center_lng`, `fare_center_lat` y
+`unpriced_destination_max_km`, este ultimo en 5 km como punto de partida. **El centro usa las
+coordenadas de `places` y no las de D122**, que es el hallazgo H17: si se resuelve al reves,
+se cambian dos numeros desde el panel.
+
+**Cinco columnas de valor en `ride_requests`**: `fare_amount`, `fare_trip_amount`,
+`fare_cargo_amount`, `fare_is_night` y `fare_is_rural`. Admiten nulo porque **las 45
+solicitudes anteriores a D217 no tienen valor y no se les puede inventar uno**: un cero ahi
+seria peor que un vacio, porque un cero parece un dato. Se guarda el desglose y no solo el
+total porque con los precios cambiando desde el panel, un total suelto no se puede volver a
+explicar dentro de seis meses.
+
+**LA FORMULA QUEDO GARANTIZADA POR LA BASE DE DATOS, no por el codigo.** Misma idea que el
+indice unico de las ofertas aceptadas de la Fase 5: la regla deja de ser algo que hay que
+acordarse de cumplir. Tres restricciones nuevas:
+
+- `rr_fare_matches_parts`: en la encomienda el total es la mayor de las dos partes, y en el
+  viaje de pasajeros es la suma. Un total que no cuadre no entra, venga de donde venga
+- `rr_fare_all_or_nothing`: o estan las cinco columnas o no esta ninguna
+- `rr_fare_rural_is_never_night`: D222 tambien escrito en la estructura
+
+**43 comprobaciones automaticas, todas en verde a la primera**, en
+`supabase/dev-tools/prueba_calculo_tarifa.sql`. Cubren los seis casos de la tarifa urbana, los
+rurales planos, las tres formas de combinar carga, las once que tienen que fallar con su
+codigo de error, las cuatro restricciones de columna y los permisos.
+
+**Los ejemplos de la empresa, comprobados uno a uno:**
+
+| Servicio | Cuenta | Valor |
+|---|---|---|
+| 3 personas a un rural de 15.000 | plana | 15.000 |
+| 1 persona urbana + bicicleta | 4.000 + 2.300 | 6.300 |
+| 3 personas rural + bulto de cafe | 15.000 + 4.900 | 19.900 |
+| Encomienda urbana, caja pequena | mayor(4.000, 1.700) | 4.000 |
+| Encomienda urbana, bulto de cafe | mayor(4.000, 4.900) | 4.900 |
+| Encomienda urbana de noche, bulto de cafe | mayor(7.000, 4.900) | 7.000 |
+| Encomienda rural 12.000, bicicleta | mayor(12.000, 2.300) | 12.000 |
+
+**Dos detalles del archivo de pruebas que valen para el que venga.** Uno: **todas las
+comprobaciones pasan la hora a mano**, ninguna deja `now()`. Una prueba que no fije la hora
+pasaria por la tarde y fallaria a medianoche, y eso no es una prueba. Dos: **los cuatro bordes
+de la franja estan medidos** -21:59, 22:00, 04:59 y 05:00- porque un `>` donde va un `>=`
+desplaza el recargo una hora entera sin que nada mas se note. Y hay una quinta, la 21, que
+escribe la misma hora en UTC: si alguien quitara la conversion de zona, las cuatro primeras
+podrian seguir en verde y esa se pondria roja.
+
+**Sin errores en esta migracion.** Es la primera del bloque que salio a la primera.
+
+---
+
+### Lo que se hizo: paso 3b, la tarifa del punto mas cercano (2026-08-25)
+
+**Nueva implementacion.** `supabase/migrations/20260826024500_rural_fare_nearest_point.sql`.
+
+**No estaba en el plan.** Salio de una pregunta del usuario al revisar el paso 3, y era un
+hueco de verdad: `quote_fare` solo sabia cobrar rural si el destino era exactamente uno de la
+lista. Un punto entre dos destinos caia en urbano o rebotaba. Ver D226, D227 y D228.
+
+Lo que entro: `quote_fare` **se borro y se volvio a crear** —cambia el tipo de retorno y eso
+`create or replace` no lo admite, asi que hubo que volver a conceder permisos— con dos
+columnas nuevas de salida, `reference` y `reference_m`. Y en `ride_requests`, la columna
+`fare_reference` con dos restricciones: una tarifa rural sin referencia esconde de donde salio
+el numero, y una referencia en un viaje urbano no significa nada. Van juntas o no van.
+
+El orden dentro de la funcion importa y queda dicho: **primero el destino exacto, y solo si no
+tiene precio propio se busca el mas cercano.** Un destino de la lista nunca se redondea a otro.
+
+**54 comprobaciones en el archivo del calculo, todas en verde.** Las once nuevas cubren el
+punto medio ganado por cada lado, que el destino exacto no se redondea, que fuera del radio no
+se pega, que una tarifa apagada deja de servir de referencia y las dos restricciones de la
+columna.
+
+**UN ERROR, Y ES EL MAS INSTRUCTIVO DEL BLOQUE.** Al aplicar D226, **diecinueve
+comprobaciones que estaban en verde se pusieron rojas de golpe**. La causa no era la funcion:
+era el montaje del archivo de pruebas. Para probar lo rural inventaba dos tarifas sobre El
+hospital y El coliseo, que estan a 431 y 467 metros del parque, y **casi todas las
+comprobaciones urbanas usan el parque como destino**. Con la regla nueva, el parque se pegaba
+a una tarifa rural y devolvia 15.000 donde tenia que devolver 4.000.
+
+En la realidad ningun destino rural va a estar a cuatrocientos metros del parque, asi que el
+que fallaba era el montaje. Se corrigio creando **dos lugares de prueba con coordenadas
+elegidas**, a 10 y 11,5 km al norte y separados 1,5 km: la geometria la decide el archivo y no
+el azar de donde caen los lugares de Amalfi. **Y el radio de D226 se fija dentro del archivo**
+en vez de leer el de produccion, porque ese valor es provisional y va a cambiar: una prueba
+que dependiera de el se pondria roja el dia que se afine, sin que nada estuviera mal.
+
+**La leccion, que vale para todo el proyecto:** una regla nueva puede volver ambiguo el
+montaje de pruebas que ya existian, sin que ninguna este mal escrita. Diecinueve rojas de
+golpe no significaron diecinueve fallos: significaron uno.
+
+---
+
+### Lo que se hizo: paso 4, request_ride con valor, carga y encomienda (2026-08-25)
+
+**Existente — modificada para cumplir el nuevo requisito.**
+`supabase/migrations/20260826040000_request_ride_with_fare.sql`. Cierra D217: a partir de aqui
+una solicitud nace con su valor escrito, el mismo que el pasajero vio antes de confirmar.
+
+**Se partio de `20260811184748_pickup_reference.sql`**, que era la ultima version aplicada, y
+**se conservaron sus once comprobaciones en el mismo orden**: perfil, cuenta bloqueada, rol,
+telefono, R11, las dos de zona de servicio (D150), la referencia, la caducidad dirigida
+(D151), R6 y la de conductores disponibles. Eso es justo lo que E30 borro sin querer.
+
+**Los cuatro parametros nuevos van al final y con valor por defecto**, asi que la llamada que
+hoy hace `ride-service.ts` sigue valiendo sin tocar una linea de TypeScript. La pantalla se
+ocupa en su propio paso.
+
+**`find_available_drivers` NO se toco, y se comprobo leyendola antes de decidirlo.** Filtra por
+`asientos libres >= p_passenger_count`, y una encomienda pide cero, asi que cualquier conductor
+disponible es candidato aunque lleve el motorraton lleno. Es exactamente D220.
+
+**32 comprobaciones automaticas, todas en verde**, en
+`supabase/dev-tools/prueba_solicitud_con_valor.sql`. La mitad son regresion de E30.
+
+**DISCREPANCIA ENCONTRADA ENTRE ESTE DOCUMENTO Y EL CODIGO, y se reporta tal cual.** La
+seccion 15.14 dice que la Fase 14 dejo 24 comprobaciones en `prueba_referencia.sql` y
+`prueba_posicion.sql`, **y ninguno de los dos archivos esta en el repositorio**. Entre ellas
+estaban las tres pruebas de regresion que se anadieron al corregir E30 "para que no pueda
+repetirse en silencio". O sea que **la red que debia proteger esta reescritura no existia**, y
+esta reescritura es exactamente la operacion que produjo E30. Las de `request_ride` se
+escribieron aqui; **las de `get_driver_location` siguen sin existir** y quedan pendientes.
+
+**Un error, y fue del montaje de la prueba.** Para comprobar D151 hacia falta una solicitud
+viva pero vencida, y se puso `expires_at` en el pasado dejando `requested_at` en ahora:
+`rr_expiry_after_request` exige que la caducidad sea posterior a la peticion, asi que la fila
+no entraba y el archivo se caia entero. Hay que mover las dos fechas. Una sola correccion.
+
+**Y un hallazgo nuevo, H21, que salio al escribir la comprobacion 29.** Esta abajo, con los
+demas hallazgos abiertos. No se toco nada: es una decision de la empresa, no del codigo.
+
+**Una alarma que resulto ser falsa, y queda escrita porque el metodo funciono.** Al comprobar
+que la prueba no hubiera dejado nada, el servicio en curso que habia antes aparecio terminado.
+Se investigo en vez de darlo por bueno: **cero filas con `cancelled_by = 'admin'`**, que es la
+huella que dejarian estos scripts, y el viaje quedo `completed`, que ningun script de aqui
+sabe hacer porque todos cancelan. Lo termino la aplicacion cincuenta minutos antes de la
+prueba. El rollback funciono.
+
+---
+
+### Lo que se hizo: correccion D230/D231 y carga de 24 destinos rurales (2026-08-26)
+
+**Correccion de un error del asistente, no de un fallo del sistema.** El usuario entrego
+`docs/destinos-rurales.csv` con coordenadas de 34 destinos, en grados/minutos/segundos.
+Convertidas y verificadas contra `is_within_service_area` antes de escribir nada: **24 caen
+dentro del municipio**, 2 tienen la longitud mal transcrita (falta el 7 inicial: llegan como
+"5°..." en vez de "75°...") y 10 siguen sin coordenada.
+
+**Medir antes de cargar destapo que D226 estaba mal planteada.** Alto del Rio queda a 1.432 m
+del parque; El Taparo a 1.459 m. Con el radio de 2 km de D227, **32 de los 36 lugares urbanos
+caian dentro del radio de un destino rural, el parque incluido**: un viaje al parque habria
+cobrado 10.800 en vez de 4.000. Nunca llego a produccion porque no se habia cargado ninguna
+tarifa rural todavia con esa regla puesta.
+
+**La causa era una interpretacion estrecha, no el codigo.** El usuario dijo "si esta mas cerca
+de un lugar que de el otro, se cobre el del lugar mas cerca", sin limitarlo a los rurales, y
+asi quedo escrito D230. `supabase/migrations/20260826053000_nearest_place_wins.sql` reescribe
+`quote_fare` para comparar contra TODOS los lugares activos de `places`, no solo los que
+tienen fila en `rural_fares`. Un lugar urbano nunca pierde contra si mismo, a cero metros, asi
+que deja de necesitar que nada lo proteja.
+
+**El radio subio a 3 km (D231), y esta vez con separacion real medida**: 314 m minima, 979
+mediana, 4.273 maxima entre los 24 destinos. Con la regla nueva, pasarse de radio ya no
+encarece el pueblo: solo alcanza a puntos sin ningun nombre cerca.
+
+**Los 24 destinos verificados se cargaron**, en
+`supabase/migrations/20260826060000_seed_rural_fares_batch1.sql`. Cada uno es un lugar nuevo
+en `places` (`sort_order` 20, para separarlo visualmente de los urbanos de la Fase 9) con su
+fila en `rural_fares`. Tiene que ser un lugar y no solo una tarifa porque D230 compara
+distancias contra `places` entero.
+
+**Verificacion contra los datos reales, 60 de 60 en verde**, no solo contra la sintetica: los
+24 destinos exactos cobran su tarifa exacta, y **los 36 lugares urbanos de la Fase 9, el
+parque incluido, siguen cobrando 4.000**. Es la comprobacion que motivo la correccion, hecha
+con las coordenadas de verdad y no con los lugares inventados de las pruebas automaticas.
+
+**146 comprobaciones automaticas existentes vueltas a correr despues del cambio de regla,
+todas en verde.** Una tuvo que reescribirse: la 51 de `prueba_calculo_tarifa.sql` esperaba que
+al apagar un destino rural el punto cayera al siguiente rural; con D230 el resultado es
+mejor — el punto se queda sin poder cobrarse y rebota por D219, que es lo honesto cuando la
+empresa retira un destino en vez de cobrar la tarifa de un sitio a kilometro y medio.
+
+**Lo que sigue sin cargar, y por que:**
+
+- **Cañada Onda y Finca Posada.** El usuario corrigio el nombre de la primera (no "Cañonada").
+  Las coordenadas de las dos siguen con la longitud rota; pendientes de confirmacion
+- **10 destinos sin coordenada**: Sorrento, Entrada a la Mina, Los Tanques, La Mina, La
+  Aguacatera, Cajamarca, Palmitas, La Blanquita, y los dos nombres en duda: **La Vibora**
+  (¿es "La víbora" de `places`, a 1,34 km del parque?) y **Manzanares** (¿es "Vereda
+  Manzanares", a 3,49 km, que si cuadra con sus 12.000?)
+
+---
+
+### Lo que se hizo: cuatro nombres resueltos y cargados (2026-08-26)
+
+**Existente — modificada para cumplir el nuevo requisito**, en dos de los cuatro casos; **nueva
+implementacion** en los otros dos. `supabase/migrations/20260826070000_seed_rural_fares_batch2.sql`.
+
+El usuario entrego las coordenadas de Cañada Honda (corrigio el nombre, no "Cañonada"), Finca
+Posada, y los dos nombres en duda. **Los dos en duda se midieron antes de decidir, y salieron
+distintos** (D232): Manzanares resulto ser el mismo sitio que "Vereda Manzanares" (288 m de
+diferencia, ruido de GPS); La Vibora resulto ser un sitio distinto de "La víbora" urbana (3.817
+m de diferencia).
+
+**Cañada Honda y Finca Posada entraron sin ambiguedad**, aunque quedaron cerca de destinos ya
+cargados (219 m de Alto del Rio, 359 m de Finca Doña Lucia): no es senal de duplicado, son
+nombres y precios distintos en la lista de la empresa, y la separacion entre los 24 rurales de
+la primera tanda ya bajaba hasta 314 m.
+
+**Verificacion contra el servidor, no contra la memoria**, antes de cada decision: se comprobo
+que el "La víbora" viejo no tuviera ninguna solicitud que lo referenciara antes de renombrarlo,
+y despues de la migracion se confirmo que sigue existiendo un solo "la víbora" activo y que
+cada uno de los cuatro nombres cobra exactamente su tarifa.
+
+**146 comprobaciones existentes vueltas a correr, todas en verde. Sin regresion.**
+
+**28 de 36 tarifas rurales cargadas.** Quedan 8 sin coordenada: Sorrento, Entrada a la Mina,
+Los Tanques, La Mina, La Aguacatera, Cajamarca, Palmitas y La Blanquita.
+
+---
+
+### Lo que se hizo: paso 6, la pantalla del pasajero (2026-08-26)
+
+**Nueva implementacion.** Modulo `src/features/fare/` (diez archivos: tipos, dos servicios, dos
+hooks, cuatro componentes y el formateador de pesos) mas cambios en
+`src/app/passenger/index.tsx`, `src/features/ride/ride-draft.tsx`,
+`src/features/ride/ride-service.ts` y `src/features/ride/errors.ts`. Ademas,
+`supabase/migrations/20260826080000_active_request_includes_fare.sql`: `get_active_request`
+extendida con el tipo de servicio, la descripcion y el valor, para que D152 (restaurar un
+servicio en curso al reabrir la aplicacion) siga funcionando con encomiendas y no solo con
+viajes de pasajeros.
+
+**`ResumenDelViaje` gano cuatro piezas nuevas, todas condicionadas al tipo de servicio:**
+
+- `ServiceTypeToggle` -Pasajero/Encomienda- arriba de la tarjeta. Los tres casos del encargo
+  siguen sin confundirse: es el mismo boton "Pasajero" con o sin carga, y solo "Encomienda"
+  cambia la forma del formulario de abajo
+- El campo de pasajeros se sustituye por la descripcion de la encomienda cuando corresponde
+- `ChosenCargoList` -lo ya elegido, con su precio y un boton para quitar- y `CargoPicker`, un
+  dialogo con los seis tipos y un contador de mas y menos cada uno, mismo patron que
+  `PassengerCount`. "Agregar carga" pasa a decir "Agregar otra carga" en cuanto hay una linea,
+  que es como se resuelve el pedido de la empresa sin boton aparte
+- `FareRow`, el valor en vivo, con la referencia del destino rural cuando aplica (D228)
+
+**El boton de confirmar espera a tener un precio valido**, no solo a que termine de enviar.
+Antes de este paso el unico candado era la ruta de Mapbox, decorativa; el valor es el punto
+central de D217, asi que aqui si bloquea: mientras se calcula, mientras una encomienda no
+tiene carga todavia, o si el servidor rechazo el destino, el boton espera.
+
+**`useFareQuote` llama a la MISMA funcion `quote_fare` que usara `request_ride`** para congelar
+el valor, con el mismo patron de debounce que ya usaba la estimacion de ruta (D149). Sin fecha
+propia: se deja que el servidor use su reloj, que es el que de verdad decide el recargo
+nocturno.
+
+**Verificado en el emulador, no solo compilado.** Se abrio la aplicacion de verdad, se entro
+como el pasajero de prueba y se probaron en vivo los dos casos:
+
+- **Pasajero + bicicleta**: $4.000 + $2.300 = **$6.300**, la suma
+- **Encomienda + bulto de cafe**: mayor($4.000, $4.900) = **$4.900**, la comparacion
+
+Los dos salieron exactos. Tambien se comprobo en pantalla: el boton "Agregar carga" cambiando
+a "Agregar otra carga", el precio recalculandose al quitar la carga, el boton de confirmar
+deshabilitado mientras una encomienda no tiene carga, y que el caso ya existente de "no
+sabemos donde recogerte" -sin tocar en este paso- seguia funcionando igual que antes: **sin
+regresion**.
+
+**Un ajuste que salio de mirar la pantalla y no del codigo.** La primera version de `FareRow`
+decia "Calculando el valor" con un giro cuando una encomienda no tenia carga todavia, y era
+enganoso: no hay nada calculandose, hace falta que el pasajero agregue algo. Se vio en el
+emulador de camino a la primera comprobacion, no en un caso de prueba. Se cambio a "Agrega una
+carga para ver el valor" con el icono de la caja, sin el giro.
+
+**146 comprobaciones existentes en 0 fallando** tras extender `get_active_request`, mas 5
+nuevas para la extension en `supabase/dev-tools/prueba_active_request_fare.sql`: una solicitud
+vieja sigue leyendose con el valor en nulo, una encomienda trae su desglose completo, la carga
+detallada sigue siendo consultable aparte, otro pasajero no ve nada ajeno, y sin sesion no se
+puede leer nada.
+
+**Lo que se vio en pantalla y no estaba en el plan: la barra de pestanas del emulador no
+respondia donde se esperaba.** Costo varias capturas en la sesion darse cuenta de que las
+coordenadas visuales del emulador no correspondian una a una con los pixeles reales de la
+captura. Se resolvio leyendo la jerarquia de la interfaz con `uiautomator dump` en lugar de
+adivinar por coordenadas, que es lo mas fiable y lo que deberia usarse desde ahora para
+cualquier prueba en el emulador que necesite tocar un punto exacto.
+
+---
+
+### Correccion D233: la tarifa rural en los dos sentidos (2026-08-26)
+
+**Correccion de un error del asistente**, no un fallo del sistema, encontrado por el usuario
+probando la aplicacion de verdad -no en el emulador de esta sesion, en su telefono-.
+`supabase/migrations/20260826090000_rural_fare_both_directions.sql`.
+
+**El reporte, con sus palabras:** "si tengo un viaje del parque a la vereda manzanares, el
+costo es de 12000, pero si el viaje se invierte de manzanares al parque, cuesta 4000". Se
+revizo el codigo y se confirmo: `quote_fare` nunca miraba el origen, solo el destino.
+
+**La correccion.** Nueva funcion auxiliar `rural_fare_for_point`, que extrae la logica de D230
+-el lugar exacto si tiene `place_id`, si no el mas cercano dentro del radio- para poder
+aplicarla dos veces sin repetir el codigo: una al origen, otra al destino. Despues:
+
+- ninguno de los dos es rural -> tarifa urbana, como siempre
+- uno de los dos es rural -> esa es la tarifa, sea origen o destino
+- los dos son rurales y distintos -> **gana el mas caro** (decision del usuario, 2026-08-26:
+  no hay tarifa de la empresa para un trayecto entre dos veredas, y cobrar de menos seria peor)
+
+**`quote_fare` cambio de firma**: ahora recibe los cuatro datos del origen, no solo los del
+destino. `request_ride` ya los tenia en sus propios parametros; solo hubo que pasarselos.
+
+**D219 se volvio simetrico.** Antes solo el destino sin lugar y lejos rebotaba. Ahora el origen
+puede ser una vereda de verdad -es justo el caso que este arreglo hace posible, recoger a
+alguien fuera del pueblo-, asi que la misma comprobacion se aplica a los dos, con codigos
+distintos: `ORIGIN_NOT_PRICED` y `DESTINATION_NOT_PRICED`, para que el mensaje no le diga "el
+destino" a quien penso en el punto de recogida.
+
+**Consecuencia en el cliente que hay que saber**: `quote_fare` ahora necesita el origen. La
+pantalla del resumen ya podia mostrarse sin ubicacion conocida (D137, "Continuar sin
+ubicacion"), y hasta ahora igual calculaba un precio porque el origen no le importaba a la
+formula. Sin origen, ya no hay valor que mostrar: mostrar un precio sin saber de donde sale
+seria volver a suponer que es urbano, que es justo el error que se corrigio. `useFareQuote`
+gano un tercer estado -`pending: 'origin'`, junto al ya existente `'cargo'`- y `FareRow` dice
+"Necesitamos saber de dónde sales para ver el valor" en vez de girar para siempre.
+
+**158 comprobaciones automaticas, todas en verde**, repartidas en los cinco archivos del
+bloque. `prueba_calculo_tarifa.sql` crecio de 54 a 61: nueve nuevas prueban el viaje al reves
+cobrando lo mismo, el caso de dos rurales distintos ganando el mas caro, y `ORIGIN_NOT_PRICED`
+con una chincheta lejos como origen.
+
+**Un tropiezo real al escribir las pruebas, y vale la pena dejarlo escrito.** Al correr
+`prueba_calculo_tarifa.sql` salieron **23 comprobaciones en rojo de golpe**, todas devolviendo
+10.800 -Alto del Rio- donde debian devolver 4.000. La causa: el archivo se escribio cuando
+`rural_fares` estaba vacia, y usaba "el parque" como coordenada suelta, sin `place_id`. Desde
+que se cargaron los 28 destinos rurales reales de esta misma sesion, Alto del Rio quedo a 1.432
+m del parque, dentro del radio de D230, y esa coordenada suelta empezo a pegarsele a un rural
+de verdad. **La aplicacion real nunca comete este error** -cuando el pasajero elige un lugar de
+la lista, el `place_id` siempre viaja-, asi que el fallo era del archivo de pruebas, no del
+codigo. Se corrigio apagando todas las tarifas rurales reales al principio de la transaccion de
+prueba, que de todos modos se revierte al final: la produccion nunca se entera, y la prueba deja
+de depender de que ningun destino rural futuro caiga cerca del parque.
+
+**Y un segundo hallazgo, mas pequeno, de la misma corrida:** una comprobacion (D230, "apagar el
+mas cercano deja el punto sin precio") tenia la expectativa equivocada desde que se escribio, y
+no fue esta correccion quien lo rompio: los dos lugares sinteticos de prueba estan a 1,5 km
+entre si y el radio de prueba es 2 km, asi que apagar uno **siempre** deja al otro alcanzable.
+Se corrigio la comprobacion para probar lo que de verdad pasa -cae al siguiente que siga
+activo- y se anadio una nueva que apaga los dos y esa si prueba "sin precio".
+
+**Verificado en el emulador, con los datos reales, no solo con datos sinteticos:**
+Parque -> Vereda Manzanares y Vereda Manzanares -> Parque, los dos $12.000, el ejemplo exacto
+del reporte del usuario. Con la ruta real de Mapbox dibujada, 4,3 km y 11 minutos.
+
+---
+
+### Correccion D234: la busqueda del punto mas cercano vuelve a comparar contra TODOS los lugares (2026-08-26)
+
+**Segunda correccion de un error del asistente en el mismo dia**, tambien encontrada por el
+usuario probando de verdad -esta vez en la tablet y en el emulador, no solo en el telefono-.
+`supabase/migrations/20260826100000_rural_snap_compares_all_places.sql`.
+
+**El reporte, con capturas de las dos.** En la tablet, un origen de "Tu ubicacion actual" a
+133,6 km del parque -el GPS real, lejos de Amalfi- daba "Ocurrio un error inesperado". En el
+emulador, el mismo origen a 800 m y a 1,4 km del parque -dentro del pueblo- cobraba **$10.800
+Tarifa de Alto del Rio** y **$10.800 Tarifa de La vibora** en dos pruebas distintas, en vez de
+los $4.000 urbanos. El mismo origen elegido de la lista -Estacion de bomberos, El callejon- daba
+bien, $4.000.
+
+**La causa, encontrada leyendo el codigo, no adivinada.** D230 (`20260826053000`) ya habia
+resuelto exactamente este problema, pero para el destino solamente: "gana el punto nombrado mas
+cercano, urbano o rural", comparando `quote_fare` contra TODOS los lugares activos con un
+`left join` a `rural_fares`. D233, al reescribir esa logica en una funcion compartida
+(`rural_fare_for_point`) para poder aplicarla al origen y al destino, la escribio con un
+`join` -no `left join`- contra `rural_fares`: buscaba el rural mas cercano dentro del radio
+**sin comparar nunca contra los urbanos**. Deshizo D230 sin que nadie se diera cuenta, porque
+todas las pruebas de D233 usaban lugares elegidos de la lista (`place_id`), que no pasan por esa
+busqueda. Solo "Tu ubicacion actual" -la unica forma real de mandar una coordenada suelta- lo
+delataba.
+
+**La correccion.** Se devuelve el `left join` de D230 dentro de `rural_fare_for_point`: se busca
+el lugar activo mas cercano entre TODOS dentro del radio, y solo si ESE lugar tiene tarifa
+rural se cobra. Que el mas cercano sea urbano -o un rural sin tarifa activa- es la respuesta
+correcta, "esto no es rural", no un fallo.
+
+**Un segundo hallazgo salio al correr las pruebas, y no es un error nuevo, es uno que ya estaba
+mal desde que se escribio.** La comprobacion 57 de `prueba_calculo_tarifa.sql` esperaba que
+apagar la tarifa del lugar sintetico mas cercano hiciera que el punto "cayera" al siguiente
+rural que le siguiera activo. Esa nunca fue la regla que D230 escribio: D230 dice "gana el punto
+nombrado mas cercano, urbano o rural", sin condicion de que tenga tarifa activa. Si el mas
+cercano se queda sin tarifa, eso ES urbano desde su perspectiva, y entonces decide D219 -la
+distancia al centro del pueblo-, no una cascada a un segundo lugar rural. El comportamiento que
+la prueba 57 esperaba era, sin que nadie lo hubiera decidido asi, un efecto secundario de la
+misma regresion de D233: buscar solo entre rurales activos hacia parecer que habia una cascada.
+Se corrigio la expectativa de la prueba -ahora espera `DESTINATION_NOT_PRICED`, coherente con
+D219-, no el codigo del servidor.
+
+**Tambien se agrego una comprobacion nueva, la 62**, que reproduce el reporte del usuario
+directamente: una coordenada en el parque mismo, sin `place_id`, con un lugar rural sintetico a
+1,5 km -dentro del radio-, y confirma que gana el parque, urbano, $4.000.
+
+**Y se cerro el hueco del mensaje generico.** `ORIGIN_NOT_PRICED`, el codigo nuevo de D233, no
+tenia traduccion en `src/features/ride/errors.ts`: por eso la tablet, con un origen a 133,6 km,
+mostraba "Ocurrio un error inesperado" en vez de "Ese punto de recogida no tiene tarifa. Elige
+uno de la lista de lugares". Se agrego junto a `DESTINATION_NOT_PRICED`, que ya lo tenia.
+
+**Las 159 comprobaciones automaticas, todas en verde**: los 62 de `prueba_calculo_tarifa.sql`
+-61 mas la nueva 62, con la 57 corregida- y las 97 de los otros cuatro archivos, sin cambios.
+
+**Verificado en vivo en el emulador, con el escenario exacto que reporto el usuario**: "Tu
+ubicacion actual" -> "El parque", 1,4 km. Antes: $10.800, Tarifa de La vibora. Ahora: $4.000,
+sin referencia.
+
+---
+
+### Lo que se hizo: paso 7, historial y recaudo del conductor (2026-08-26)
+
+**Dos de los trece requisitos originales que faltaban por cerrar.** El historial del conductor
+(Fase 16) ya existia y solo le faltaba el valor; el recaudo no existia ni como pantalla ni como
+funcion. `supabase/migrations/20260826110000_driver_history_and_earnings.sql`,
+`supabase/dev-tools/prueba_recaudo.sql` (12 comprobaciones).
+
+**El historial.** `list_driver_history` y `get_driver_job` ganaron `service_type`,
+`parcel_description` y las columnas de tarifa -`fare_amount`, `fare_is_rural`,
+`fare_reference`, y en el detalle ademas `fare_trip_amount`/`fare_cargo_amount`/`fare_is_night`-.
+Postgres no deja usar `create or replace` para anadir columnas a un `returns table` -"cannot
+change return type of existing function", 42P13-, asi que las dos se borraron y se crearon de
+nuevo, mismo patron que D233 con `quote_fare`.
+
+**El recaudo, D235.** Decidido con el usuario: **pestana propia**, no una tarjeta encima de
+"Servicios" -esa pestana mezcla rechazos y expiraciones sin valor, y el recaudo es dinero, no
+registro operativo-. `list_driver_earnings(p_period, p_from_date, p_to_date)`, nueva, consulta
+`rides.status = 'completed'` directo -no reutiliza `list_driver_history`-, y **el periodo lo
+decide el servidor con su propio reloj (D154)**: `'today'`/`'week'` se calculan con
+`fare_timezone` y medianoche local, sin que el telefono mande ningun instante. La pantalla de
+esta version ofrece "Hoy" y "Esta semana"; el servidor ya acepta `'custom'` con fechas -no
+timestamptz, por el mismo motivo de D154- para cuando haga falta un rango, que no se construyo
+por no hacer falta todavia.
+
+**Cliente:** `src/features/history/history-service.ts` extendido (`DriverJob`/`DriverJobDetail`
+con los campos nuevos); `src/app/driver/(tabs)/history.tsx` con el valor y el tipo de servicio
+en cada tarjeta; `src/app/driver/job/[id].tsx` con una tarjeta "EL VALOR" nueva, que reusa
+`fetchRequestCargo` -la misma funcion que ya usaba el resumen del pasajero- para listar la carga
+de una encomienda. Modulo nuevo `src/features/earnings/` (`types.ts`, `earnings-service.ts`,
+`use-earnings.ts`, `period-toggle.tsx`) y pantalla nueva `src/app/driver/(tabs)/earnings.tsx`,
+registrada como cuarta pestana en `src/app/driver/(tabs)/_layout.tsx`.
+
+**Un detalle de React que costo una vuelta.** El primer `useEarnings` ponia
+`setLoading(true)` con un `setTimeout` al principio del efecto que reacciona al cambio de
+periodo, y el lint lo rechazo -`react-hooks/set-state-in-effect`-. Se corrigio con el mismo
+patron que ya usa `use-fare-quote`: guardar el periodo anterior y limpiar en el render mismo en
+cuanto cambia, no dentro del efecto.
+
+**12 comprobaciones nuevas, todas en verde**, y un hallazgo real durante la escritura de las
+pruebas: la comprobacion que verificaba "cada conductor ve solo lo suyo" fallaba con
+`auth.uid()` nulo. La causa: buscaba al otro conductor en una subconsulta ejecutada DESPUES de
+`set local role authenticated`, y `drivers` tiene RLS -sin `auth.uid()` puesto todavia, la
+subconsulta veia cero filas y `sub` quedaba nulo en el reclamo JWT-. Se corrigio buscandolo
+ANTES del cambio de rol, con el privilegio con el que corre el montaje. Las otras
+comprobaciones tambien se protegieron contra los servicios reales que esta cuenta de prueba
+acumula de sesiones anteriores, filtrando por los identificadores propios de la prueba -misma
+leccion que D233/D234 con `rural_fares`-.
+
+**Verificado en vivo en el emulador**, con dos servicios completados reales insertados para la
+prueba -uno de pasajero urbano, uno de encomienda con carga-, ademas de los servicios antiguos
+de antes de D217 que ya existian en la cuenta de prueba:
+
+- El historial muestra "$4.000" en la tarjeta del pasajero y "$4.000" en la de la encomienda
+  -con "Encomienda" en vez de "1 pasajero"-, y los servicios de antes de D217 no muestran ningun
+  valor, como corresponde
+- El detalle del pasajero trae la tarjeta "EL VALOR" con el monto; el de la encomienda ademas
+  trae "Caja pequeña" debajo, la carga real de esa solicitud
+- La pestana "Recaudo", en "Hoy", suma **$8.000** -los dos servicios de hoy- y lista cada uno
+  con su ruta y su valor; en "Esta semana" suma lo mismo y ademas lista los dos servicios
+  viejos con **"Sin valor"**, sin inventarles un numero
+
+**Un problema de entorno, no de la aplicacion, aparecio a mitad de la verificacion.** El
+emulador llevaba mucho rato pausado -coincidiendo con la interrupcion de la sesion por limite de
+uso- y su canal grafico quedo trabado: `screencap` y `uiautomator dump` se colgaban
+indefinidamente, y logcat confirmo la causa real, `SurfaceFlinger: Faking VSYNC due to driver
+stall`, un atasco del driver de GPU del host que sobrevivio incluso a reiniciar el emulador.
+Se resolvio relanzandolo con renderizado por software (`-gpu swiftshader_indirect`), que evita
+el paso por el GPU del host. Queda como leccion para esta maquina: si `screencap` se cuelga
+despues de una pausa larga, no es la app, es el emulador, y la salida es relanzarlo con
+`-gpu swiftshader_indirect`.
+
+**171 comprobaciones automaticas en verde en total** (159 de antes, mas las 12 de
+`prueba_recaudo.sql`). `npm run typecheck`, `npm run lint` y `npm run format:check`, los tres
+en 0.
+
+---
+
+### Lo que se hizo: paso 8, regresion de las fases 11 a 19 (2026-08-26)
+
+**Dos partes: los once archivos de pruebas automaticas, y una prueba en vivo con la tablet
+como pasajero y el emulador como conductor, con datos reales de principio a fin, no
+sinteticos.**
+
+**Automatica, primero.** Los once `.sql` de `supabase/dev-tools/` corridos de nuevo:
+`prueba_tarifas`, `prueba_encomiendas`, `prueba_calculo_tarifa`, `prueba_solicitud_con_valor`,
+`prueba_active_request_fare`, `prueba_recaudo` -las seis del bloque especial- y
+`prueba_calificaciones`, `prueba_cancelaciones`, `prueba_detalle_historial`, `prueba_historial`,
+`prueba_notificaciones` -las cinco de las fases 16 a 19-. **Las once en 0 fallando.** Cubren de
+sobra las fases 16 a 19; de las fases 11 a 15 cubren lo que toca el bloque especial de verdad
+-`request_ride` entero, D220 y el choque con `enforce_ride_capacity`-, pero no el ciclo
+aceptar-llegar-empezar-terminar en si, que no cambio de codigo esta vez.
+
+**Un hallazgo de `prueba_recaudo.sql` que se corrigio de paso.** El `sum(fare_amount)` de dos
+comprobaciones llevaba el filtro de aislamiento -`request_id like 'ea000000%'`- solo en el
+`count`, no en el `sum`: al insertar datos de verificacion reales para el paso 7 (mas abajo en
+esta seccion), el total salio inflado. Se corrigio aplicando el mismo filtro a las dos
+agregaciones. Mismo tipo de leccion que D233/D234 con `rural_fares`, aplicada aqui al recaudo.
+
+**En vivo, con la tablet de verdad como pasajero -Jhan Roldan- y el emulador como conductor
+-conductor.prueba-, sin datos sinteticos.** Un hallazgo aparte primero: al abrir la app en la
+tablet aparecio un aviso de React, *"Can't perform a React state update on a component that
+hasn't mounted yet"*. Se investigo -no se ignoro- y no volvio a aparecer tras recargar; no se
+pudo achacar a un cambio de esta sesion ni reproducir de nuevo, asi que queda anotado y sin
+cerrar, no como regresion confirmada.
+
+Con un viaje real -Alto de la Virgen a El parque, elegidos de la lista para no depender del GPS
+real de la tablet, que esta lejos de Amalfi-, se verifico en vivo, en este orden:
+
+1. **La solicitud y la tarifa**: `$4.000`, calculado bien, con los datos reales de la tablet
+2. **La oferta**: le llego al conductor con la distancia, el mapa y el valor correctos, y con
+   los 20 segundos de la regla R2 cumpliendose de verdad -varias ofertas expiraron exactamente a
+   los 20 segundos, cronometradas contra el reloj del servidor, no supuestas-
+3. **`accept_ride_offer`**: acepto bien, devolvio un `ride_id` real
+4. **`start_driving_to_pickup`**: paso a "en camino" sin error
+5. **La regla R5** -no dejar confirmar la llegada si el conductor no esta cerca de verdad-
+   **rechazo correctamente** una confirmacion de llegada estando a 749 m del punto de recogida,
+   con el mensaje de siempre
+
+**Lo que NO se pudo cerrar en vivo, y por que.** Los ultimos tres pasos -llegar, empezar,
+terminar- necesitaban que la ubicacion en vivo del conductor de prueba llegara de verdad a
+`driver_locations` desde cerca del punto de recogida. En este emulador, tras el reinicio con
+renderizado por software del paso 7, ni `emu geo fix` ni la app "Fake GPS" -que si sirvio para
+la ubicacion inicial- lograron que la app empujara una ubicacion nueva a tiempo: la distancia
+medida se quedo clavada en 749 m durante varios intentos, incluso tras mover el marcador.
+**Es un problema de este entorno de prueba, no del codigo**: el ciclo completo
+aceptar-llegar-empezar-terminar es exactamente el mismo que las fases 12 a 15 ya tenian antes
+del bloque especial, nadie lo toco esta vez, y **si esta cubierto, con distancias sinteticas
+controladas, por `prueba_solicitud_con_valor.sql`** y por las pruebas de las fases 12 a 15 que
+quedaron comiteadas en su momento.
+
+**Tambien goteo, sin buscarlo, una confirmacion util:** el error generico de la tablet de la
+correccion D234 -"Ocurrio un error inesperado" para un origen sin tarifa- se volvio a ver, esta
+vez ya corregido: el mensaje fue "Ese punto de recogida no tiene tarifa. Elige uno de la lista
+de lugares", en la tablet real, con el GPS real de la tablet -a 133 km de Amalfi- como origen.
+
+**Veredicto: sin regresion.** Las once pruebas automaticas en verde, y en vivo se confirmo la
+solicitud, la tarifa, la oferta con sus tiempos, la aceptacion y el rechazo correcto por
+distancia. Lo unico que falto cerrar en vivo -el tramo final del ciclo- es una limitacion de
+este dispositivo de prueba en este momento, no un cambio de comportamiento, y esta cubierto por
+otras pruebas.
 
 ---
 
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 18 completadas y aprobadas (Fase 18 comiteada por el usuario el
-  2026-08-21), **mas D161 y el cambio del mapa a Mapbox**. **Fase 19 probada de punta a punta
-  el 2026-08-25** (seccion 15.20), esperando tu aprobacion
-- **Paso actual:** La Fase 19 esperando aprobacion y commit. El arbol de trabajo NO esta
-  limpio: migracion de notificaciones ya aplicada al servidor, y sin comitear
-  `app.config.ts`, `.gitignore`, `package.json`/`package-lock.json`, `src/app/_layout.tsx`,
-  `src/types/database.ts`, la carpeta nueva `src/features/notifications/`,
-  `supabase/dev-tools/prueba_notificaciones.sql`, la migracion
-  `20260821223728_push_notifications.sql` y **`google-services.json`, que SI va al
-  repositorio**. `upload-debug.jks` es una copia temporal que se puede borrar
+- **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161 y el cambio del
+  mapa a Mapbox**. **Lo siguiente NO es la Fase 20**, sino el bloque especial de tarifas,
+  encomiendas y carga (seccion 15.21), **que ya esta en curso**
+- **Paso actual:** Bloque especial, paso 6: las pantallas del pasajero. **Toda la parte de
+  servidor esta terminada y verificada.** **El arbol de trabajo NO esta limpio**: hay doce
+  archivos sin comitear, listados en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)
-- **Ultimo paso completado:** La Fase 17 entera, con su checklist de validacion. Antes, la
-  Fase 16
+- **Ultimo paso completado:** La Fase 19 entera, probada en los dos aparatos. Antes, la
+  Fase 18
 - **Funcionalidades terminadas:** Sistema de diseno (12 componentes), navegacion por roles
   con guardias, base de datos completa con sus politicas y funciones, autenticacion completa
   con registro, login, logout, sesion persistente, recuperacion de contrasena y estados de
@@ -3389,7 +4301,17 @@ quedo como estaba, a proposito.
   H5 `profiles_protect_columns` no exime al rol privilegiado. H6 la API de Auth rechaza los
   correos `@motomoto.test`. H9 `adjustResize` dejo de encoger la ventana con el modo de
   borde a borde, corregido en `BottomSheet` y documentado en `Screen`
-- **Hallazgos abiertos:** H10 el indice unico de `places` normaliza mayusculas y espacios de
+- **Hallazgos abiertos:** **H21 NUEVO, del 2026-08-25, y es una pregunta para la empresa mas
+  que un fallo.** `accept_ride_offer` hace `is_available = (is_available and v_free > 0)`, o
+  sea que **un conductor que llena el motorraton queda marcado como no disponible**, y
+  `find_available_drivers` filtra por esa columna antes de contar asientos. Resultado: **a un
+  motorraton lleno de pasajeros nunca se le ofreceria una encomienda**, aunque D220 diga que la
+  carga va en la parrilla y no quita puesto. La aritmetica de asientos si funciona — esta
+  medido en la comprobacion 29 de `prueba_solicitud_con_valor.sql` —; lo que corta es la
+  columna. **No se toco a proposito**: cambiar la disponibilidad afecta a los caminos vivos de
+  las fases 13 y 14, y ademas hay que preguntarle a la empresa si un motorraton con tres
+  personas debe poder llevar ademas un bulto. La comprobacion 30 deja medido el comportamiento
+  de hoy. H10 el indice unico de `places` normaliza mayusculas y espacios de
   los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
   lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
   **H15 DECIDIDO, se cierra en la Fase 22.** `shares_ride_with` no filtra por estado, asi que
