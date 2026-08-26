@@ -48,13 +48,19 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   Next.js del panel en `admin/`, con su acceso administrativo, y **existe por fin un
   administrador de verdad** —no habia ninguno, comprobado contra el servidor—. Detalle en la
   seccion 15.22, con los once pasos acordados
-- **Trabajo siguiente:** la Fase 20, paso 2: servidor —auditoria, reportes y lo que falte de RLS
-  para el panel—. **El paso 1 esta cerrado del todo**, con sus dos pruebas de sesion real hechas
-  por el usuario: entrar como administrador y ser rechazado como pasajero
-- **Ultimo commit:** `611e0e8`, "Fase de mejoras terminada", que **ya incluye todo el bloque
-  especial**. Comprobado con `git status` el 2026-08-26: hasta empezar la Fase 20 el arbol
-  estaba limpio. La nota anterior de esta linea decia que quedaban doce archivos sin comitear y
-  **era falsa**: estaba fechada el 25 y el usuario comiteo despues. **SIN COMITEAR ahora: la
+- **El paso 2 tambien esta hecho y verificado:** la auditoria administrativa deja de ser una
+  tabla vacia y el bloqueo de cuentas pasa por una funcion que registra quien lo hizo. **Un
+  error del asistente en ese paso abrio un agujero por el que un pasajero podia hacerse
+  administrador, y lo cazo la prueba de romper**, no la revision del codigo. Corregido y con
+  280 comprobaciones automaticas en verde
+- **Trabajo siguiente:** la Fase 20, paso 3: el tablero con los servicios en curso
+- **Ultimo commit:** `475214b`, "Fase 20 paso 1: proyecto del panel y acceso administrativo".
+  Antes, `611e0e8` cerro todo el bloque especial. **SIN COMITEAR: lo del paso 2** —las dos
+  migraciones `20260826170000` y `20260826180000`, `supabase/dev-tools/prueba_auditoria.sql`,
+  las dos correcciones de `prueba_notificaciones.sql`, los tipos regenerados y la actualizacion
+  de este archivo—. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
+  2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
+  estaba fechada el 25 y el usuario comiteo despues. Lo que quedo comiteado en `475214b`: la
   carpeta `admin/` entera, `supabase/dev-tools/seed_admin.sql`, el aislamiento del panel en
   `tsconfig.json`, `eslint.config.js`, `.prettierignore` y `.gitignore`, y la actualizacion de
   este archivo**
@@ -605,6 +611,8 @@ aplicacion sigue sin tocar dinero.
 | D236 | **El panel vive en el mismo repositorio, en `admin/`** | Decidido con el usuario el 2026-08-26. Un solo historial de commits para las dos mitades del producto, que es lo que tiene sentido con un desarrollador solo: un cambio que toca el servidor y el panel a la vez queda en un commit y no en dos repositorios que hay que mantener sincronizados. El precio es que la configuracion del raiz veia la carpeta nueva, y hubo que aislarla en `tsconfig.json`, `eslint.config.js` y `.prettierignore`, igual que se hizo con `example/` en D42 |
 | D237 | **Tailwind para los estilos del panel** | Decidido con el usuario el 2026-08-26, tras pedir recomendacion. El panel son unas diez pantallas de tablas, formularios y filtros; con CSS a mano se acaba reescribiendo la misma tabla en cada pantalla y descuadrandose entre ellas. **La paleta no se reinventa**: `admin/src/app/globals.css` declara los mismos nombres semanticos y los mismos valores crudos que `src/theme/colors.ts` (D47), asi que el naranja de marca sigue definido en un solo sitio conceptual. **El panel no lleva tema oscuro**, a diferencia de la aplicacion movil: se usa a plena luz en una oficina y dos temas duplican el trabajo de cada pantalla |
 | D238 | **La guardia del panel vive en un solo archivo y no autoriza, solo dibuja** | `admin/src/proxy.ts`. Mismo criterio que D70 —una pantalla nueva queda protegida sin acordarse— y que D72 —la autorizacion de verdad son las politicas RLS de la Fase 5, que ya exigen `is_admin()`—. Comprueba el rol **leyendolo del servidor con `getUser()`, no de la cookie con `getSession()`**, porque la segunda se cree lo que el navegador diga. Verificado mandando una cookie falsificada: responde igual que sin sesion. Y a quien tiene sesion valida pero no es administrador **se le cierra la sesion** antes de devolverlo al acceso, para que no quede atrapado con una sesion que no sirve y sin forma de entrar con otra cuenta |
+| D240 | **Las acciones administrativas van por funciones que auditan en la misma transaccion** | Decidido con el usuario el 2026-08-26, eligiendo entre esto, la escritura directa por RLS y un modelo mixto. El motivo de fondo es que la alternativa barata no era mas barata: con escritura directa, la auditoria hay que acordarse de escribirla desde el panel, y quien llame a la API a mano —cosa que puede hacer cualquiera con una sesion de administrador— no se acuerda nunca. Atado a la transaccion, si la auditoria falla el cambio tampoco pasa. **Es coherente con D83**, que ya decidio que los clientes solo leen, y el panel es un cliente |
+| D241 | **La marca `motomoto.admin_action` no autoriza: solo dice por donde vino la accion** | Sale de un error del asistente del mismo dia, cazado por la comprobacion 17 de `prueba_auditoria.sql`. La primera version dejo la marca como unica condicion del disparador, y entonces cualquiera que la pusiera podia cambiar rol y estado: **un pasajero podia hacerse administrador**. El disparador exige ahora la marca **y** `is_admin()`. La leccion es mas amplia que la correccion: al apretar una tuerca se aflojo otra, porque la proteccion vieja y la nueva cubrian cosas distintas y se sustituyo una por otra en vez de sumarlas |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4215,7 +4223,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | # | Paso | Estado |
 |---|---|---|
 | 1 | Proyecto Next.js y acceso administrativo | **HECHO Y VERIFICADO** |
-| 2 | Servidor: auditoria, reportes y lo que falte de RLS para el panel | Pendiente |
+| 2 | Servidor: auditoria y bloqueo de cuentas | **HECHO Y VERIFICADO** |
 | 3 | Tablero con los servicios en curso | Pendiente |
 | 4 | Gestion de conductores: alta, edicion, bloqueo, documentos | Pendiente |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | Pendiente |
@@ -4334,16 +4342,105 @@ dos pruebas de sesion real —entrar y ser rechazado— las hizo el usuario.
 
 ---
 
+### Lo que se hizo: paso 2, la auditoria y el bloqueo de cuentas (2026-08-26)
+
+**Nueva implementacion.** `supabase/migrations/20260826170000_admin_audit_and_account_status.sql`
+y su correccion `20260826180000_fix_admin_action_flag_requires_admin.sql`, mas
+`supabase/dev-tools/prueba_auditoria.sql` (23 comprobaciones).
+
+**La auditoria del paso 2 destapo lo mismo que el paso 1 con los administradores:** una pieza
+declarada que nunca habia existido de verdad. `admin_audit_logs` esta desde la Fase 5, con sus
+dos indices y su politica de lectura, y al medirla contra el servidor tenia **cero filas**;
+ninguna migracion del proyecto escribia en ella. Lo mismo `reports`, cero filas. `notifications`
+si tenia 20, o sea que la Fase 19 esta viva.
+
+**Y detras habia un hueco peor.** `profiles_update_admin` permitia a un administrador cambiar el
+estado de cualquier cuenta con un UPDATE directo, asi que el panel **podria bloquear a alguien
+sin dejar rastro**, y la auditoria seguiria en cero. No hacia falta ni el panel: basta una
+sesion de administrador y una llamada a la API a mano.
+
+**D240, decidido con el usuario:** las acciones administrativas van por **funciones que auditan
+en la misma transaccion**. No es una convencion que haya que recordar: si la auditoria falla, el
+cambio tampoco pasa. Misma idea con la que el bloque especial garantizo la formula de la tarifa
+con restricciones en vez de con codigo.
+
+Lo que entro:
+
+- **`log_admin_action`**, el unico camino de escritura de la auditoria. Es `security definer`
+  porque la tabla **no tiene politica de INSERT para nadie, ni para el administrador**: si el
+  panel pudiera insertar filas de auditoria, tambien podria inventarlas
+- **`admin_set_account_status`**, bloquear y desbloquear. Es la accion transversal de los pasos
+  4 y 7. **Un administrador no puede bloquearse a si mismo**, porque `is_admin()` exige cuenta
+  activa y seria perder el panel sin vuelta atras desde el propio panel
+- **El disparador `protect_profile_columns` deja de eximir al administrador.** Ahora un UPDATE
+  directo del rol o del estado se revierte tambien para el, y el unico camino es la funcion
+
+**UN ERROR DEL ASISTENTE, Y LO ENCONTRO LA PRUEBA DE ROMPER, NO LA REVISION DEL CODIGO.** Al
+quitarle al disparador la exencion de `is_admin()` se puso en su lugar una marca de transaccion
+(`motomoto.admin_action`), **y la marca quedo como UNICA condicion**. Resultado: cualquiera que
+la pusiera se saltaba la proteccion entera, y no solo el estado —tambien el rol—. **Un pasajero
+podia hacerse administrador.** La version de la Fase 5 era menos estricta con los
+administradores pero mas segura con todo el mundo: **el cambio empeoro la seguridad en vez de
+mejorarla**.
+
+Lo cazo la **comprobacion 17**, escrita a proposito como "el intento mas fino": ponerse la marca
+a mano siendo pasajero. Esperaba `active` y obtuvo `blocked`. La correccion es una sola —el
+disparador exige **las dos cosas**, la marca Y `is_admin()`— y se le anadio la **comprobacion 23**,
+que prueba la mitad peor del mismo agujero: con el estado se queda fuera alguien, con el rol se
+queda dentro del panel cualquiera.
+
+**La leccion, y vale mas que la correccion:** al apretar una tuerca se puede aflojar otra. La
+proteccion vieja y la nueva cubrian cosas distintas, y sustituir una por otra dejo un hueco que
+ninguna de las dos tenia por separado. **La marca no es una llave: es la senal de que la accion
+viene por el camino auditado. La autorizacion la sigue dando `is_admin()`.**
+
+**23 comprobaciones, todas en verde.** Once prueban que funciona; doce prueban que **no se puede
+rodear**: un pasajero llamando a las funciones, un administrador bloqueado, un UPDATE directo,
+un INSERT inventado en la auditoria, un DELETE de lo ya registrado y los dos intentos de la
+marca. La 21 y la 22 van en pareja a proposito: sin la 21 en verde —un segundo administrador
+activo SI puede— la 22 podria estar en verde porque la funcion no funciona en absoluto.
+
+**Regresion de los doce archivos: 280 comprobaciones, 0 fallando.** Se corrio entera porque el
+disparador que se toco es de la Fase 5 y lo dispara cualquier actualizacion de perfil de la
+aplicacion movil.
+
+**`prueba_notificaciones.sql` salio en rojo, y NO era regresion de este paso.** Se diagnostico
+en vez de suponerlo: mi cambio solo toca `protect_profile_columns`, por donde las notificaciones
+no pasan. Eran **dos premisas que el mundo real habia invalidado**, las dos por las pruebas en
+vivo de la Fase 19 y del bloque especial:
+
+- La comprobacion 4 contaba **todas** las notificaciones `new_offer` del conductor, sin filtrar
+  por la oferta de la prueba. Habia 17 reales acumuladas del 25 y el 26, asi que salia 2 donde
+  debia salir 1. Se filtro por `data->>'offerId'`, que es la clave que la funcion guarda de
+  verdad —comprobado leyendo una fila real, no suponiendo el nombre—
+- La comprobacion 5 daba por hecho que **el segundo conductor no tenia `push_token`**. Dejo de
+  ser cierto: los dos conductores de prueba ya lo tienen, porque se usaron en aparatos reales.
+  Ahora la prueba **se lo quita a si misma** dentro de la transaccion que se deshace. Una premisa
+  heredada del mundo real no es una premisa
+
+Es la misma leccion que el `sum` de `prueba_recaudo.sql` en el paso 8 del bloque especial, y ya
+van tres veces: **una prueba que no controla sus datos se pone roja sin que nada este roto.**
+
+**Tipos regenerados** con `admin_set_account_status` y `log_admin_action` dentro.
+`npm run typecheck`, `npm run lint` y `npm run format:check` de la aplicacion movil, los tres
+en 0.
+
+**Lo que NO entro en este paso, y por que.** La bandeja de reportes (D204) necesita pantalla y va
+en el paso 10; la tabla ya existe y no le falta nada del servidor. Las demas acciones
+administrativas —aprobar un conductor, cambiar una tarifa, asignar un vehiculo— se construyen en
+su paso y **ya tienen la base**: una llamada a `log_admin_action` dentro de su propia funcion.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20, paso 2 de once: el servidor —auditoria, reportes y lo que falte de
-  RLS para el panel—. El paso 1, el proyecto Next.js y el acceso administrativo, esta **hecho,
-  verificado y cerrado** (seccion 15.22), pruebas de sesion real incluidas.
-  **El arbol de trabajo NO esta limpio**: falta comitear la carpeta `admin/` entera, la semilla
-  del administrador, el aislamiento del panel en la configuracion del raiz y este archivo
+- **Paso actual:** Fase 20, paso 3 de once: el tablero con los servicios en curso. Los pasos 1
+  —proyecto Next.js y acceso administrativo— y 2 —auditoria y bloqueo de cuentas— estan
+  **hechos, verificados y cerrados** (seccion 15.22). **El arbol de trabajo NO esta limpio**:
+  falta comitear lo del paso 2, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

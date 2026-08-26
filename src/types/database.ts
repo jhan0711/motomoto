@@ -1080,6 +1080,14 @@ export type Database = {
     };
     Functions: {
       accept_ride_offer: { Args: { p_offer_id: string }; Returns: string };
+      admin_set_account_status: {
+        Args: {
+          p_reason?: string;
+          p_status: Database['public']['Enums']['user_status'];
+          p_user_id: string;
+        };
+        Returns: undefined;
+      };
       assert_ride_driver: {
         Args: {
           p_allowed: Database['public']['Enums']['ride_status'][];
@@ -1406,6 +1414,16 @@ export type Database = {
           lng: number;
           name: string;
         }[];
+      };
+      log_admin_action: {
+        Args: {
+          p_action: string;
+          p_after?: Json;
+          p_before?: Json;
+          p_entity_id?: string;
+          p_entity_type: string;
+        };
+        Returns: number;
       };
       offer_pending_requests: { Args: never; Returns: number };
       offer_request_to_drivers: {

@@ -115,6 +115,7 @@ declare
   v_tipo  text;
   v_ok    boolean;
   v_cola_antes integer;
+  v_oferta uuid;
   v_cola_despues integer;
 begin
   -- ---------------------------------------------------- driver_arrived, primera vez
@@ -144,20 +145,37 @@ begin
     '1', v_n::text, v_n = 1);
 
   -- ------------------------------------------------------------- nueva oferta
+  --
+  -- LA PRUEBA SE QUITA EL TOKEN A SI MISMA EN VEZ DE DAR POR HECHO QUE NO LO
+  -- TIENE. Cuando se escribio, el segundo conductor no tenia `push_token` y la
+  -- comprobacion 5 se apoyaba en eso. **Dejo de ser cierto**: el 2026-08-26 los
+  -- dos conductores de prueba ya tenian token, porque se usaron en aparatos
+  -- reales durante la Fase 19 y el bloque especial, y la 5 empezo a fallar sin
+  -- que nada estuviera roto. Una premisa heredada del mundo real no es una
+  -- premisa: se fija aqui, dentro de la transaccion que se deshace.
+  update public.profiles set push_token = null where id = c_cond2;
+
   select count(*) into v_cola_antes from net.http_request_queue;
 
   insert into public.ride_offers (request_id, driver_id, expires_at)
-  values (c_ra2, c_cond2, now() + interval '20 seconds');
+  values (c_ra2, c_cond2, now() + interval '20 seconds')
+  returning id into v_oferta;
 
+  -- SE FILTRA POR LA SOLICITUD DE ESTA PRUEBA, no solo por conductor y tipo.
+  -- Sin ese filtro la comprobacion cuenta tambien las notificaciones reales que
+  -- la cuenta de prueba acumula de sesiones anteriores -habia 17 el 2026-08-26,
+  -- de la prueba en vivo del bloque especial- y sale 2 donde tiene que salir 1.
+  -- Es la misma leccion que ya se aplico al `sum` de prueba_recaudo.sql: una
+  -- prueba que no se aisla se pone roja por datos que no son suyos.
   select count(*), max(type) into v_n, v_tipo
-  from public.notifications where user_id = c_cond2 and type = 'new_offer';
+  from public.notifications
+  where user_id = c_cond2 and type = 'new_offer' and data->>'offerId' = v_oferta::text;
   insert into resultados values (4, 'La oferta nueva crea UNA notificacion para el conductor',
     '1 / new_offer', v_n || ' / ' || coalesce(v_tipo, '(ninguna)'),
     v_n = 1 and v_tipo = 'new_offer');
 
-  -- El conductor 2 no tiene push_token en los datos de prueba (a diferencia de
-  -- Ana): sin token, la fila de notifications se guarda igual pero NO se
-  -- encola ninguna peticion.
+  -- Al conductor 2 se le quito el token unas lineas mas arriba: sin token, la
+  -- fila de notifications se guarda igual pero NO se encola ninguna peticion.
   select count(*) into v_cola_despues from net.http_request_queue;
   insert into resultados values (5, 'Sin token, se guarda el aviso pero no se encola nada',
     'v_cola_despues = v_cola_antes', v_cola_antes || ' -> ' || v_cola_despues,
