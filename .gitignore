@@ -41,6 +41,13 @@ yarn-error.*
 google-services.json
 GoogleService-Info.plist
 
+# Panel administrativo (Fase 20). Salidas de compilacion de Next.js.
+# Su node_modules y sus .env ya quedan cubiertos por las reglas de mas arriba,
+# que no llevan barra inicial y por eso valen en cualquier nivel.
+admin/.next/
+admin/out/
+admin/next-env.d.ts
+
 # typescript
 *.tsbuildinfo
 

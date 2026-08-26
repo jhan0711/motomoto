@@ -5,6 +5,8 @@ const expoConfig = require('eslint-config-expo/flat');
 module.exports = defineConfig([
   expoConfig,
   {
-    ignores: ['dist/*', 'example/**', 'node_modules/**'],
+    // El panel administrativo (Fase 20) es un proyecto Next.js aparte, con su propia
+    // configuracion de ESLint. Compartir esta, que es la de Expo, daria falsos avisos.
+    ignores: ['dist/*', 'example/**', 'node_modules/**', 'admin/**'],
   },
 ]);

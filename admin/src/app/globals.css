@@ -1,0 +1,70 @@
+@import 'tailwindcss';
+
+/*
+ * Tokens de color del panel administrativo.
+ *
+ * Son los MISMOS nombres semanticos que usa la aplicacion movil en
+ * `src/theme/colors.ts` (D47), con los mismos valores crudos, para que el panel
+ * y la aplicacion se lean como una sola familia. Si un tono cambia alli, cambia
+ * aqui: son dos proyectos distintos y no comparten codigo.
+ *
+ * El panel no implementa tema oscuro. La aplicacion movil si lo tiene, pero un
+ * panel de escritorio que se usa a plena luz en una oficina no lo necesita, y
+ * mantener dos temas duplicaria el trabajo de cada pantalla. Por eso aqui solo
+ * viven los valores del tema claro.
+ */
+
+@theme {
+  /* Marca: naranja ambar (D45). */
+  --color-brand: #f27127;
+  --color-brand-strong: #b4470f;
+  --color-brand-subtle: #fef3ec;
+  --color-on-brand: #ffffff;
+
+  /* Superficies. */
+  --color-background: #fafafa;
+  --color-surface: #ffffff;
+  --color-surface-subtle: #fafafa;
+  --color-surface-pressed: #f4f4f5;
+
+  /* Bordes. */
+  --color-border: #e4e4e7;
+  --color-border-strong: #a1a1aa;
+
+  /* Texto. */
+  --color-text-primary: #18181b;
+  --color-text-secondary: #52525b;
+  --color-text-tertiary: #a1a1aa;
+  --color-text-inverse: #ffffff;
+
+  /* Accion primaria: casi negro, segun la direccion visual de la Fase 0. */
+  --color-action: #18181b;
+  --color-action-pressed: #3f3f46;
+  --color-action-disabled: #d4d4d8;
+  --color-on-action: #ffffff;
+
+  /* Estados. */
+  --color-success: #0e9f6e;
+  --color-success-subtle: #d7f5e9;
+  --color-on-success: #ffffff;
+
+  --color-warning: #f59e0b;
+  --color-warning-subtle: #fdf0d5;
+  --color-on-warning: #18181b;
+
+  --color-danger: #dc2626;
+  --color-danger-subtle: #fbdddd;
+  --color-on-danger: #ffffff;
+  /* Un escalon mas oscuro que `danger`: sobre el rosa palido el 500 se queda en
+     3,79:1 y el 600 sube a 5,46:1 (hallazgo H14 de la Fase 3). */
+  --color-on-danger-subtle: #b01b1b;
+
+  --color-info: #2563eb;
+  --color-info-subtle: #dbe6fd;
+  --color-on-info: #ffffff;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+}

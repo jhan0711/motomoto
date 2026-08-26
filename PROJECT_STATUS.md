@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-25
+- **Ultima actualizacion:** 2026-08-26
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -44,13 +44,20 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   VERIFICADOS**, incluidas las correcciones D233/D234 encontradas probando con datos reales.
   **Once archivos de pruebas automaticas en verde**, y una prueba en vivo con la tablet real
   como pasajero y el emulador como conductor. Detalle en la seccion 15.21
-- **Trabajo siguiente:** la Fase 20, el panel administrativo
-- **Ultimo commit:** la Fase 19 quedo comiteada por el usuario el 2026-08-25, hash sin
-  registrar aqui. **SIN COMITEAR: las doce migraciones del bloque especial, sus seis
-  scripts de pruebas, los modulos `src/features/fare/` y `src/features/earnings/` completos,
-  los cambios en las pantallas del pasajero y del conductor y en los servicios de solicitudes
-  e historial, la pestana nueva "Recaudo", los tipos regenerados, la plantilla de destinos
-  rurales y la actualizacion de este archivo**
+- **La Fase 20 esta EMPEZADA. El paso 1 de once esta hecho y verificado:** existe el proyecto
+  Next.js del panel en `admin/`, con su acceso administrativo, y **existe por fin un
+  administrador de verdad** —no habia ninguno, comprobado contra el servidor—. Detalle en la
+  seccion 15.22, con los once pasos acordados
+- **Trabajo siguiente:** la Fase 20, paso 2: servidor —auditoria, reportes y lo que falte de RLS
+  para el panel—. **El paso 1 esta cerrado del todo**, con sus dos pruebas de sesion real hechas
+  por el usuario: entrar como administrador y ser rechazado como pasajero
+- **Ultimo commit:** `611e0e8`, "Fase de mejoras terminada", que **ya incluye todo el bloque
+  especial**. Comprobado con `git status` el 2026-08-26: hasta empezar la Fase 20 el arbol
+  estaba limpio. La nota anterior de esta linea decia que quedaban doce archivos sin comitear y
+  **era falsa**: estaba fechada el 25 y el usuario comiteo despues. **SIN COMITEAR ahora: la
+  carpeta `admin/` entera, `supabase/dev-tools/seed_admin.sql`, el aislamiento del panel en
+  `tsconfig.json`, `eslint.config.js`, `.prettierignore` y `.gitignore`, y la actualizacion de
+  este archivo**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -100,7 +107,29 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - **Indicar siempre la ruta exacta** de cada archivo que se crea o modifica.
 - Mantener al final de cada respuesta el bloque **ESTADO DEL PROYECTO**.
 
-**Por donde se sigue: la Fase 20, el panel administrativo.** Las fases 0 a 19 estan terminadas,
+**Por donde se sigue: la Fase 20, paso 2 de once.** El paso 1 —el proyecto Next.js del panel y
+el acceso administrativo— **esta hecho y verificado**, y con el aparecieron dos cosas que este
+documento decia mal: que quedaban doce archivos sin comitear (era falso, `git status` sale
+limpio) y, sobre todo, que **no existia ni un solo administrador** pese a que el rol y todas sus
+politicas RLS estan desde la Fase 5. Ahora existe: `admin.prueba@motomoto-qa.co` / `Admin.2026`,
+creado por `supabase/dev-tools/seed_admin.sql`. **Los once pasos y todo lo verificado estan en la
+seccion 15.22.** Tres cosas de ese paso que conviene saber ya:
+
+- **El panel es un proyecto aparte dentro del mismo repositorio**, en `admin/` (D236), con Next
+  16, Tailwind (D237) y su propia cadena de `typecheck`, `lint` y `format:check`. **El raiz lo
+  ignora**: si se toca la configuracion del raiz, `admin` tiene que seguir excluido
+- **Se comprobo que Metro sigue construyendo la aplicacion movil** con ese `node_modules` nuevo
+  dentro: bundle de Android real, 200 y 6,59 MB, sin colisiones. **No hizo falta
+  `metro.config.js`** y por eso no se puso
+- **La guardia del panel esta en `admin/src/proxy.ts`**, no en `middleware.ts`: Next 16 deprecio
+  ese nombre. Si al arrancar aparece un error de "falta el export" con el archivo correcto, es
+  cache: borrar `admin/.next`
+
+**El paso 1 esta cerrado, con sus dos pruebas de sesion real hechas por el usuario**: entrar como
+administrador y ser rechazado usando la cuenta del pasajero. Las hace el usuario porque el
+asistente no escribe contrasenas en formularios.
+
+Lo que sigue valiendo del contexto anterior: las fases 0 a 19 estan terminadas,
 aprobadas y comiteadas, y el **bloque especial pedido por los duenos de la empresa el
 2026-08-25** -encomiendas, pasajero con carga, tarifas y recaudo, que iba antes del panel- **esta
 TERMINADO, los ocho pasos, con verificacion en vivo incluida.** Incluye las correcciones D233 -la
@@ -569,6 +598,15 @@ aplicacion sigue sin tocar dinero.
 
 | D230 | **MODIFICA A D226 Y D227: gana el punto nombrado mas cercano, no solo el rural mas cercano** | Error de interpretacion del asistente, corregido el 2026-08-26 con las coordenadas reales de la empresa. El usuario dijo "si esta mas cerca de un lugar que de el otro, se cobre el del lugar mas cerca" y D226 lo estrecho sin querer a "del destino RURAL mas cercano". Con las coordenadas reales se vio el costo: Alto del Rio queda a 1.432 m del parque y 32 de los 36 lugares urbanos caian dentro del radio de un rural. **Nunca estuvo en produccion**: se detecto midiendo antes de cargar ninguna tarifa. La regla nueva compara contra TODOS los lugares activos, no solo los que tienen precio rural; un lugar urbano nunca pierde contra si mismo, a cero metros |
 | D231 | **El radio de D230 sube a 3 km, y esta vez con dato de verdad** | Medido contra las coordenadas reales: los 24 destinos rurales se separan 314 m como minimo, 979 m mediana, 4.273 m maximo. Un punto en mitad del tramo mas largo queda a 2,2 km de un extremo, asi que 3 km lo cubre con margen sin volver a caer en el problema de D227 (un radio grande que encarece el pueblo), porque con D230 pasarse de radio ya no le pone precio rural a un lugar urbano |
+### Decisiones de la Fase 20
+
+| # | Decision | Valor |
+|---|---|---|
+| D236 | **El panel vive en el mismo repositorio, en `admin/`** | Decidido con el usuario el 2026-08-26. Un solo historial de commits para las dos mitades del producto, que es lo que tiene sentido con un desarrollador solo: un cambio que toca el servidor y el panel a la vez queda en un commit y no en dos repositorios que hay que mantener sincronizados. El precio es que la configuracion del raiz veia la carpeta nueva, y hubo que aislarla en `tsconfig.json`, `eslint.config.js` y `.prettierignore`, igual que se hizo con `example/` en D42 |
+| D237 | **Tailwind para los estilos del panel** | Decidido con el usuario el 2026-08-26, tras pedir recomendacion. El panel son unas diez pantallas de tablas, formularios y filtros; con CSS a mano se acaba reescribiendo la misma tabla en cada pantalla y descuadrandose entre ellas. **La paleta no se reinventa**: `admin/src/app/globals.css` declara los mismos nombres semanticos y los mismos valores crudos que `src/theme/colors.ts` (D47), asi que el naranja de marca sigue definido en un solo sitio conceptual. **El panel no lleva tema oscuro**, a diferencia de la aplicacion movil: se usa a plena luz en una oficina y dos temas duplican el trabajo de cada pantalla |
+| D238 | **La guardia del panel vive en un solo archivo y no autoriza, solo dibuja** | `admin/src/proxy.ts`. Mismo criterio que D70 —una pantalla nueva queda protegida sin acordarse— y que D72 —la autorizacion de verdad son las politicas RLS de la Fase 5, que ya exigen `is_admin()`—. Comprueba el rol **leyendolo del servidor con `getUser()`, no de la cookie con `getSession()`**, porque la segunda se cree lo que el navegador diga. Verificado mandando una cookie falsificada: responde igual que sin sesion. Y a quien tiene sesion valida pero no es administrador **se le cierra la sesion** antes de devolverlo al acceso, para que no quede atrapado con una sesion que no sirve y sin forma de entrar con otra cuenta |
+| D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
+
 ### Decisiones de la Fase 16
 
 | D232 | **Los dos nombres en duda se resuelven distinto, uno por uno** | Con las coordenadas exactas de la empresa, entregadas el 2026-08-26. **Manzanares SI es "Vereda Manzanares"**: la coordenada nueva cae a 288 m de la existente, que es ruido normal de GPS entre dos lecturas del mismo sitio; se le agrego la tarifa rural al lugar que ya habia, sin duplicar. **La Vibora NO es "La víbora"**: la coordenada nueva cae a 3.817 m de la existente, casi 4 km, son dos sitios distintos. Decidido por el usuario: el nombre "La víbora" pasa al sitio nuevo, y el urbano viejo se renombra a un nombre que no colisiona y se desactiva. No se borro: `places_name_unique` no tiene filtro por estado, asi que dos filas no pueden compartir nombre aunque una este apagada, y el proyecto no borra registros que puedan ser historial |
@@ -991,8 +1029,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 17 | Calificaciones | COMPLETADA Y APROBADA |
 | 18 | Cancelaciones y errores operativos | COMPLETADA Y APROBADA |
 | 19 | Notificaciones | COMPLETADA Y APROBADA |
-| — | **BLOQUE ESPECIAL: tarifas, encomiendas y carga** (seccion 15.21) | **Pendiente. Va ANTES de la Fase 20** |
-| 20 | Panel administrativo | Pendiente |
+| — | **BLOQUE ESPECIAL: tarifas, encomiendas y carga** (seccion 15.21) | **TERMINADO Y COMITEADO** |
+| 20 | Panel administrativo | **EN CURSO.** Paso 1 de 11 hecho y verificado (seccion 15.22) |
 | 21 | Gestion de conductores y vehiculos | Pendiente |
 | 22 | Seguridad y auditoria | Pendiente |
 | 23 | Pruebas | Pendiente |
@@ -4162,14 +4200,150 @@ otras pruebas.
 
 ---
 
+## 15.22 FASE 20: PANEL ADMINISTRATIVO (EN CURSO)
+
+**EMPEZADA EL 2026-08-26.** Es la primera fase que no construye nada dentro de la aplicacion
+movil: el panel es un proyecto Next.js aparte, y el trabajo aqui es tanto de la aplicacion web
+nueva como de no romper la que ya existe.
+
+### Los once pasos acordados con el usuario
+
+El orden sale de la seccion 5 -lo que el panel tiene que hacer- mas lo que las fases 18 y 19
+dejaron esperando a que existiera panel (D204, D215, D216) y lo que el bloque especial dejo por
+gestionar (tarifas, destinos, tipos de carga, recaudo).
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Proyecto Next.js y acceso administrativo | **HECHO Y VERIFICADO** |
+| 2 | Servidor: auditoria, reportes y lo que falte de RLS para el panel | Pendiente |
+| 3 | Tablero con los servicios en curso | Pendiente |
+| 4 | Gestion de conductores: alta, edicion, bloqueo, documentos | Pendiente |
+| 5 | Gestion de vehiculos y asignacion conductor-vehiculo | Pendiente |
+| 6 | Lugares, tarifas urbanas y rurales, tipos de carga (con D229) | Pendiente |
+| 7 | Listado de pasajeros con bloqueo | Pendiente |
+| 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
+| 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
+| 10 | Reportes y calificaciones (D204) | Pendiente |
+| 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
+
+### Lo que se hizo: paso 1, el proyecto y el acceso (2026-08-26)
+
+**Nueva implementacion.** Carpeta `admin/`, dentro del mismo repositorio que la aplicacion movil
+(D236). Next.js 16.3.3, React 19.2.8, Tailwind 4, TypeScript.
+
+**Antes de escribir una linea se comprobo el estado real contra el servidor y contra git**, y
+las dos comprobaciones corrigieron lo que decia este documento:
+
+- **La cabecera decia "SIN COMITEAR" doce archivos del bloque especial.** Es falso desde que el
+  usuario comiteo: `git status` sale limpio y el ultimo commit es `611e0e8`, "Fase de mejoras
+  terminada". La nota estaba fechada el 25 y el trabajo siguio el 26
+- **NO EXISTIA NINGUN ADMINISTRADOR.** El rol `admin`, `is_admin()` y todas sus politicas RLS
+  existen desde la Fase 5, pero la tabla tenia cuatro pasajeros, dos conductores y **cero
+  administradores**. O sea que ninguna de esas politicas se habia ejecutado nunca de verdad
+
+**El primer administrador, y por que costo mas que un UPDATE.**
+`supabase/dev-tools/seed_admin.sql`, con la maniobra que ya avisaba la regla 1 de las aprendidas
+en la Fase 6: `profiles_protect_columns` revierte cualquier cambio de rol incluso ejecutando
+como `postgres`, porque `is_admin()` depende de `auth.uid()` y en un script no hay sesion. El
+disparador es BEFORE UPDATE y no cubre INSERT, asi que **hay que sustituir la fila**, no
+actualizarla. Es el mismo patron de `seed_test_driver.sql`, con la leccion de E28 incluida: las
+cuatro columnas de token a cadena vacia y no a nulo, o la cuenta no puede iniciar sesion.
+Cuenta: `admin.prueba@motomoto-qa.co` / `Admin.2026`, "Administrador de prueba".
+
+**La guardia de acceso (D238).** Vive en un solo archivo, `admin/src/proxy.ts`, y no en cada
+pantalla: mismo criterio que D70 en la aplicacion movil, para que una pantalla nueva quede
+protegida sin que haya que acordarse. Y mismo criterio que D72: **decide que se dibuja, no que
+se permite.** La autorizacion de verdad siguen siendo las politicas RLS de la Fase 5, que ya
+exigen `is_admin()`; si alguien se saltara esta guardia, la base de datos seguiria sin
+devolverle una sola fila.
+
+Dos detalles que no son adorno:
+
+- **`getUser()` y no `getSession()`.** El segundo se cree lo que diga la cookie, que el
+  navegador puede haber tocado; el primero pregunta al servidor de Supabase. Se comprobo
+  mandando una cookie falsificada a mano: responde 307 igual que sin sesion
+- **A quien tiene sesion pero no es administrador se le cierra la sesion antes de devolverlo al
+  acceso.** Sin eso quedaria dando vueltas: con sesion abierta, sin permiso y sin forma de
+  entrar con otra cuenta
+
+**El mensaje de error del acceso es el mismo para una contrasena equivocada y para una cuenta
+que existe pero no es administradora** (D239). Decir "esa cuenta no tiene permiso" confirmaria
+que el correo existe, que es el mismo criterio de D74 en la recuperacion de contrasena.
+
+**Lo que se hizo para no romper la aplicacion movil.** El panel vive dentro de la misma carpeta,
+asi que la configuracion del raiz lo veia. Se aislo igual que `example/` en D42: `admin` excluido
+en `tsconfig.json`, en `eslint.config.js` y en `.prettierignore`, y las salidas de Next anadidas
+al `.gitignore`. **Se comprobo que hacia falta**: antes del cambio, `npm run format:check` del
+raiz fallaba con doce archivos del panel.
+
+**Y se comprobo que Metro sigue construyendo la aplicacion movil**, que era el riesgo de verdad
+de meter un `node_modules` de 364 paquetes dentro del proyecto. No se dio por bueno que
+arrancara: **se pidio el bundle entero de Android y se midio**. HTTP 200, 6.590.930 bytes, cero
+colisiones de modulos. **Por eso NO se anadio `metro.config.js`**: no hace falta, y la regla 4
+dice que no se deja puesto un cambio hecho sobre una hipotesis que no se confirmo.
+
+**Estilos: Tailwind (D237).** Se decidio con el usuario. El panel es casi todo tablas,
+formularios y filtros, y con CSS a mano las diez pantallas acaban descuadradas entre si. **La
+paleta no se reinventa**: `admin/src/app/globals.css` declara los mismos nombres semanticos y los
+mismos valores crudos de `src/theme/colors.ts` (D47), incluida la nota del hallazgo H14 sobre el
+rojo. **El panel no implementa tema oscuro**, a diferencia de la aplicacion: se usa a plena luz
+en una oficina, y dos temas duplicarian el trabajo de cada pantalla.
+
+**Tres tropiezos, los tres diagnosticados en vez de parcheados:**
+
+1. **El lint rechazo el formulario de acceso** con `react-hooks/set-state-in-effect`, el mismo
+   error que salio en `useEarnings` en el paso 7 del bloque especial. **No se silencio la regla**
+   (regla 6 de las aprendidas): el mensaje de "sin permiso" que manda el proxy por la URL se
+   **deriva en el render**, y en cuanto el usuario intenta entrar manda el resultado de su
+   intento
+2. **Next elegia mal la raiz del proyecto.** Lo avisaba al arrancar: con dos `package-lock.json`
+   -el del movil y el del panel- escogia la carpeta de arriba, y habria pasado a vigilar el
+   proyecto movil entero. Corregido fijando `turbopack.root`
+3. **Next 16 deprecio `middleware.ts` en favor de `proxy.ts`.** Salio en el log al arrancar. Se
+   migro el archivo y la funcion exportada. **Despues del cambio el servidor seguia dando un
+   error de "falta el export" aunque el archivo lo tenia**, y la causa no era el codigo sino la
+   cache de Turbopack: borrando `.next` el arranque salio limpio. Se comprobo leyendo el log
+   completo, no suponiendo
+
+**Verificado, y separado por quien lo verifico:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El raiz no se rompe | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| La aplicacion movil sigue compilando | Bundle Android real pedido a Metro | 200, 6,59 MB, sin colisiones |
+| Calidad del panel | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| El administrador existe | Consulta al servidor tras la semilla | rol `admin`, activo, tokens no nulos |
+| Sin sesion no se entra | `GET /` | 307 a `/acceso` |
+| Una cookie falsificada tampoco | `GET /` con cookie inventada | 307 a `/acceso` |
+| **Entrar de verdad como administrador** | **El usuario, en su navegador** | **Funciono**, y el log del servidor lo confirma con `GET / 200` |
+| **Que el acceso RECHACE a un pasajero** | **El usuario, en su navegador** | **Rechazado**, con el mensaje comun de D239 |
+
+**La prueba de romper del paso 1 esta hecha, y se comprobo que valia.** El usuario entro con la
+cuenta del pasajero de prueba y el panel la rechazo. Antes de darlo por bueno **se pregunto al
+servidor por el estado de esa cuenta**, porque un rechazo puede salir en verde por el motivo
+equivocado: si la cuenta estuviera bloqueada, sin confirmar o sin contrasena, el panel la habria
+rechazado igual y no se habria probado nada. Esta **activa, con el correo confirmado y con
+contrasena**, a nombre de Ana Gomez y con rol `passenger`. Es decir que **lo unico que la separa
+del administrador es el rol**, que es exactamente lo que la guardia tenia que mirar.
+
+Es la misma leccion que la pareja de comprobaciones 12 y 13 de `prueba_encomiendas.sql`, donde
+una prueba estuvo en verde porque el control que debia medirse ni siquiera llegaba a ejecutarse.
+
+**El paso 1 queda cerrado.** El asistente no introduce contrasenas en formularios, asi que las
+dos pruebas de sesion real —entrar y ser rechazado— las hizo el usuario.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
-- **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161 y el cambio del
-  mapa a Mapbox**. **Lo siguiente NO es la Fase 20**, sino el bloque especial de tarifas,
-  encomiendas y carga (seccion 15.21), **que ya esta en curso**
-- **Paso actual:** Bloque especial, paso 6: las pantallas del pasajero. **Toda la parte de
-  servidor esta terminada y verificada.** **El arbol de trabajo NO esta limpio**: hay doce
-  archivos sin comitear, listados en la cabecera
+- **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
+  mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
+  TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
+- **Paso actual:** Fase 20, paso 2 de once: el servidor —auditoria, reportes y lo que falte de
+  RLS para el panel—. El paso 1, el proyecto Next.js y el acceso administrativo, esta **hecho,
+  verificado y cerrado** (seccion 15.22), pruebas de sesion real incluidas.
+  **El arbol de trabajo NO esta limpio**: falta comitear la carpeta `admin/` entera, la semilla
+  del administrador, el aislamiento del panel en la configuracion del raiz y este archivo
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

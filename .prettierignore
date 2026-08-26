@@ -4,6 +4,9 @@ node_modules/
 # Codigo de referencia de la plantilla, no forma parte del proyecto
 example/
 
+# Panel administrativo (Fase 20). Proyecto Next.js aparte, con su propio Prettier.
+admin/
+
 # Salidas de compilacion
 dist/
 web-build/
