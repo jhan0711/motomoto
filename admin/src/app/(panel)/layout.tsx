@@ -1,15 +1,18 @@
 import { createClient } from '@/lib/supabase/server';
-import { Dashboard } from '@/features/dashboard/dashboard';
 import { LogoutButton } from './logout-button';
+import { PanelNav } from './panel-nav';
 
 /**
- * El tablero: la pantalla de inicio del panel.
+ * Marco comun de las pantallas del panel: cabecera, navegacion y quien entro.
+ *
+ * Vive en un grupo de rutas `(panel)` -entre parentesis, asi que no aparece en
+ * la URL- para que la pantalla de acceso quede fuera: ahi no hay sesion todavia
+ * y no tendria sentido dibujar una navegacion ni un boton de salir.
  *
  * La cabecera se dibuja en el servidor, que es donde se sabe quien entro sin
- * preguntarselo al navegador. El tablero en si es de cliente, porque se
- * refresca solo.
+ * preguntarselo al navegador.
  */
-export default async function InicioPage() {
+export default async function PanelLayout({ children }: LayoutProps<'/'>) {
   const supabase = await createClient();
 
   const {
@@ -23,8 +26,8 @@ export default async function InicioPage() {
     .single();
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-6 py-8">
-      <div className="flex items-start justify-between gap-4">
+    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+      <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold text-text-primary">Panel administrativo</h1>
           <p className="mt-1 text-sm text-text-secondary">
@@ -32,11 +35,11 @@ export default async function InicioPage() {
           </p>
         </div>
         <LogoutButton />
-      </div>
+      </header>
 
-      <div className="mt-8">
-        <Dashboard />
-      </div>
-    </main>
+      <PanelNav />
+
+      <main className="mt-6">{children}</main>
+    </div>
   );
 }

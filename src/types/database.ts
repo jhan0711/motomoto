@@ -1111,12 +1111,43 @@ export type Database = {
           waiting_seconds: number;
         }[];
       };
+      admin_list_drivers: {
+        Args: never;
+        Returns: {
+          account_status: Database['public']['Enums']['user_status'];
+          approval_status: Database['public']['Enums']['driver_approval_status'];
+          approved_at: string;
+          created_at: string;
+          driver_id: string;
+          full_name: string;
+          has_active_ride: boolean;
+          is_available: boolean;
+          phone: string;
+          plate: string;
+          rating_average: number;
+          rating_count: number;
+          unit_number: number;
+          vehicle_id: string;
+        }[];
+      };
       admin_set_account_status: {
         Args: {
           p_reason?: string;
           p_status: Database['public']['Enums']['user_status'];
           p_user_id: string;
         };
+        Returns: undefined;
+      };
+      admin_set_driver_approval: {
+        Args: {
+          p_driver_id: string;
+          p_reason?: string;
+          p_status: Database['public']['Enums']['driver_approval_status'];
+        };
+        Returns: undefined;
+      };
+      admin_update_driver_contact: {
+        Args: { p_driver_id: string; p_full_name: string; p_phone: string };
         Returns: undefined;
       };
       assert_ride_driver: {

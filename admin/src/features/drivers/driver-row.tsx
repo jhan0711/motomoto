@@ -1,0 +1,173 @@
+'use client';
+
+import { useState } from 'react';
+import { Ban, Check, CircleSlash, Pencil, Star, Truck, UserCheck } from 'lucide-react';
+import type { Driver } from './types';
+import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
+import { cambiarAprobacion, cambiarEstadoCuenta, editarContacto } from './driver-actions';
+import { EditContactDialog } from './edit-contact-dialog';
+
+interface Props {
+  conductor: Driver;
+  onCambio: () => void;
+}
+
+export function DriverRow({ conductor, onCambio }: Props) {
+  const [trabajando, setTrabajando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editando, setEditando] = useState(false);
+
+  const aprobado = conductor.approval_status === 'approved';
+  const bloqueada = conductor.account_status === 'blocked';
+
+  async function ejecutar(accion: () => Promise<{ ok: boolean; mensaje?: string }>) {
+    setTrabajando(true);
+    setError(null);
+    const r = await accion();
+    setTrabajando(false);
+
+    if (!r.ok) {
+      setError(r.mensaje ?? 'No pudimos completar la operación.');
+      return;
+    }
+    onCambio();
+  }
+
+  return (
+    <article className="rounded-xl border border-border bg-surface p-4">
+      <header className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="font-medium text-text-primary">{conductor.full_name}</h3>
+            <span
+              className={`rounded-md px-2 py-0.5 text-xs ${ESTILO_APROBACION[conductor.approval_status]}`}
+            >
+              {ETIQUETA_APROBACION[conductor.approval_status]}
+            </span>
+            {bloqueada && (
+              <span className="rounded-md bg-danger-subtle px-2 py-0.5 text-xs text-on-danger-subtle">
+                Cuenta bloqueada
+              </span>
+            )}
+            {/*
+             * Que vaya conduciendo no es un estado suyo, es una circunstancia
+             * de ahora mismo, y por eso se dice aparte y en otro tono: es lo
+             * que explica por que algunos botones no se pueden pulsar.
+             */}
+            {conductor.has_active_ride && (
+              <span className="rounded-md bg-info-subtle px-2 py-0.5 text-xs text-info">
+                En servicio ahora
+              </span>
+            )}
+          </div>
+
+          <p className="mt-1 text-sm text-text-secondary">{conductor.phone}</p>
+        </div>
+
+        <div className="flex flex-col items-end gap-1 text-sm">
+          <span className="flex items-center gap-1.5 text-text-primary">
+            <Truck size={15} className="text-text-tertiary" />
+            {conductor.unit_number === null
+              ? 'Sin motorratón'
+              : `Motorratón ${conductor.unit_number}`}
+          </span>
+          <span className="flex items-center gap-1.5 text-text-secondary">
+            <Star size={14} className="text-text-tertiary" />
+            {conductor.rating_count === 0
+              ? 'Sin calificaciones'
+              : `${Number(conductor.rating_average).toFixed(2)} · ${conductor.rating_count}`}
+          </span>
+        </div>
+      </header>
+
+      {error !== null && (
+        <p
+          role="alert"
+          className="mt-3 rounded-lg bg-danger-subtle px-3 py-2 text-sm text-on-danger-subtle"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
+        {!aprobado ? (
+          <button
+            type="button"
+            disabled={trabajando}
+            onClick={() =>
+              void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'approved', null))
+            }
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-action px-3 text-sm font-medium text-on-action disabled:bg-action-disabled"
+          >
+            <Check size={15} />
+            Aprobar
+          </button>
+        ) : (
+          <button
+            type="button"
+            /*
+             * Se deshabilita cuando va conduciendo, y ademas el servidor lo
+             * rechaza con DRIVER_HAS_ACTIVE_RIDE. Las dos cosas: el boton
+             * apagado explica por que no se puede, y la comprobacion del
+             * servidor es la que de verdad lo impide, porque el estado de esta
+             * pantalla puede tener diez segundos de antiguedad.
+             */
+            disabled={trabajando || conductor.has_active_ride}
+            title={
+              conductor.has_active_ride
+                ? 'Tiene un servicio en curso. Resuélvelo primero.'
+                : undefined
+            }
+            onClick={() =>
+              void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'blocked', null))
+            }
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+          >
+            <CircleSlash size={15} />
+            Retirar aprobación
+          </button>
+        )}
+
+        <button
+          type="button"
+          disabled={trabajando}
+          onClick={() => setEditando(true)}
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+        >
+          <Pencil size={15} />
+          Editar contacto
+        </button>
+
+        <button
+          type="button"
+          disabled={trabajando}
+          onClick={() =>
+            void ejecutar(() =>
+              cambiarEstadoCuenta(conductor.driver_id, bloqueada ? 'active' : 'blocked', null),
+            )
+          }
+          className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+        >
+          {bloqueada ? <UserCheck size={15} /> : <Ban size={15} />}
+          {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
+        </button>
+      </div>
+
+      {editando && (
+        <EditContactDialog
+          nombreActual={conductor.full_name}
+          telefonoActual={conductor.phone}
+          onCerrar={() => setEditando(false)}
+          onGuardar={async (nombre, telefono) => {
+            const r = await editarContacto(conductor.driver_id, nombre, telefono);
+            if (r.ok) {
+              setEditando(false);
+              onCambio();
+            }
+            return r;
+          }}
+        />
+      )}
+    </article>
+  );
+}
