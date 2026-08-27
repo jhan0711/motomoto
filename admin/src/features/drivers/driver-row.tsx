@@ -97,7 +97,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
             onClick={() =>
               void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'approved', null))
             }
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-action px-3 text-sm font-medium text-on-action disabled:bg-action-disabled"
+            className="btn btn-primario h-9 gap-1.5 px-3"
           >
             <Check size={15} />
             Aprobar
@@ -121,7 +121,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
             onClick={() =>
               void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'blocked', null))
             }
-            className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+            className="btn btn-secundario h-9 gap-1.5 px-3"
           >
             <CircleSlash size={15} />
             Retirar aprobación
@@ -132,7 +132,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
           type="button"
           disabled={trabajando}
           onClick={() => setEditando(true)}
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+          className="btn btn-secundario h-9 gap-1.5 px-3"
         >
           <Pencil size={15} />
           Editar contacto
@@ -146,7 +146,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
               cambiarEstadoCuenta(conductor.driver_id, bloqueada ? 'active' : 'blocked', null),
             )
           }
-          className="flex h-9 items-center gap-1.5 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+          className="btn btn-secundario h-9 gap-1.5 px-3"
         >
           {bloqueada ? <UserCheck size={15} /> : <Ban size={15} />}
           {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}

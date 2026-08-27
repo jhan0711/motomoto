@@ -2,16 +2,17 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users } from 'lucide-react';
+import { LayoutDashboard, Truck, Users } from 'lucide-react';
 
 /*
  * Las secciones del panel, en el orden en que se van construyendo. Las que
- * faltan -vehiculos, tarifas, pasajeros, servicios, reportes- se anaden aqui
- * segun llegan sus pasos, y la navegacion no hay que volver a tocarla.
+ * faltan -tarifas, pasajeros, servicios, reportes- se anaden aqui segun llegan
+ * sus pasos, y la navegacion no hay que volver a tocarla.
  */
 const SECCIONES = [
   { href: '/', etiqueta: 'Tablero', icono: LayoutDashboard },
   { href: '/conductores', etiqueta: 'Conductores', icono: Users },
+  { href: '/motorratones', etiqueta: 'Motorratones', icono: Truck },
 ] as const;
 
 export function PanelNav() {
@@ -30,10 +31,10 @@ export function PanelNav() {
              * inferior, no solo con el color: misma regla que los estados
              * (D202), el color nunca es la unica senal.
              */
-            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium ${
+            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2.5 text-sm font-medium transition-colors duration-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand) ${
               activa
                 ? 'border-brand text-brand-strong'
-                : 'border-transparent text-text-secondary hover:text-text-primary'
+                : 'border-transparent text-text-secondary hover:border-border-strong hover:text-text-primary'
             }`}
             aria-current={activa ? 'page' : undefined}
           >

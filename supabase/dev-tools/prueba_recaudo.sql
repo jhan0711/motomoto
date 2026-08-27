@@ -85,12 +85,36 @@ begin
   select d.id into v_cond from public.drivers d order by d.id limit 1;
   select d.id into v_cond2 from public.drivers d where d.id <> v_cond order by d.id limit 1;
 
+  -- LA PRUEBA CREA SU PROPIA ASIGNACION SI NO LA HAY, en vez de dar por hecho
+  -- que el conductor tiene motorraton. Dejo de ser cierto el 2026-08-27, cuando
+  -- el usuario probo la pantalla de motorratones del panel y quito y reasigno
+  -- unidades: el conductor se quedo sin ninguna vigente y esta prueba se cayo
+  -- con un 23502, sin que nada estuviera roto.
+  --
+  -- Es la cuarta vez que una prueba se pone roja por una premisa heredada del
+  -- mundo real -antes: el `sum` de prueba_recaudo, y las dos de
+  -- prueba_notificaciones-. La regla ya deberia estar aprendida: **una prueba
+  -- monta lo que necesita, no lo encuentra.**
   select a.vehicle_id into v_veh
   from public.driver_vehicle_assignments a
   where a.driver_id = v_cond and a.unassigned_at is null;
+
+  if v_veh is null then
+    select v.id into v_veh from public.vehicles v where v.status = 'active' limit 1;
+    insert into public.driver_vehicle_assignments (driver_id, vehicle_id)
+    values (v_cond, v_veh);
+  end if;
+
   select a.vehicle_id into v_veh2
   from public.driver_vehicle_assignments a
   where a.driver_id = v_cond2 and a.unassigned_at is null;
+
+  if v_veh2 is null then
+    select v.id into v_veh2 from public.vehicles v
+    where v.status = 'active' and v.id <> v_veh limit 1;
+    insert into public.driver_vehicle_assignments (driver_id, vehicle_id)
+    values (v_cond2, v_veh2);
+  end if;
 
   -- Las solicitudes, insertadas directamente con su valor ya calculado: lo que
   -- prueba este archivo es que el historial y el recaudo LEEN bien lo que ya

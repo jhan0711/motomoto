@@ -88,15 +88,11 @@ export function EditContactDialog({ nombreActual, telefonoActual, onCerrar, onGu
               type="button"
               onClick={onCerrar}
               disabled={guardando}
-              className="h-10 rounded-lg border border-border px-3 text-sm font-medium text-text-primary"
+              className="btn btn-secundario h-10 px-3"
             >
               Cancelar
             </button>
-            <button
-              type="submit"
-              disabled={guardando}
-              className="flex h-10 items-center gap-2 rounded-lg bg-action px-4 text-sm font-medium text-on-action disabled:bg-action-disabled"
-            >
+            <button type="submit" disabled={guardando} className="btn btn-primario h-10 px-4">
               {guardando && <LoaderCircle size={15} className="animate-spin" />}
               Guardar
             </button>

@@ -31,7 +31,7 @@ export function Dashboard() {
         <button
           type="button"
           onClick={() => void recargar()}
-          className="flex h-10 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-text-primary"
+          className="btn btn-secundario h-10 px-3"
         >
           <RefreshCw size={15} />
           Actualizar

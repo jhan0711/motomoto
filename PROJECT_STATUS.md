@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-26
+- **Ultima actualizacion:** 2026-08-27
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -56,15 +56,35 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **El paso 3 tambien esta hecho y verificado:** el panel tiene su primera pantalla con contenido
   real, el tablero de servicios en curso, **visto funcionando por el usuario con dos servicios de
   verdad**. 291 comprobaciones automaticas en verde
-- **Trabajo siguiente:** la Fase 20, paso 4: gestion de conductores —alta, edicion, bloqueo y
-  documentos—
-- **Ultimo commit:** `12bb3c2`, "Fase 20 paso 2: auditoria administrativa y bloqueo de cuentas".
-  Antes, `475214b` cerro el paso 1 y `611e0e8` todo el bloque especial. **SIN COMITEAR: lo del
-  paso 3** —la migracion `20260826200000`, `supabase/dev-tools/prueba_tablero.sql`, las dos
-  herramientas `seed_active_service.sql` y `remove_active_service.sql`, el modulo
-  `admin/src/features/dashboard/`, la pagina de inicio del panel, los clientes de Supabase
-  tipados, `admin/src/lib/supabase/database.types.ts`, los tipos regenerados y la actualizacion
-  de este archivo—. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
+- **El paso 4 resulto ser tres bloques y se partio.** **4a —gestionar los conductores que ya
+  existen— esta hecho**, con 315 comprobaciones automaticas en verde y **el mismo hueco de
+  seguridad del paso 2 encontrado y corregido en una segunda tabla**. **4b** —dar de alta un
+  conductor— **necesita la clave `service_role`**, y **4c** —documentos— **necesita un bucket de
+  Storage que no existe**
+- **El 4a esta cerrado del todo**, con las pantallas probadas por el usuario y **la auditoria
+  comprobada contra sus acciones reales**, no solo contra las sinteticas
+- **El paso 5 tambien esta hecho y verificado**, pantallas incluidas: vehiculos y asignacion
+  conductor-vehiculo. Con el aparecio **por tercera vez el mismo hueco de escritura directa sin
+  auditoria**, ahora en `vehicles` y `driver_vehicle_assignments`
+- **Y se hizo el DOBLE TURNO, que no estaba en el plan** (D246): un motorraton lo pueden llevar
+  varias personas, con un solo conductor conectado a la vez. **Modifica una regla de la Fase 5.**
+  Verificado en servidor con 16 comprobaciones; **falta que el usuario lo vea en pantalla**
+- **Los botones del panel dejaron de ser planos**, tambien a peticion suya: hover, pulsacion y
+  foco de teclado, centralizados en tres clases
+- **Trabajo siguiente:** decidir entre 4b —el alta de conductores, que obliga a decidir sobre la
+  clave `service_role`—, 4c —documentos, con bucket nuevo— o el paso 6, tarifas y lugares
+- **Ultimo commit:** `d6be25a`, "fase 20 paso 4a", con sus catorce archivos. Antes, `1690efb` el
+  paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y `611e0e8` todo el bloque especial. **SIN
+  COMITEAR: el paso 5 entero, el doble turno y los botones** —las migraciones `20260827010000`,
+  `20260827020000`, `20260827040000` y `20260827050000`; `prueba_vehiculos.sql` y
+  `prueba_doble_turno.sql`; las correcciones de `prueba_recaudo.sql` y
+  `prueba_solicitud_con_valor.sql` para que monten su propia asignacion; el modulo
+  `admin/src/features/vehicles/`, la pantalla `/motorratones`, las clases de boton en
+  `globals.css` y los 17 botones migrados; los cambios de `src/features/ride/errors.ts` y
+  `src/features/driver/driver-service.ts` en la aplicacion movil; los tipos regenerados y este
+  archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
+  detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
+  que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
   estaba fechada el 25 y el usuario comiteo despues. Lo que quedo comiteado en `475214b`: la
   carpeta `admin/` entera, `supabase/dev-tools/seed_admin.sql`, el aislamiento del panel en
@@ -140,6 +160,24 @@ seccion 15.22.** Tres cosas de ese paso que conviene saber ya:
 **El paso 1 esta cerrado, con sus dos pruebas de sesion real hechas por el usuario**: entrar como
 administrador y ser rechazado usando la cuenta del pasajero. Las hace el usuario porque el
 asistente no escribe contrasenas en formularios.
+
+**TRES COSAS DE LA FASE 20 QUE CAMBIAN REGLAS VIEJAS Y HAY QUE SABER ANTES DE TOCAR NADA:**
+
+1. **El mismo hueco de seguridad aparecio TRES VECES**, en `profiles` (paso 2), en `drivers`
+   (paso 4a) y en `vehicles` mas `driver_vehicle_assignments` (paso 5): las politicas
+   `_all_admin` de la Fase 5 son `for all`, asi que **un administrador podia cambiar cosas con un
+   UPDATE directo y sin dejar rastro**. Las cuatro estan cerradas. **Faltan `document_types`,
+   `documents` y `places`**, que se cierran en sus pasos. Si se toca alguna de esas tres, esto es
+   lo primero que hay que mirar
+2. **UN MOTORRATON LO PUEDEN LLEVAR VARIAS PERSONAS desde el 2026-08-27** (D246), porque la
+   empresa tiene doble turno. **Se retiro el indice `dva_one_active_per_vehicle` de la Fase 5.**
+   Lo que aquel indice protegia se protege ahora en `is_available`: **solo un conductor de los que
+   comparten unidad puede estar disponible a la vez**. Un conductor sigue teniendo una sola unidad
+3. **En el paso 2 el asistente abrio un agujero por el que un pasajero podia hacerse
+   administrador**, al sustituir la comprobacion de `is_admin()` del disparador por una marca de
+   transaccion. Lo cazo la prueba de romper. La leccion, en D241: **al apretar una tuerca se
+   aflojo otra**, porque las dos protecciones cubrian cosas distintas y se sustituyo una por otra
+   en vez de sumarlas
 
 Lo que sigue valiendo del contexto anterior: las fases 0 a 19 estan terminadas,
 aprobadas y comiteadas, y el **bloque especial pedido por los duenos de la empresa el
@@ -621,6 +659,10 @@ aplicacion sigue sin tocar dinero.
 | D241 | **La marca `motomoto.admin_action` no autoriza: solo dice por donde vino la accion** | Sale de un error del asistente del mismo dia, cazado por la comprobacion 17 de `prueba_auditoria.sql`. La primera version dejo la marca como unica condicion del disparador, y entonces cualquiera que la pusiera podia cambiar rol y estado: **un pasajero podia hacerse administrador**. El disparador exige ahora la marca **y** `is_admin()`. La leccion es mas amplia que la correccion: al apretar una tuerca se aflojo otra, porque la proteccion vieja y la nueva cubrian cosas distintas y se sustituyo una por otra en vez de sumarlas |
 | D242 | **Las funciones de LECTURA del panel son `security invoker`, al reves que las de escritura** | Las que escriben son `security definer` porque tienen que poder tocar tablas que el cliente no toca, y comprueban `is_admin()` ellas mismas. Las que leen no: si `admin_list_active_services` fuera definer, **un pasajero que la llamara veria el tablero entero de la empresa**, porque la funcion esta concedida a `authenticated` como todas. Siendo invoker, las politicas RLS de la Fase 5 se aplican con la identidad de quien llama y cada uno ve lo que le toca. La comprobacion de administrador no hace falta escribirla: ya la hacen las politicas |
 | D243 | **El tablero consulta cada diez segundos en vez de suscribirse a tiempo real** | La Fase 13 publico `ride_requests` y `rides` en realtime, asi que suscribirse era posible. Se eligio preguntar porque **tres de los datos que el tablero muestra —la espera, la antiguedad de la ultima posicion y las ofertas vivas— cambian con el paso del tiempo aunque no cambie ninguna fila**, asi que una suscripcion no ahorraria el refresco: haria falta igual un temporizador para que los minutos avanzaran. Ademas el tablero es una lista agregada y no un marcador moviendose, asi que diez segundos no cambian ninguna decision de un despachador. Es reversible: si hace falta inmediatez, la suscripcion se anade encima |
+| D244 | **No se le retira la aprobacion a un conductor que va conduciendo** | Es la respuesta a lo que la Fase 18 dejo pendiente en D216. Dejar a un pasajero dentro de un motorraton cuyo conductor acaba de perder el permiso no arregla nada: lo que hay que hacer primero es resolver el servicio. El servidor responde `DRIVER_HAS_ACTIVE_RIDE` y el panel apaga el boton, **las dos cosas**, porque el boton apagado explica por que no se puede y la comprobacion del servidor es la que de verdad lo impide. Cancelar el servicio desde el panel llega en el paso 11. **Bloquear la CUENTA si se puede en cualquier momento**, que es la salida para una urgencia de verdad |
+| D245 | **Aprobar a un conductor y bloquear su cuenta son dos acciones distintas** | Y por eso son dos funciones, no una con un parametro. Bloquear la cuenta deja a la persona sin poder entrar en la aplicacion; retirar la aprobacion la deja entrar pero no trabajar. La empresa usa las dos en momentos distintos: la primera ante un problema grave, la segunda cuando caduca un papel. Juntarlas obligaria a explicar en la pantalla una diferencia que los nombres ya dicen solos |
+| D246 | **UN MOTORRATON LO PUEDEN LLEVAR VARIAS PERSONAS, PERO SOLO UNA CONECTADA A LA VEZ** | Pedido por el usuario el 2026-08-27 -"algunos tienen doble turno"- y decidido entre tres opciones. **Modifica una regla de la Fase 5**: se retira el indice `dva_one_active_per_vehicle`. Lo que aquel indice protegia -que dos conductores no aparezcan al volante de la misma unidad- se protege ahora donde de verdad se decide, en `is_available`, porque es la columna por la que filtra `find_available_drivers`: si dos companeros pudieran estar disponibles a la vez, **los dos recibirian ofertas y los dos podrian aceptar con un solo motorraton fisico**. Se descarto reasignar en cada cambio de turno -obliga a acordarse dos veces al dia- y se descarto quitar el limite sin mas -deja el hueco abierto-. Lo que NO cambia: `dva_one_active_per_driver` sigue en pie, un conductor tiene una sola unidad |
+| D247 | **El mensaje del companero conectado usa el texto del servidor, no el catalogo** | Unica excepcion en el proyecto a traducir por `hint`. El servidor manda "Juan Perez ya esta conectado con el motorraton 99", y ese dato -quien y cual- no se puede tener en el cliente. **Con el nombre delante, el conductor resuelve llamando a su companero; sin el, tiene que llamar a la oficina.** Sigue siendo el `hint` el que decide que caso es (D88); el texto solo se muestra, y el catalogo conserva un respaldo generico por si llegara vacio |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4233,8 +4275,11 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 1 | Proyecto Next.js y acceso administrativo | **HECHO Y VERIFICADO** |
 | 2 | Servidor: auditoria y bloqueo de cuentas | **HECHO Y VERIFICADO** |
 | 3 | Tablero con los servicios en curso | **HECHO Y VERIFICADO** |
-| 4 | Gestion de conductores: alta, edicion, bloqueo, documentos | Pendiente |
-| 5 | Gestion de vehiculos y asignacion conductor-vehiculo | Pendiente |
+| 4a | Gestion de los conductores que ya existen | **HECHO Y VERIFICADO**, pantallas incluidas |
+| 4b | Alta de un conductor nuevo | Pendiente. **Necesita la clave `service_role`** |
+| 4c | Documentos de conductores y vehiculos | Pendiente. **No existe el bucket** |
+| 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
+| — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
 | 6 | Lugares, tarifas urbanas y rurales, tipos de carga (con D229) | Pendiente |
 | 7 | Listado de pasajeros con bloqueo | Pendiente |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
@@ -4529,15 +4574,276 @@ poder pedir otro por la regla R6. Se limpio al terminar y se comprobo: cero.
 
 ---
 
+### Lo que se hizo: paso 4a, gestion de los conductores que ya existen (2026-08-26)
+
+**EL PASO 4 ERA TRES BLOQUES Y SE PARTIO CON EL USUARIO.** La auditoria previa lo destapo antes
+de escribir nada:
+
+| Parte del paso 4 | Estado real al auditarlo |
+|---|---|
+| Listar, ver y editar conductores | Todo en servidor. Faltaba pantalla |
+| Bloquear y desbloquear la cuenta | **Ya hecho en el paso 2**, con auditoria |
+| Aprobar y retirar la aprobacion | Faltaba la funcion auditada |
+| **Dar de alta un conductor nuevo** | **Bloqueado.** Crear una cuenta de Auth no lo permite la clave publicable |
+| Documentos | **No existe el bucket.** Solo hay `avatars`, y `documents` lleva cero filas desde la Fase 5 |
+
+Se hizo **4a** y quedaron **4b** —el alta— y **4c** —los documentos— para sus propios pasos. El
+motivo de partirlo esta escrito en la migracion: el alta obliga a meter la clave `service_role`
+en el panel, **una clave que salta toda la RLS**, y mezclar esa decision con pantallas normales
+es la forma de que pase sin discutirse.
+
+`supabase/migrations/20260826220000_admin_driver_management.sql`,
+`supabase/dev-tools/prueba_conductores.sql` (24 comprobaciones), el modulo
+`admin/src/features/drivers/` (cinco archivos) y la reestructuracion de las rutas del panel.
+
+**EL MISMO HUECO DEL PASO 2, EN OTRA TABLA.** `protect_driver_columns` empezaba por "si es
+administrador, puede cambiar cualquier cosa", asi que **se podia aprobar o bloquear a un
+conductor con un UPDATE directo y sin dejar rastro**, igual que pasaba con el estado de las
+cuentas. Se aplico la misma correccion de D241: la marca de transaccion **mas** `is_admin()`,
+nunca una sola de las dos. **Las comprobaciones 13 y 14 lo miden**, y la 14 cubre la otra mitad
+de lo que ese disparador protege: que nadie se suba la calificacion a mano.
+
+Que ese hueco apareciera dos veces en dos tablas distintas es el dato que importa: **la exencion
+"si es administrador, pasa" estaba repetida en el proyecto**, y arreglarla en un sitio no la
+arreglaba en el otro. Quedan por revisar las demas politicas `_all_admin` cuando lleguen sus
+pasos.
+
+**Tres funciones nuevas:**
+
+- **`admin_list_drivers`**, lectura, `security invoker` por D242. Trae el vehiculo asignado -solo
+  el vivo, `unassigned_at is null`- y **si el conductor va conduciendo ahora mismo**, que es el
+  dato que decide si se le puede retirar la aprobacion. Ordena poniendo primero a los pendientes
+  de aprobar, que son los que esperan una decision de la empresa
+- **`admin_set_driver_approval`**, auditada. **Es distinta de bloquear la cuenta a proposito**, y
+  por eso son dos funciones y no una con un parametro: bloquear la cuenta deja a la persona sin
+  poder entrar en la aplicacion; retirar la aprobacion la deja entrar pero no trabajar. La
+  empresa usa las dos cosas en momentos distintos
+- **`admin_update_driver_contact`**, auditada. Va por funcion aunque la RLS ya permitiria el
+  UPDATE directo, por D240: **el telefono que se edita aqui es el que la aplicacion le ensena al
+  pasajero para llamar a su conductor**
+
+**D244: no se retira la aprobacion a quien va conduciendo.** Es la respuesta a lo que la Fase 18
+dejo pendiente en D216 —"que el administrador bloquee a un conductor a mitad de operacion"— y la
+respuesta es que **no se hace a ciegas**: dejar a un pasajero dentro de un motorraton cuyo
+conductor acaba de perder el permiso no arregla nada. El servidor responde
+`DRIVER_HAS_ACTIVE_RIDE` y el panel apaga el boton. **Las dos cosas**: el boton apagado explica
+por que no se puede, y la comprobacion del servidor es la que de verdad lo impide, porque el
+estado de la pantalla puede tener diez segundos de antiguedad. Cancelar el servicio primero desde
+el panel es del paso 11.
+
+**Dos detalles de la funcion de aprobacion que no son adorno.** Retirar la aprobacion **apaga la
+disponibilidad**, porque `drivers_available_only_when_approved` haria fallar la operacion entera
+si no; y **la fecha de aprobacion no se borra al retirar**, porque
+`drivers_approved_has_date` la exige en un solo sentido, a proposito, para conservar cuando se
+aprobo por primera vez.
+
+**En el panel**, las rutas se reorganizaron en un grupo `(panel)` —entre parentesis, asi que no
+sale en la URL— con la cabecera y la navegacion en un layout comun, para que la pantalla de
+acceso quede fuera. **La guardia no hubo que tocarla**: `/conductores` quedo protegida sola,
+que es exactamente lo que D238 buscaba al ponerla en un solo sitio. Comprobado: responde 307.
+
+**La lista de conductores NO se refresca sola**, al reves que el tablero. No cambia por su
+cuenta: cambia cuando alguien de la empresa la cambia, y quien la cambia es quien esta mirando la
+pantalla. Un temporizador solo serviria para mover el listado bajo el raton de quien esta a punto
+de pulsar un boton.
+
+**Los errores del servidor se traducen por su codigo `hint`, nunca por el texto del mensaje**
+(D88). Comparar cadenas de texto para decidir que ensenar es la forma de que un dia deje de
+funcionar en silencio.
+
+**Dos errores mios en las pruebas, y el segundo es el interesante:**
+
+1. Uso `v_row.column1` sobre un `select ... into` de un solo valor, que no existe. Error de
+   escritura, corregido con una variable de texto
+2. **La comprobacion 21 esperaba que un pasajero NO viera ningun conductor, y ve UNO.** Se
+   investigo en vez de forzar el resultado: es `drivers_select_ride_counterpart`, politica de la
+   Fase 5 que deja al pasajero ver la calificacion del conductor que lo lleva. **La equivocada
+   era la expectativa, no el codigo**, igual que le paso a la 57 de `prueba_calculo_tarifa` con
+   D234. Reescrita, mide algo mejor que "no ve nada": **ve solo al suyo** (21), **es justo el
+   suyo** (23) y **no ve a los otros dos** (24)
+
+Ademas, una comprobacion mal disenada por mi: la 10 intentaba aprobar al conductor ocupado para
+vigilar a la 9, pero `pending` tambien es retirar la aprobacion, asi que la regla la rechazaba
+con razon. Se cambio por corregirle el contacto, que si esta permitido: **entre la 8, la 9 y la
+10 queda claro que el rechazo es por el viaje en marcha y no porque la funcion rechace todo lo
+que toque a ese conductor.**
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las tres funciones | `prueba_conductores.sql` | **24 de 24**, doce de ellas intentando rodear |
+| Regresion completa | Los catorce archivos de `dev-tools/` | **315 comprobaciones, 0 fallando** |
+| La guardia cubre la ruta nueva | `GET /conductores` sin sesion | 307 a `/acceso`, sin tocar el proxy |
+| El panel compila para produccion | `npm run build` | Compila, con las dos rutas |
+| Calidad del panel | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| La aplicacion movil no se rompe | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| **Las pantallas en el navegador** | **El usuario, en su navegador** | **Las tres funcionan**: aprobar y retirar aprobacion, el telefono invalido rechazado con su mensaje, y bloquear y desbloquear la cuenta |
+
+**Y LA AUDITORIA SE COMPROBO CON LAS ACCIONES REALES DEL USUARIO, no solo con las sinteticas.**
+Despues de que las probara en pantalla se consulto `admin_audit_logs`: **las cuatro acciones
+estaban ahi**, con quien las hizo, la hora en horario de Colombia y el estado anterior y
+posterior. Es la primera vez que esa tabla tiene filas de verdad desde que se creo en la Fase 5.
+
+Una de las cuatro entradas confirma D244 sin haberla buscado: al retirar la aprobacion, el
+`before_data` guardo `is_available: true` y el conductor quedo no disponible. **La regla se ve en
+el registro**, no solo en la prueba.
+
+**Se comprobo ademas como quedaron los conductores despues de las pruebas**, que es lo que evita
+dejar el entorno roto para la sesion siguiente: los dos **aprobados y con la cuenta activa**. El
+primero quedo `is_available = false`, y **eso es correcto**: retirar la aprobacion apaga la
+disponibilidad y volver a aprobar NO la reenciende, porque ese interruptor lo maneja el conductor
+desde su aplicacion. Hay que reejecutar su semilla antes de usarlo para probar.
+
+---
+
+### Lo que se hizo: paso 5, vehiculos y asignacion (2026-08-27)
+
+**Nueva implementacion.** `supabase/migrations/20260827010000_admin_vehicle_management.sql`, su
+correccion `20260827020000`, `supabase/dev-tools/prueba_vehiculos.sql` (26 comprobaciones), el
+modulo `admin/src/features/vehicles/` y la pantalla `/motorratones`.
+
+**TERCERA VEZ QUE APARECE EL MISMO HUECO.** El paso 2 lo encontro en `profiles`, el 4a en
+`drivers`, y aqui estaba otra vez en `vehicles` y en `driver_vehicle_assignments`: las politicas
+`_all_admin` son `for all`, asi que se podia crear, editar, asignar y desasignar **con escritura
+directa y sin dejar rastro**. Se cerraron las dos —conservando la lectura, que `vehicles` la
+tiene abierta a proposito por D86— y **quedan avisadas las que faltan**: `document_types`,
+`documents` y `places`, para sus pasos.
+
+Que aparezca tres veces ya no es casualidad: **la exencion "si es administrador, pasa" estaba
+repetida por todo el esquema de la Fase 5**, y no habia panel entonces que la usara a diario.
+
+Cinco funciones: `admin_list_vehicles` -lectura, invoker por D242-, `admin_create_vehicle`,
+`admin_update_vehicle`, `admin_assign_vehicle` y `admin_unassign_vehicle`, las cuatro ultimas
+auditadas.
+
+**Dos reglas de proteccion nuevas, las dos con el criterio de D244:**
+
+- **No se retira ni se manda a taller una unidad que va por la calle con un pasajero dentro**
+  (`VEHICLE_HAS_ACTIVE_RIDE`)
+- **No se le baja la capacidad por debajo de lo que ya lleva encima**
+  (`CAPACITY_BELOW_CURRENT_LOAD`). Esta no la atrapaba nada: `enforce_ride_capacity` mira al
+  aceptar el viaje, no al editar el vehiculo, asi que se podia dejar un viaje de tres pasajeros
+  en una unidad declarada de dos, **un dato que se contradice a si mismo**
+
+**La comprobacion 4 mide el hallazgo H10 en esta tabla**: una placa repetida se atrapa aunque
+venga en minusculas. Sin comparar normalizado, `zzv802` pasaria la comprobacion y chocaria
+despues contra el indice unico con un 23505 sin explicacion, porque el disparador
+`normalize_vehicle_plate` la habria puesto en mayusculas.
+
+**UN FALLO REAL EN LA MIGRACION, y es de los que se aprenden.** `admin_assign_vehicle` cerraba la
+asignacion anterior con `unassigned_at = now()`, y **`now()` en PostgreSQL no es el reloj: es el
+instante en que empezo la transaccion**. Al cerrar una asignacion creada en esa misma
+transaccion, las dos fechas salian identicas y saltaba `dva_period_valid`.
+
+Lo cazo la comprobacion 11, y **solo porque las pruebas corren dentro de una transaccion**. El
+panel nunca lo habria sufrido —cada accion es su propia transaccion—, y por eso el fallo es
+peor, no mejor: **un fallo que solo aparece segun quien llame a la funcion se descubre tarde y en
+el sitio equivocado.** Corregido con `clock_timestamp()` en las dos funciones, tambien en la que
+ninguna prueba habia pisado.
+
+**Verificado por el usuario en pantalla:** el alta con numero repetido rechazada, la asignacion,
+el cambio de estado y el boton de asignar apagado en una unidad en taller.
+
+---
+
+### Lo que se hizo: DOBLE TURNO, fuera del plan (2026-08-27)
+
+**Peticion del usuario mientras probaba el paso 5**, con sus palabras: *"en el plan esta previsto
+que un motorraton lo pueden manejar dos o mas personas? es que algunos tienen doble turno"*.
+
+**No estaba previsto, y el sistema lo impedia a proposito.** `dva_one_active_per_vehicle`, indice
+unico parcial de la Fase 5, solo admitia una asignacion vigente por unidad, con este motivo
+escrito: *"sin la segunda, dos conductores podrian aparecer al volante del mismo motorraton, y un
+pasajero recibiria datos de un vehiculo que no es el que viene por el"*.
+
+**Ese motivo seguia siendo bueno, pero resolvia "dos a la vez", no "dos por turnos".** La regla
+estaba en el sitio equivocado: en QUIEN TIENE ASIGNADA la unidad, cuando lo que importa es QUIEN
+ESTA TRABAJANDO CON ELLA AHORA.
+
+`supabase/migrations/20260827040000_shared_vehicle_shifts.sql`, su ajuste `20260827050000` y
+`supabase/dev-tools/prueba_doble_turno.sql` (16 comprobaciones).
+
+**D246, decidido con el usuario entre tres opciones.** Varias asignaciones vigentes por unidad,
+**pero un solo conductor disponible a la vez entre los que la comparten**. La regla vive en
+`is_available` y no en la asignacion porque **es ahi donde se decide quien recibe servicios**:
+`find_available_drivers` filtra por esa columna, asi que dos companeros disponibles a la vez
+recibirian ofertas distintas y **los dos podrian aceptar con un solo motorraton fisico**.
+
+**Media solucion ya estaba puesta desde la Fase 5 sin saberlo:** `enforce_ride_capacity` suma los
+asientos ocupados **por vehiculo y no por conductor**, asi que dos companeros nunca podrian
+sobrecargar la unidad entre los dos. Esa mitad no hubo que tocarla.
+
+**El mensaje de error nombra al companero y la unidad** —*"Juan Perez ya esta conectado con el
+motorraton 99"*—, y `setAvailability` lo prefiere al texto fijo del catalogo. **Es la unica vez en
+el proyecto que se usa el mensaje del servidor en vez del `hint`**, y el motivo esta escrito: con
+el nombre delante el conductor resuelve llamando a su companero; sin el, tiene que llamar a la
+oficina para averiguar quien esta conectado. Sigue siendo el `hint` el que decide (D88); el texto
+solo se muestra. **Y se anadio igualmente al catalogo de `errors.ts` como respaldo**, porque sin
+traduccion el conductor habria leido "Ocurrio un error inesperado", que es exactamente D234.
+
+**UN ERROR QUE SE CORRIGIO ANTES DE QUE LLEGARA A LA PANTALLA.** La primera version de
+`admin_list_vehicles` devolvia los conductores como **dos listas paralelas** —un texto
+`"Ana, Juan"` y un array de identificadores, las dos ordenadas por nombre—, y el panel tenia que
+emparejarlas partiendo el texto por comas. **Eso se rompe con un conductor llamado "Gomez, Ana":
+el panel quitaria del turno a una persona distinta de la que se pulso, en silencio.** Se cambio a
+un `jsonb` con los pares antes de escribir la pantalla.
+
+**16 comprobaciones, todas en verde.** La 9 es la central -el companero no se conecta a la vez- y
+va con la 11 vigilandola -tras el relevo si entra-, porque sin esa pareja la 9 podria estar en
+verde porque nadie puede conectarse nunca, que romperia la aplicacion entera. La 15 mide la
+consecuencia que de verdad importa: de los que comparten unidad, **solo uno queda visible para
+`find_available_drivers`**.
+
+**LA CUARTA PREMISA HEREDADA DEL MUNDO REAL, y esta la provoco el propio panel.** Al probar la
+pantalla de motorratones, el usuario quito y reasigno unidades, y **el "Conductor de prueba" se
+quedo sin ninguna vigente**: dos cerradas, la 99 y una 96. Eso tumbo `prueba_recaudo` y
+`prueba_solicitud_con_valor` con un 23502, **sin que nada estuviera roto**, y ademas **habria
+dejado su aplicacion movil sin funcionar**, que es lo que de verdad importaba de ese hallazgo. Se
+restauro con `seed_test_driver.sql` y las dos pruebas pasan a **crear su propia asignacion si no
+la encuentran**. Van cuatro veces con la misma leccion —el `sum` de `prueba_recaudo`, las dos de
+`prueba_notificaciones` y esta—: **una prueba monta lo que necesita, no lo encuentra.**
+
+**Tambien hubo que corregir `prueba_vehiculos`**, que usaba `driver_name`: esa columna dejo de
+existir al cambiar la forma del listado. No es una prueba que estuviera mal, es un contrato que
+cambio por una decision aprobada.
+
+---
+
+### Lo que se hizo: los botones dejan de ser planos (2026-08-27)
+
+**Reportado por el usuario probando el panel**, no por las pruebas: *"si posas el puntero sobre
+ellos son completamente planos"*.
+
+Era cierto y era mio: cada boton repetia su pinta en clases sueltas y **ninguno tenia estados**.
+Se centralizo en `admin/src/app/globals.css` con tres clases -`.btn`, `.btn-primario`,
+`.btn-secundario`- y se migraron los 17 botones del panel. **Se centralizo porque el problema no
+era un boton**: era que la pinta estaba repetida en cada sitio, asi que arreglarlos uno a uno
+habria dejado el siguiente igual de plano.
+
+Las tres senales, y por que las tres:
+
+- **hover**, dice "esto se puede pulsar", antes de pulsarlo
+- **active**, dice "te he oido" en el momento del clic. **Es la que faltaba y la que mas se
+  nota**: sin ella, en una conexion lenta no se sabe si el clic entro. Encoge el boton en vez de
+  solo oscurecerlo, porque el movimiento se percibe aunque el cambio de color sea sutil
+- **focus-visible**, dice donde esta el teclado. No es decoracion: sin ella el panel no se puede
+  usar sin raton
+
+Un boton apagado no responde a nada: ni encoge, ni cambia el cursor. Los enlaces de la navegacion
+llevaban el mismo problema y se arreglaron igual.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20, paso 4 de once: gestion de conductores. Los pasos 1 —proyecto Next.js
-  y acceso administrativo—, 2 —auditoria y bloqueo de cuentas— y 3 —el tablero de servicios en
-  curso— estan **hechos, verificados y cerrados** (seccion 15.22). **El arbol de trabajo NO esta
-  limpio**: falta comitear lo del paso 3, listado en la cabecera
+- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a y 5 estan **hechos y verificados** (seccion
+  15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y modifica
+  una regla de la Fase 5**. Falta decidir si sigue 4b, 4c o el paso 6. **El arbol de trabajo NO
+  esta limpio**: falta comitear todo lo del paso 5 en adelante, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

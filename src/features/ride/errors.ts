@@ -124,6 +124,17 @@ const MESSAGES: Record<string, string> = {
   // no le caben. Pasa entre la oferta y el toque, y no hay nada que corregir.
   VEHICLE_CAPACITY_EXCEEDED: 'Ya no te quedan asientos libres para ese servicio.',
   DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motorratón.',
+  /*
+   * Doble turno (D246): dos conductores comparten motorratón y solo uno puede
+   * estar disponible a la vez.
+   *
+   * Este texto es el RESPALDO. El servidor manda un mensaje mejor —dice el
+   * nombre del compañero y el número de la unidad—, y `setAvailability` lo
+   * prefiere cuando llega, porque con el nombre delante el conductor resuelve
+   * llamándolo y sin el nombre tiene que llamar a la oficina.
+   */
+  COMPANION_ALREADY_AVAILABLE:
+    'Otro conductor ya está conectado con tu motorratón. Solo uno puede estar disponible a la vez.',
 
   // Las calificaciones, desde la Fase 17.
   //

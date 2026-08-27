@@ -1080,6 +1080,19 @@ export type Database = {
     };
     Functions: {
       accept_ride_offer: { Args: { p_offer_id: string }; Returns: string };
+      admin_assign_vehicle: {
+        Args: { p_driver_id: string; p_vehicle_id: string };
+        Returns: undefined;
+      };
+      admin_create_vehicle: {
+        Args: {
+          p_max_passengers?: number;
+          p_model?: string;
+          p_plate: string;
+          p_unit_number: number;
+        };
+        Returns: string;
+      };
       admin_list_active_services: {
         Args: never;
         Returns: {
@@ -1130,6 +1143,25 @@ export type Database = {
           vehicle_id: string;
         }[];
       };
+      admin_list_vehicles: {
+        Args: never;
+        Returns: {
+          active_driver_id: string;
+          active_driver_name: string;
+          created_at: string;
+          driver_count: number;
+          drivers: Json;
+          drivers_label: string;
+          has_active_ride: boolean;
+          max_passengers: number;
+          model: string;
+          notes: string;
+          plate: string;
+          status: Database['public']['Enums']['vehicle_status'];
+          unit_number: number;
+          vehicle_id: string;
+        }[];
+      };
       admin_set_account_status: {
         Args: {
           p_reason?: string;
@@ -1146,8 +1178,24 @@ export type Database = {
         };
         Returns: undefined;
       };
+      admin_unassign_vehicle: {
+        Args: { p_driver_id: string };
+        Returns: undefined;
+      };
       admin_update_driver_contact: {
         Args: { p_driver_id: string; p_full_name: string; p_phone: string };
+        Returns: undefined;
+      };
+      admin_update_vehicle: {
+        Args: {
+          p_max_passengers: number;
+          p_model: string;
+          p_notes?: string;
+          p_plate: string;
+          p_status: Database['public']['Enums']['vehicle_status'];
+          p_unit_number: number;
+          p_vehicle_id: string;
+        };
         Returns: undefined;
       };
       assert_ride_driver: {

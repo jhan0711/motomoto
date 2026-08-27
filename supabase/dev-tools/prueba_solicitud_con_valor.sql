@@ -91,10 +91,27 @@ begin
 
   select d.id into v_cond from public.drivers d order by d.id limit 1;
 
+  -- LA PRUEBA CREA SU PROPIA ASIGNACION SI NO LA HAY, en vez de dar por hecho
+  -- que el conductor tiene motorraton. Dejo de ser cierto el 2026-08-27, cuando
+  -- el usuario probo la pantalla de motorratones del panel y quito y reasigno
+  -- unidades: el conductor se quedo sin ninguna vigente y esta prueba se cayo
+  -- con un 23502, sin que nada estuviera roto.
+  --
+  -- Es la cuarta vez que una prueba se pone roja por una premisa heredada del
+  -- mundo real -antes: el `sum` de prueba_recaudo, y las dos de
+  -- prueba_notificaciones-. La regla ya deberia estar aprendida: **una prueba
+  -- monta lo que necesita, no lo encuentra.**
   select a.vehicle_id, v.max_passengers into v_veh, v_cap
   from public.driver_vehicle_assignments a
     join public.vehicles v on v.id = a.vehicle_id
   where a.driver_id = v_cond and a.unassigned_at is null;
+
+  if v_veh is null then
+    select v.id, v.max_passengers into v_veh, v_cap
+    from public.vehicles v where v.status = 'active' limit 1;
+    insert into public.driver_vehicle_assignments (driver_id, vehicle_id)
+    values (v_cond, v_veh);
+  end if;
 
   -- El conductor, disponible y con la posicion recien puesta. **La ubicacion de
   -- los conductores de prueba caduca a los dos minutos**, asi que este archivo

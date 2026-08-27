@@ -68,3 +68,50 @@ body {
   background: var(--color-background);
   color: var(--color-text-primary);
 }
+
+/*
+ * BOTONES: LOS ESTADOS VIVEN AQUI Y NO EN CADA BOTON.
+ *
+ * La primera version del panel pintaba los botones con clases sueltas en cada
+ * sitio, y quedaron **completamente planos**: no cambiaban al pasar el puntero
+ * ni al pulsarlos. Lo reporto el usuario probando el panel, no las pruebas.
+ *
+ * Se centraliza porque el problema no era un boton: era que cada uno repetia su
+ * pinta y ninguno tenia estados. Con esto, un boton nuevo los hereda sin que
+ * haya que acordarse.
+ *
+ * Las tres senales, y por que las tres:
+ *
+ *   hover        dice "esto se puede pulsar", antes de pulsarlo
+ *   active       dice "te he oido", en el momento del clic. Es la que faltaba y
+ *                la que mas se nota: sin ella, en una conexion lenta no se sabe
+ *                si el clic entro
+ *   focus-visible  dice donde esta el teclado. No es decoracion: sin ella el
+ *                panel no se puede usar sin raton
+ *
+ * `active` encoge el boton en vez de solo oscurecerlo porque el movimiento se
+ * percibe aunque el cambio de color sea sutil, y porque funciona igual sobre
+ * fondos claros y oscuros.
+ */
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-lg text-sm font-medium;
+    @apply transition-[background-color,border-color,color,transform] duration-100 ease-out;
+    @apply focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--color-brand);
+    @apply active:scale-[0.97];
+    /* Un boton apagado no responde a nada: ni encoge, ni cambia el cursor. */
+    @apply disabled:cursor-not-allowed disabled:active:scale-100;
+  }
+
+  .btn-primario {
+    @apply bg-action text-on-action;
+    @apply hover:bg-action-pressed;
+    @apply disabled:bg-action-disabled disabled:hover:bg-action-disabled;
+  }
+
+  .btn-secundario {
+    @apply border border-border bg-surface text-text-primary;
+    @apply hover:border-border-strong hover:bg-surface-pressed;
+    @apply disabled:text-text-tertiary disabled:hover:border-border disabled:hover:bg-surface;
+  }
+}

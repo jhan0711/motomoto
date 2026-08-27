@@ -22,7 +22,7 @@ export function LogoutButton() {
       type="button"
       onClick={handleSignOut}
       disabled={isSigningOut}
-      className="flex h-10 shrink-0 items-center gap-2 rounded-lg border border-border px-3 text-sm font-medium text-text-primary disabled:text-text-tertiary"
+      className="btn btn-secundario h-10 shrink-0 px-3"
     >
       <LogOut size={16} />
       {isSigningOut ? 'Saliendo…' : 'Cerrar sesión'}

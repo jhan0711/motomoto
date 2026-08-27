@@ -143,6 +143,29 @@ export async function setAvailability(driverId: string, available: boolean): Pro
         },
       };
     }
+
+    /*
+     * DOBLE TURNO (D246). Cuando su companero de motorraton ya esta conectado,
+     * el disparador `drivers_one_available_per_vehicle` responde con un mensaje
+     * que **dice quien es y con que unidad**: "Juan Perez ya esta conectado con
+     * el motorraton 99".
+     *
+     * Aqui se prefiere ese mensaje al texto fijo del catalogo, y es la unica vez
+     * en el proyecto que se hace. El motivo es que el dato viene del servidor y
+     * no se puede tener en el cliente: con el nombre delante, el conductor
+     * resuelve llamando a su companero; sin el, tiene que llamar a la oficina
+     * para preguntar quien esta conectado.
+     *
+     * Sigue siendo el `hint` el que decide -D88-, no el texto. Si el mensaje
+     * llegara vacio, el catalogo pone el respaldo.
+     */
+    if (error.hint?.trim() === 'COMPANION_ALREADY_AVAILABLE' && error.message.trim() !== '') {
+      return {
+        ok: false,
+        failure: { code: 'COMPANION_ALREADY_AVAILABLE', message: error.message },
+      };
+    }
+
     return fail(error);
   }
 

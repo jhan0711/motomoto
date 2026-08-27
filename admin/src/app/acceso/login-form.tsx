@@ -131,7 +131,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={isSubmitting}
-        className="flex h-12 items-center justify-center gap-2 rounded-lg bg-action font-medium text-on-action disabled:bg-action-disabled"
+        className="btn btn-primario h-12 w-full text-base"
       >
         {isSubmitting && <LoaderCircle size={18} className="animate-spin" />}
         {isSubmitting ? 'Entrando…' : 'Entrar'}
