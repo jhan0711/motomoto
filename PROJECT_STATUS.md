@@ -71,20 +71,21 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   Verificado en servidor con 16 comprobaciones; **falta que el usuario lo vea en pantalla**
 - **Los botones del panel dejaron de ser planos**, tambien a peticion suya: hover, pulsacion y
   foco de teclado, centralizados en tres clases
-- **El paso 6a esta hecho y verificado**, pantallas incluidas: lugares y tarifas rurales, con D229
-  aplicada **midiendo la distancia** y no preguntando. **Encontro un lugar roto en produccion**
-  —"Vereda Guayabito", activa y sin tarifa desde la Fase 9—, que quedo desactivada conservando
-  sus coordenadas
-- **Trabajo siguiente:** decidir entre 6b —tarifas urbanas, tipos de carga y parametros—, 4b —el
-  alta de conductores, que obliga a decidir sobre la clave `service_role`— o 4c —documentos, con
-  bucket nuevo—
+- **El paso 6 entero esta hecho y verificado**, pantallas incluidas. **6a** —lugares y tarifas
+  rurales, con D229 aplicada **midiendo la distancia** y no preguntando— **encontro un lugar roto
+  en produccion**: "Vereda Guayabito", activa y sin tarifa desde la Fase 9, que quedo desactivada
+  conservando sus coordenadas. **6b** —tarifas urbanas, tipos de carga y los 18 parametros—
+  **destapo que la politica de escritura de `drivers` seguia abierta desde el paso 4a**, cerrada
+  ya. **409 comprobaciones automaticas en verde**
+- **Trabajo siguiente:** decidir entre 4b —el alta de conductores, que obliga a decidir sobre la
+  clave `service_role`—, 4c —documentos, con bucket nuevo— o el paso 7, el listado de pasajeros
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
-  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 6a entero** —las migraciones
-  `20260827080000`, `20260827090000` y `20260827100000`; `supabase/dev-tools/prueba_lugares.sql`;
-  el modulo `admin/src/features/places/`, la pantalla `/lugares` y su entrada en la navegacion;
-  los tipos regenerados y este archivo—. **El commit del paso 3 costo dos intentos**: el primero
-  no llego a hacerse y se
+  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 6b entero** —las migraciones
+  `20260827120000` y `20260827140000`; `supabase/dev-tools/prueba_configuracion.sql`; las dos
+  comprobaciones nuevas de `prueba_conductores.sql`; el modulo `admin/src/features/config/`, la
+  pantalla `/tarifas` y su entrada en la navegacion; los tipos regenerados y este archivo—. **El
+  commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
   detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
   que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
@@ -165,12 +166,19 @@ asistente no escribe contrasenas en formularios.
 
 **TRES COSAS DE LA FASE 20 QUE CAMBIAN REGLAS VIEJAS Y HAY QUE SABER ANTES DE TOCAR NADA:**
 
-1. **El mismo hueco de seguridad aparecio TRES VECES**, en `profiles` (paso 2), en `drivers`
-   (paso 4a) y en `vehicles` mas `driver_vehicle_assignments` (paso 5): las politicas
-   `_all_admin` de la Fase 5 son `for all`, asi que **un administrador podia cambiar cosas con un
-   UPDATE directo y sin dejar rastro**. Las cuatro estan cerradas. **Faltan `document_types`,
-   `documents` y `places`**, que se cierran en sus pasos. Si se toca alguna de esas tres, esto es
-   lo primero que hay que mirar
+1. **El mismo hueco de seguridad aparecio CINCO VECES**, en `profiles` (paso 2), `drivers`
+   (paso 4a, mal cerrado y rematado en 6b), `vehicles` mas `driver_vehicle_assignments` (paso 5),
+   `places` mas `rural_fares` (6a) y `urban_fares`, `cargo_types` y `app_settings` (6b): las
+   politicas `_all_admin` de la Fase 5 son `for all`, asi que **un administrador podia cambiar
+   cosas con un UPDATE directo y sin dejar rastro**. **Solo quedan abiertas `documents` y
+   `document_types`**, que se cierran en el paso 4c. Si se toca alguna de las dos, esto es lo
+   primero que hay que mirar.
+
+   **Y ojo con la forma en que se cerro mal la de `drivers`:** en el paso 4a se apreto el
+   disparador `protect_driver_columns` y se dio por hecho que bastaba. No bastaba —el disparador
+   solo protege cinco columnas—, asi que quedo abierto cambiar `is_available` o borrar la ficha
+   de un conductor. **El disparador y la politica protegen cosas distintas.** Lo destapo
+   comprobar contra `pg_policies` una frase que el propio asistente acababa de escribir
 2. **UN MOTORRATON LO PUEDEN LLEVAR VARIAS PERSONAS desde el 2026-08-27** (D246), porque la
    empresa tiene doble turno. **Se retiro el indice `dva_one_active_per_vehicle` de la Fase 5.**
    Lo que aquel indice protegia se protege ahora en `is_available`: **solo un conductor de los que
@@ -666,6 +674,7 @@ aplicacion sigue sin tocar dinero.
 | D246 | **UN MOTORRATON LO PUEDEN LLEVAR VARIAS PERSONAS, PERO SOLO UNA CONECTADA A LA VEZ** | Pedido por el usuario el 2026-08-27 -"algunos tienen doble turno"- y decidido entre tres opciones. **Modifica una regla de la Fase 5**: se retira el indice `dva_one_active_per_vehicle`. Lo que aquel indice protegia -que dos conductores no aparezcan al volante de la misma unidad- se protege ahora donde de verdad se decide, en `is_available`, porque es la columna por la que filtra `find_available_drivers`: si dos companeros pudieran estar disponibles a la vez, **los dos recibirian ofertas y los dos podrian aceptar con un solo motorraton fisico**. Se descarto reasignar en cada cambio de turno -obliga a acordarse dos veces al dia- y se descarto quitar el limite sin mas -deja el hueco abierto-. Lo que NO cambia: `dva_one_active_per_driver` sigue en pie, un conductor tiene una sola unidad |
 | D247 | **El mensaje del companero conectado usa el texto del servidor, no el catalogo** | Unica excepcion en el proyecto a traducir por `hint`. El servidor manda "Juan Perez ya esta conectado con el motorraton 99", y ese dato -quien y cual- no se puede tener en el cliente. **Con el nombre delante, el conductor resuelve llamando a su companero; sin el, tiene que llamar a la oficina.** Sigue siendo el `hint` el que decide que caso es (D88); el texto solo se muestra, y el catalogo conserva un respaldo generico por si llegara vacio |
 | D248 | **La ubicacion de un lugar no se edita: se desactiva y se crea otro** | Mover un lugar cambia su distancia al centro, y con ella dos cosas que deciden precios: si necesita tarifa rural (D229) y a que destino se pega un punto suelto del mapa (D230). Un campo de coordenadas en el formulario invitaria a corregir "una chincheta mal puesta" sin ver que eso puede cambiar lo que paga la gente por viajes que no tienen nada que ver. Desactivar y crear otro **ademas conserva el historial** de los viajes que usaron el sitio viejo |
+| D249 | **Los precios y los parametros se editan de uno en uno, no con un formulario y un boton** | Un formulario con veinte campos y un "Guardar" al final invita a tocar cuatro cosas a la vez; si una falla la validacion del servidor, quien lo usa no sabe cual de las cuatro, y las otras tres pueden haberse guardado o no. Editando en el sitio, **cada cambio lleva su propia respuesta y su propia linea de auditoria**, que es justo lo que se quiere de algo que decide cuanto paga la gente |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4284,7 +4293,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
 | 6a | Lugares y tarifas rurales (con D229) | **HECHO Y VERIFICADO**, pantallas incluidas |
-| 6b | Tarifas urbanas, tipos de carga y parametros | Pendiente |
+| 6b | Tarifas urbanas, tipos de carga y parametros | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 7 | Listado de pasajeros con bloqueo | Pendiente |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
@@ -4916,15 +4925,89 @@ urbano, que es lo que se queria medir.
 
 ---
 
+### Lo que se hizo: paso 6b, tarifas urbanas, tipos de carga y parametros (2026-08-27)
+
+`supabase/migrations/20260827120000_admin_fares_cargo_and_settings.sql`, su correccion
+`20260827140000`, `supabase/dev-tools/prueba_configuracion.sql` (25 comprobaciones), dos
+comprobaciones nuevas en `prueba_conductores.sql`, el modulo `admin/src/features/config/` y la
+pantalla `/tarifas`.
+
+**LA REJILLA URBANA NO SE CREA NI SE BORRA, SOLO SE EDITA.** Son seis casillas fijas -uno, dos o
+tres pasajeros, de dia o de noche- y esa forma la decidio la empresa. `urban_fares` **no tiene
+`is_active` a proposito** desde el bloque especial: apagar "dos pasajeros de noche" no significa
+nada y dejaria un servicio sin precio a las once.
+
+**Los parametros se agrupan en dos, porque `app_settings` mezcla dos cosas muy distintas**:
+precios y horarios por un lado, y reglas de operacion por otro -los veinte segundos de R2, el
+maximo de R11, el radio de llegada de R5-. Viven en la misma tabla, pero cambiar una tarifa y
+cambiar el reparto de servicios no son la misma decision. **Cada clave lleva su rango comprobado
+en el servidor, y cada rango tiene su motivo**: no son numeros redondos, son los limites donde el
+sistema deja de funcionar. Un cero en `offer_response_seconds` caducaria cada oferta antes de que
+el conductor la viera, y la aplicacion dejaria de repartir servicios **sin que nada pareciera
+roto**.
+
+**La zona horaria se valida contra el catalogo de PostgreSQL**, no contra una lista escrita a
+mano: `pg_timezone_names`. Una lista propia se queda vieja y nadie se entera.
+
+**Los valores se editan de uno en uno, no con un formulario y un boton al final** (D249). Un
+formulario con veinte campos invita a tocar cuatro cosas y guardarlas juntas; si una falla la
+validacion, quien lo usa no sabe cual. De uno en uno, **cada cambio lleva su propia respuesta y su
+propia linea en la auditoria**.
+
+**EL HALLAZGO DEL PASO, Y NO LO ENCONTRO NINGUNA PRUEBA.** Al terminar se listaron las politicas
+`for all` que quedaban vivas —para comprobar una frase que el asistente acababa de escribir en la
+migracion, "ninguna tabla del panel admite ya escritura directa sin auditoria"— y **la frase era
+falsa**: `drivers_all_admin` seguia abierta desde el paso 4a.
+
+Alli se aprieto el disparador `protect_driver_columns` y **se dio por hecho que bastaba**. No
+bastaba: el disparador solo protege cinco columnas, asi que quedaba abierto **cambiar
+`is_available` de cualquier conductor —o borrarle la ficha— con un UPDATE directo y sin rastro**.
+Con el doble turno (D246) es peor todavia, porque esa columna decide **quien de los que comparten
+motorraton recibe los viajes**.
+
+**La leccion: el disparador y la politica protegen cosas distintas, y apretar uno no cierra la
+otra.** Es la misma forma del error de D241 —sustituir una proteccion por otra dejando un hueco
+que ninguna de las dos tenia por separado— y la segunda vez que el asistente la comete en esta
+fase. Corregido en `20260827140000`, con dos comprobaciones nuevas en `prueba_conductores.sql`
+que miden el UPDATE y el DELETE.
+
+**Y quedo comprobado que comprobar sirve**: la frase estaba escrita, era plausible, y **solo
+mirarla contra el servidor la desmintio**.
+
+**Con esto, de todas las tablas que el panel gestiona solo quedan abiertas `documents` y
+`document_types`**, que son del paso 4c. Las demas —`profiles`, `drivers`, `vehicles`,
+`driver_vehicle_assignments`, `places`, `rural_fares`, `urban_fares`, `cargo_types` y
+`app_settings`— pasan todas por funciones auditadas.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las funciones | `prueba_configuracion.sql` | **25 de 25 a la primera** |
+| El hueco de `drivers` | `prueba_conductores.sql`, dos nuevas | **26 de 26** |
+| Regresion completa | Los dieciocho archivos | **409 comprobaciones, 0 fallando** |
+| **Que el rollback no dejo nada tocado** | Consulta al servidor tras las pruebas | Intacto: $4.000, R2 en 20 s, `America/Bogota` |
+| Politicas de escritura que quedan | `pg_policies` | Solo `documents` y `document_types` (paso 4c) |
+| Panel y aplicacion movil | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Funciona** |
+
+**Una advertencia sobre `prueba_configuracion.sql`, que lo dice en su cabecera:** es **el unico
+archivo de pruebas que toca los precios y los parametros reales**. No hay alternativa —la rejilla
+son seis filas fijas y `app_settings` tiene una fila por clave, no se pueden inventar copias—, asi
+que **el `rollback` del final es lo unico que lo hace seguro**. No debe partirse en trozos ni
+ejecutarse por partes.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 5 y 6a estan **hechos y verificados** (seccion
-  15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y modifica
-  una regla de la Fase 5**. Falta decidir si sigue 6b, 4b o 4c. **El arbol de trabajo NO esta
-  limpio**: falta comitear todo lo del paso 6a, listado en la cabecera
+- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 5, 6a y 6b estan **hechos y verificados**
+  (seccion 15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y
+  modifica una regla de la Fase 5**. Falta decidir si sigue 4b, 4c o el paso 7. **El arbol de
+  trabajo NO esta limpio**: falta comitear todo lo del paso 6b, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

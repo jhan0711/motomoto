@@ -1135,6 +1135,17 @@ export type Database = {
           waiting_seconds: number;
         }[];
       };
+      admin_list_cargo_types: {
+        Args: never;
+        Returns: {
+          amount: number;
+          cargo_type_id: string;
+          is_active: boolean;
+          name: string;
+          sort_order: number;
+          usage_count: number;
+        }[];
+      };
       admin_list_drivers: {
         Args: never;
         Returns: {
@@ -1169,6 +1180,22 @@ export type Database = {
           rural_is_active: boolean;
           sort_order: number;
           usage_count: number;
+        }[];
+      };
+      admin_list_settings: {
+        Args: never;
+        Returns: {
+          description: string;
+          key: string;
+          value: string;
+        }[];
+      };
+      admin_list_urban_fares: {
+        Args: never;
+        Returns: {
+          amount: number;
+          is_night: boolean;
+          passenger_count: number;
         }[];
       };
       admin_list_vehicles: {
@@ -1210,6 +1237,18 @@ export type Database = {
         Args: { p_amount: number; p_place_id: string };
         Returns: undefined;
       };
+      admin_set_setting: {
+        Args: { p_key: string; p_value: string };
+        Returns: undefined;
+      };
+      admin_set_urban_fare: {
+        Args: {
+          p_amount: number;
+          p_is_night: boolean;
+          p_passenger_count: number;
+        };
+        Returns: undefined;
+      };
       admin_unassign_vehicle: {
         Args: { p_driver_id: string };
         Returns: undefined;
@@ -1239,6 +1278,16 @@ export type Database = {
           p_vehicle_id: string;
         };
         Returns: undefined;
+      };
+      admin_upsert_cargo_type: {
+        Args: {
+          p_amount: number;
+          p_cargo_type_id: string;
+          p_is_active?: boolean;
+          p_name: string;
+          p_sort_order?: number;
+        };
+        Returns: string;
       };
       assert_ride_driver: {
         Args: {

@@ -1,0 +1,41 @@
+-- =============================================================================
+-- CORRECCION: la politica de escritura directa de `drivers` seguia abierta.
+-- =============================================================================
+--
+-- QUE ESTABA MAL, Y ES UN DESCUIDO DEL ASISTENTE EN EL PASO 4a. Alli se aprieto
+-- el disparador `protect_driver_columns` -para que ni un administrador pudiera
+-- aprobar a alguien con un UPDATE directo- **pero no se cerro
+-- `drivers_all_admin`**. El disparador solo protege cinco columnas:
+-- `approval_status`, `approved_at`, `approved_by`, `rating_average` y
+-- `rating_count`. Todo lo demas de esa tabla seguia abierto:
+--
+--   - **`is_available`**: se podia poner o quitar de servicio a cualquier
+--     conductor sin dejar rastro. Con el doble turno (D246) eso es peor todavia,
+--     porque decide **quien de los que comparten motorraton recibe los viajes**
+--   - **DELETE**: se podia borrar la ficha de conductor de alguien. No borra su
+--     cuenta -`profiles` no depende de `drivers`- pero si su aprobacion, su
+--     calificacion acumulada y su historial de asignaciones
+--
+-- COMO SE VIO. No lo encontro ninguna prueba: se vio **al listar las politicas
+-- `for all` que quedaban** despues de cerrar las tres del paso 6b, comprobando
+-- una afirmacion que el asistente acababa de escribir en esa migracion -"ninguna
+-- tabla del panel admite ya escritura directa sin auditoria"-. **La afirmacion
+-- era falsa**, y comprobarla fue lo que lo destapo.
+--
+-- La leccion: **el disparador y la politica protegen cosas distintas**, y
+-- apretar uno no cierra la otra. Es la misma forma del error de D241, donde
+-- sustituir una proteccion por otra dejo un hueco que ninguna de las dos tenia
+-- por separado.
+--
+-- QUE PASA CON `is_available` A PARTIR DE AHORA. La escribe el propio conductor
+-- desde su aplicacion, y eso **no cambia**: lo permite `drivers_update_own`, que
+-- es una de las seis excepciones acotadas de D83 y sigue en pie. Lo que se cierra
+-- es que la escriba el administrador por la puerta de atras. Si el panel necesita
+-- poner a alguien fuera de servicio, se hara con una funcion auditada en el paso
+-- 11, junto con lo demas de R10.
+-- =============================================================================
+
+drop policy if exists "drivers_all_admin" on public.drivers;
+
+-- La lectura del administrador se conserva: `drivers_select_admin` ya existe
+-- desde la Fase 5 y es la que sostiene el listado de conductores del panel.

@@ -188,6 +188,7 @@ declare
   v_row record;
   v_n integer;
   v_h text;
+  v_disponible boolean;
 begin
   execute 'set local role authenticated';
   execute format('set local request.jwt.claims to %L',
@@ -287,6 +288,35 @@ begin
   insert into resultados values (13,
     'Un UPDATE directo de la aprobacion NO surte efecto ni siendo administrador',
     'blocked', coalesce(v_row.approval_status, 'nulo'), v_row.approval_status = 'blocked');
+
+  -- 13b. **LA POLITICA DE ESCRITURA DIRECTA, QUE SE QUEDO ABIERTA HASTA EL PASO
+  --      6b.** En el 4a se apreto el disparador pero no se cerro
+  --      `drivers_all_admin`, y el disparador solo protege cinco columnas: se
+  --      podia poner o quitar de servicio a cualquier conductor -o borrarle la
+  --      ficha- sin dejar rastro. No lo encontro ninguna prueba, sino comprobar
+  --      que politicas `for all` quedaban vivas.
+  begin
+    update public.drivers set is_available = true where id = v_aprob;
+    select is_available into v_disponible from public.drivers where id = v_aprob;
+    insert into resultados values (25,
+      'Un administrador NO cambia la disponibilidad con UPDATE directo',
+      'false', v_disponible::text, v_disponible = false);
+  exception when others then
+    insert into resultados values (25,
+      'Un administrador NO cambia la disponibilidad con UPDATE directo',
+      'false', 'rechazado: ' || sqlstate, true);
+  end;
+
+  -- 13c. Ni borra una ficha de conductor.
+  begin
+    delete from public.drivers where id = v_aprob;
+    select count(*) into v_n from public.drivers where id = v_aprob;
+    insert into resultados values (26, 'Un administrador NO borra una ficha de conductor',
+      '1', v_n::text, v_n = 1);
+  exception when others then
+    insert into resultados values (26, 'Un administrador NO borra una ficha de conductor',
+      '1', 'rechazado: ' || sqlstate, true);
+  end;
 
   -- 14. Y tampoco se sube la calificacion a mano, que es la otra mitad de lo que
   --     ese disparador protege.
