@@ -77,15 +77,21 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   conservando sus coordenadas. **6b** —tarifas urbanas, tipos de carga y los 18 parametros—
   **destapo que la politica de escritura de `drivers` seguia abierta desde el paso 4a**, cerrada
   ya. **409 comprobaciones automaticas en verde**
-- **Trabajo siguiente:** decidir entre 4b —el alta de conductores, que obliga a decidir sobre la
-  clave `service_role`—, 4c —documentos, con bucket nuevo— o el paso 7, el listado de pasajeros
+- **El paso 4b esta hecho y verificado**, y con el **el panel ya puede incorporar personal sin
+  tocar la base de datos a mano**. Se hizo con una funcion `security definer` y **sin meter la
+  clave `service_role`** (D250). **La prueba que lo cierra la hizo el usuario: el conductor creado
+  desde el panel entro de verdad en la aplicacion**, que es lo unico que valida E28 y que no se
+  puede comprobar desde SQL
+- **Trabajo siguiente:** decidir entre 4c —documentos, con bucket nuevo— o el paso 7, el listado
+  de pasajeros
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
-  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 6b entero** —las migraciones
-  `20260827120000` y `20260827140000`; `supabase/dev-tools/prueba_configuracion.sql`; las dos
-  comprobaciones nuevas de `prueba_conductores.sql`; el modulo `admin/src/features/config/`, la
-  pantalla `/tarifas` y su entrada en la navegacion; los tipos regenerados y este archivo—. **El
-  commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
+  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4b entero** —las migraciones
+  `20260827160000` y `20260827170000`; `supabase/dev-tools/prueba_alta_conductor.sql`; la
+  correccion de la franja nocturna en `prueba_solicitud_con_valor.sql`; los tres componentes
+  nuevos de `admin/src/features/drivers/` y los cambios en su lista y su fila; los tipos
+  regenerados y este archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a
+  hacerse y se
   detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
   que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
@@ -675,6 +681,8 @@ aplicacion sigue sin tocar dinero.
 | D247 | **El mensaje del companero conectado usa el texto del servidor, no el catalogo** | Unica excepcion en el proyecto a traducir por `hint`. El servidor manda "Juan Perez ya esta conectado con el motorraton 99", y ese dato -quien y cual- no se puede tener en el cliente. **Con el nombre delante, el conductor resuelve llamando a su companero; sin el, tiene que llamar a la oficina.** Sigue siendo el `hint` el que decide que caso es (D88); el texto solo se muestra, y el catalogo conserva un respaldo generico por si llegara vacio |
 | D248 | **La ubicacion de un lugar no se edita: se desactiva y se crea otro** | Mover un lugar cambia su distancia al centro, y con ella dos cosas que deciden precios: si necesita tarifa rural (D229) y a que destino se pega un punto suelto del mapa (D230). Un campo de coordenadas en el formulario invitaria a corregir "una chincheta mal puesta" sin ver que eso puede cambiar lo que paga la gente por viajes que no tienen nada que ver. Desactivar y crear otro **ademas conserva el historial** de los viajes que usaron el sitio viejo |
 | D249 | **Los precios y los parametros se editan de uno en uno, no con un formulario y un boton** | Un formulario con veinte campos y un "Guardar" al final invita a tocar cuatro cosas a la vez; si una falla la validacion del servidor, quien lo usa no sabe cual de las cuatro, y las otras tres pueden haberse guardado o no. Editando en el sitio, **cada cambio lleva su propia respuesta y su propia linea de auditoria**, que es justo lo que se quiere de algo que decide cuanto paga la gente |
+| D250 | **Las cuentas de conductor se crean con una funcion `security definer`, NO con la clave `service_role`** | Decidido con el usuario el 2026-08-27 entre las dos opciones. La `service_role` es la via oficial de Supabase, pero **salta toda la RLS para cualquier operacion**: quien la tenga puede leer y escribir cualquier cosa de cualquier usuario, y hay que custodiarla. La funcion corre con privilegios tambien, pero **acotada a una operacion y con `is_admin()` dentro**: un agujero aqui da de alta conductores, un agujero con la `service_role` da todo. Ademas el proyecto ya crea cuentas asi desde la Fase 12, en las semillas |
+| D251 | **La contrasena inicial la genera el sistema y se muestra una sola vez** | El panel no deja elegirla: cuando las elige una persona para veinte conductores, acaban siendo todas parecidas. El formato es **dictable por telefono** —`Moto-XXXX-9999`, sin O, I, L ni S, que se confunden con 0, 1 y 5 al hablar—, porque asi es como llega al conductor. **Nunca se escribe en la auditoria**: un registro que la guardara seria un almacen de contrasenas en claro que cualquier administrador podria leer. Si se pierde, se genera otra |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4288,7 +4296,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 2 | Servidor: auditoria y bloqueo de cuentas | **HECHO Y VERIFICADO** |
 | 3 | Tablero con los servicios en curso | **HECHO Y VERIFICADO** |
 | 4a | Gestion de los conductores que ya existen | **HECHO Y VERIFICADO**, pantallas incluidas |
-| 4b | Alta de un conductor nuevo | Pendiente. **Necesita la clave `service_role`** |
+| 4b | Alta de un conductor nuevo | **HECHO Y VERIFICADO**, con inicio de sesion real |
 | 4c | Documentos de conductores y vehiculos | Pendiente. **No existe el bucket** |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
@@ -4999,15 +5007,116 @@ ejecutarse por partes.
 
 ---
 
+### Lo que se hizo: paso 4b, dar de alta conductores (2026-08-27)
+
+**Lo ultimo que le faltaba al panel para poder incorporar personal sin tocar la base de datos a
+mano.** `supabase/migrations/20260827160000_admin_create_driver.sql`, su correccion
+`20260827170000`, `supabase/dev-tools/prueba_alta_conductor.sql` (21 comprobaciones) y tres
+componentes nuevos en `admin/src/features/drivers/`.
+
+**POR QUE NO SE PODIA HACER DESDE EL NAVEGADOR**, y por que este paso se aparto del 4a. Un
+conductor no puede auto-registrarse, asi que la cuenta la crea el panel, y con la clave
+publicable no sale: `auth.signUp` **inicia sesion como el usuario recien creado** —echando al
+administrador de su propia sesion— y el perfil nace con rol `passenger`, que un UPDATE no puede
+cambiar (regla 1 de las aprendidas).
+
+**D250: se hace con una funcion `security definer`, no con la clave `service_role`.** Decidido
+con el usuario entre las dos opciones. El motivo es **el alcance del poder**: la `service_role`
+salta toda la RLS para cualquier operacion, y quien la tenga puede leer y escribir cualquier cosa
+de cualquier usuario. Esta funcion corre con privilegios tambien, pero **acotada a una operacion
+y con `is_admin()` comprobado dentro**. Un agujero aqui da de alta conductores; un agujero con la
+`service_role` da todo. Ademas el proyecto ya crea cuentas asi desde la Fase 12:
+`seed_test_driver.sql` y `seed_admin.sql` llevan meses haciendolo.
+
+**D251: la contrasena la genera el sistema y se muestra una sola vez.** El panel no deja
+elegirla: cuando las elige una persona para veinte conductores acaban siendo todas parecidas. El
+formato es **dictable por telefono** —`Moto-XXXX-9999`, sin O ni I ni L ni S, que se confunden
+con 0, 1 y 5 al hablar—, porque asi es como va a llegarle al conductor.
+
+**La contrasena NUNCA se escribe en la auditoria**, y la comprobacion 8 lo mide buscandola
+dentro de `before_data` y `after_data`. Un registro que la guardara seria un almacen de
+contrasenas en claro que cualquier administrador podria leer. La 9 la vigila: comprueba que el
+alta **si** queda registrada, para que la 8 no este en verde por no haberse registrado nada.
+
+**Nace pendiente de aprobar, no aprobado**, que es D245 aplicado al alta: dar de alta y autorizar
+a trabajar son dos decisiones distintas, y la segunda suele depender de unos papeles que aun no
+estan.
+
+**`admin_reset_driver_password` entro con el alta**, porque es su complemento inevitable: un
+conductor olvida su contrasena y la empresa tiene que poder darle otra. **Solo funciona sobre
+cuentas de conductor**, y la comprobacion 17 mide por que: sin esa restriccion, un administrador
+podria darle contrasena nueva a **otro administrador** y entrar con su cuenta.
+
+**UN FALLO DEL ASISTENTE, Y ES UNA TRAMPA DE SUPABASE QUE CONVIENE CONOCER.** La funcion
+generadora se cerro con `revoke all ... from public`, **y eso no basta**: Supabase tiene un
+`ALTER DEFAULT PRIVILEGES` que concede `execute` a `anon`, `authenticated` y `service_role` sobre
+**toda funcion nueva del esquema `public`**. Ese permiso es un grant explicito a cada rol, asi que
+revocarle a `PUBLIC` no lo toca. Medido: `has_function_privilege('anon', ...)` decia **true**, y
+la comprobacion 21 lo cazo esperando un rechazo y recibiendo una contrasena. Corregido con
+`revoke ... from anon, authenticated`.
+
+**Las demas funciones del panel no lo sufren** porque a todas se les concede `execute` a
+`authenticated` a proposito y todas comprueban `is_admin()` dentro. Esta era la unica que debia
+quedar cerrada, precisamente porque no comprueba nada.
+
+**H22, un hallazgo que salio de tirar del hilo y que NO se toco.** Se listaron todas las funciones
+del esquema que `anon` puede ejecutar y aparecen varias operativas: `cancel_request`,
+`accept_ride_offer`, `cancel_ride`, `reject_ride_offer`. **Se probaron llamandolas sin sesion en
+vez de suponer**, y las cuatro **se defienden solas**: comprueban la propiedad con `auth.uid()`,
+que sin sesion es nulo, y responden "Esa solicitud no es tuya". Las demas de la lista son
+funciones de disparador, que no se pueden llamar sueltas. **No hay ningun agujero abierto: hay
+permisos que sobran.** Queda para la Fase 22, que es donde toca, y no se toco ahora porque son
+funciones vivas de las fases 11 a 18 y cambiarles los permisos sin volver a probar el ciclo
+completo arriesga mas de lo que gana.
+
+**En el panel**, el dialogo de la contrasena **no se cierra tocando fuera ni con Escape**, al
+reves que los demas: solo con el boton, y hay que marcar una casilla que dice "ya la anote". Es
+friccion a proposito —un cierre accidental ahi cuesta una llamada al conductor—. Y el dialogo se
+abre **antes** de recargar la lista, porque la recarga puede tardar y esa contrasena no se puede
+perder por el camino.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las dos funciones | `prueba_alta_conductor.sql` | **21 de 21** |
+| Regresion completa | Los diecinueve archivos | **430 comprobaciones, 0 fallando** |
+| El generador ya no esta expuesto | `has_function_privilege` | `anon` y `authenticated` en `false` |
+| Panel y aplicacion movil | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **QUE EL CONDUCTOR CREADO ENTRE DE VERDAD EN LA APLICACION** | **El usuario, en el aparato** | **Entro bien** |
+
+**Esa ultima fila es la que cierra el paso, y es la unica que el asistente no podia hacer.** Desde
+SQL solo se puede comprobar que la fila tenga la forma que GoTrue espera —las cuatro columnas de
+token vacias y no nulas, que es E28—; que GoTrue la acepte de verdad solo se sabe iniciando
+sesion. El archivo de pruebas lo dice en su cabecera para que nadie lo de por cubierto.
+
+**Quedo una cuenta real creada en la prueba:** "juan" (`juan@motomoto-qa.co`), pendiente de
+aprobar y sin motorraton, tal como nace.
+
+**UNA PRUEBA FALLO SIN CULPA DE NADIE, Y LA LECCION YA ESTABA ESCRITA.** Al correr la regresion,
+tres comprobaciones de `prueba_solicitud_con_valor.sql` esperaban 4.000 —la urbana de dia— y
+obtenian 7.000. **Eran las 22:20 en Amalfi**: acababa de empezar la franja nocturna y **el
+servidor tenia razon**. Ese archivo deja correr `now()`, que es exactamente lo que el bloque
+especial dejo advertido al escribir `prueba_calculo_tarifa.sql` —"todas las comprobaciones pasan
+la hora a mano; una prueba que no fije la hora pasaria por la tarde y fallaria a medianoche"— y a
+este archivo no se le habia aplicado.
+
+`request_ride` calcula con `now()` y no admite que se le pase una hora, asi que la solucion no
+podia ser fijarla: **el archivo aparta la franja nocturna** a una ventana que no incluye el
+momento de la ejecucion, dentro de su propia transaccion. Comprobado despues que la franja real
+sigue en 22–5.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 5, 6a y 6b estan **hechos y verificados**
+- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   (seccion 15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y
-  modifica una regla de la Fase 5**. Falta decidir si sigue 4b, 4c o el paso 7. **El arbol de
-  trabajo NO esta limpio**: falta comitear todo lo del paso 6b, listado en la cabecera
+  modifica una regla de la Fase 5**. Falta decidir si sigue 4c o el paso 7. **El arbol de trabajo
+  NO esta limpio**: falta comitear todo lo del paso 4b, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

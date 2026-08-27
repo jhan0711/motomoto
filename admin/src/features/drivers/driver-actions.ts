@@ -23,6 +23,9 @@ const MENSAJES: Record<string, string> = {
   INVALID_PHONE: 'El teléfono debe ser un celular colombiano de 10 dígitos.',
   DRIVER_HAS_ACTIVE_RIDE:
     'Ese conductor tiene un servicio en curso. Resuélvelo antes de retirarle la aprobación.',
+  INVALID_EMAIL: 'Ese correo no es válido.',
+  EMAIL_TAKEN: 'Ya existe una cuenta con ese correo.',
+  VEHICLE_NOT_ACTIVE: 'Ese motorratón no existe o no está activo.',
   CANNOT_CHANGE_OWN_ACCOUNT: 'No puedes cambiar el estado de tu propia cuenta.',
 };
 
@@ -98,4 +101,46 @@ export async function editarContacto(
 
   if (error) return { ok: false, mensaje: traducir(error) };
   return { ok: true };
+}
+
+/**
+ * Da de alta un conductor. Devuelve la contrasena inicial UNA SOLA VEZ.
+ *
+ * **Ese valor no se guarda en ningun sitio**: ni en la auditoria, ni en el
+ * estado de la pantalla mas alla de lo que dure el dialogo. Si se pierde, hay
+ * que restablecerla, que genera otra distinta.
+ */
+export async function crearConductor(
+  correo: string,
+  nombre: string,
+  telefono: string,
+  vehicleId: string | null,
+): Promise<{ ok: true; password: string } | { ok: false; mensaje: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_create_driver', {
+    p_email: correo,
+    p_full_name: nombre,
+    p_phone: telefono,
+    p_vehicle_id: vehicleId ?? undefined,
+  });
+
+  if (error) return { ok: false, mensaje: traducir(error) };
+
+  const fila = data?.[0];
+  if (fila === undefined) return { ok: false, mensaje: 'No pudimos crear la cuenta.' };
+  return { ok: true, password: fila.initial_password };
+}
+
+/** Genera una contrasena nueva para un conductor. Tambien se muestra una vez. */
+export async function restablecerContrasena(
+  driverId: string,
+): Promise<{ ok: true; password: string } | { ok: false; mensaje: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_reset_driver_password', {
+    p_driver_id: driverId,
+  });
+
+  if (error) return { ok: false, mensaje: traducir(error) };
+  if (typeof data !== 'string') return { ok: false, mensaje: 'No pudimos generar la contraseña.' };
+  return { ok: true, password: data };
 }

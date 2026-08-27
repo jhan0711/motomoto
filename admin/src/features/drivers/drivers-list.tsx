@@ -1,15 +1,24 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Inbox, LoaderCircle } from 'lucide-react';
-import { listarConductores } from './driver-actions';
+import { AlertCircle, Inbox, LoaderCircle, Plus } from 'lucide-react';
+import { crearConductor, listarConductores } from './driver-actions';
 import { DriverRow } from './driver-row';
 import type { Driver } from './types';
+import { NewDriverDialog } from './new-driver-dialog';
+import { PasswordNotice } from './password-notice';
 
 export function DriversList() {
   const [conductores, setConductores] = useState<Driver[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [creando, setCreando] = useState(false);
+
+  /*
+   * La contrasena recien generada, mientras el dialogo la ensena. Vive aqui y
+   * solo aqui: no se guarda, no viaja a la auditoria y desaparece al cerrar.
+   */
+  const [credencial, setCredencial] = useState<{ nombre: string; password: string } | null>(null);
 
   const consultar = useCallback(async () => {
     const r = await listarConductores();
@@ -40,15 +49,26 @@ export function DriversList() {
 
   return (
     <section>
-      <header>
-        <h2 className="text-lg font-semibold text-text-primary">Conductores</h2>
-        <p className="mt-0.5 text-sm text-text-secondary">
-          {cargando
-            ? 'Consultando…'
-            : pendientes === 0
-              ? `${conductores.length} en total`
-              : `${conductores.length} en total · ${pendientes} ${pendientes === 1 ? 'espera' : 'esperan'} aprobación`}
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-lg font-semibold text-text-primary">Conductores</h2>
+          <p className="mt-0.5 text-sm text-text-secondary">
+            {cargando
+              ? 'Consultando…'
+              : pendientes === 0
+                ? `${conductores.length} en total`
+                : `${conductores.length} en total · ${pendientes} ${pendientes === 1 ? 'espera' : 'esperan'} aprobación`}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setCreando(true)}
+          className="btn btn-primario h-10 px-3"
+        >
+          <Plus size={16} />
+          Nuevo conductor
+        </button>
       </header>
 
       {error !== null && (
@@ -74,7 +94,7 @@ export function DriversList() {
             <Inbox size={28} className="text-text-tertiary" />
             <p className="font-medium text-text-primary">Todavía no hay conductores</p>
             <p className="max-w-sm text-sm text-text-secondary">
-              Las altas de conductores se construyen en el paso siguiente del panel.
+              Da de alta el primero con el botón de arriba.
             </p>
           </div>
         )}
@@ -87,6 +107,32 @@ export function DriversList() {
           />
         ))}
       </div>
+
+      {creando && (
+        <NewDriverDialog
+          onCerrar={() => setCreando(false)}
+          onCrear={async (correo, nombre, telefono, vehicleId) => {
+            const r = await crearConductor(correo, nombre, telefono, vehicleId);
+            if (r.ok) {
+              setCreando(false);
+              // El dialogo de la contrasena se abre ANTES de recargar: la lista
+              // puede tardar, y esa contrasena no se puede perder por el camino.
+              setCredencial({ nombre, password: r.password });
+              void consultar();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {credencial !== null && (
+        <PasswordNotice
+          titulo="Conductor creado"
+          nombre={credencial.nombre}
+          password={credencial.password}
+          onCerrar={() => setCredencial(null)}
+        />
+      )}
     </section>
   );
 }

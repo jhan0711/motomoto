@@ -1,11 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { Ban, Check, CircleSlash, Pencil, Star, Truck, UserCheck } from 'lucide-react';
+import { Ban, Check, CircleSlash, KeyRound, Pencil, Star, Truck, UserCheck } from 'lucide-react';
 import type { Driver } from './types';
 import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
-import { cambiarAprobacion, cambiarEstadoCuenta, editarContacto } from './driver-actions';
+import {
+  cambiarAprobacion,
+  cambiarEstadoCuenta,
+  editarContacto,
+  restablecerContrasena,
+} from './driver-actions';
 import { EditContactDialog } from './edit-contact-dialog';
+import { PasswordNotice } from './password-notice';
 
 interface Props {
   conductor: Driver;
@@ -16,6 +22,8 @@ export function DriverRow({ conductor, onCambio }: Props) {
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
+  // La contrasena recien generada, solo mientras el dialogo la ensena.
+  const [credencial, setCredencial] = useState<string | null>(null);
 
   const aprobado = conductor.approval_status === 'approved';
   const bloqueada = conductor.account_status === 'blocked';
@@ -141,6 +149,23 @@ export function DriverRow({ conductor, onCambio }: Props) {
         <button
           type="button"
           disabled={trabajando}
+          onClick={async () => {
+            setTrabajando(true);
+            setError(null);
+            const r = await restablecerContrasena(conductor.driver_id);
+            setTrabajando(false);
+            if (r.ok) setCredencial(r.password);
+            else setError(r.mensaje);
+          }}
+          className="btn btn-secundario h-9 gap-1.5 px-3"
+        >
+          <KeyRound size={15} />
+          Nueva contraseña
+        </button>
+
+        <button
+          type="button"
+          disabled={trabajando}
           onClick={() =>
             void ejecutar(() =>
               cambiarEstadoCuenta(conductor.driver_id, bloqueada ? 'active' : 'blocked', null),
@@ -152,6 +177,15 @@ export function DriverRow({ conductor, onCambio }: Props) {
           {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
         </button>
       </div>
+
+      {credencial !== null && (
+        <PasswordNotice
+          titulo="Contraseña nueva"
+          nombre={conductor.full_name}
+          password={credencial}
+          onCerrar={() => setCredencial(null)}
+        />
+      )}
 
       {editando && (
         <EditContactDialog

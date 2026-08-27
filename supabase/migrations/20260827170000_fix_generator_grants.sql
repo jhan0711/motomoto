@@ -1,0 +1,41 @@
+-- =============================================================================
+-- CORRECCION: `generate_initial_password` estaba abierta a todo el mundo.
+-- =============================================================================
+--
+-- QUE ESTABA MAL, Y ES UNA TRAMPA DE SUPABASE QUE CONVIENE CONOCER. La migracion
+-- anterior escribio:
+--
+--   revoke all on function public.generate_initial_password() from public;
+--
+-- y **eso no basta**. Supabase tiene puesto un `ALTER DEFAULT PRIVILEGES` que
+-- concede `execute` a `anon`, `authenticated` y `service_role` sobre **toda
+-- funcion nueva del esquema `public`**. Ese permiso es un grant explicito a cada
+-- rol, no el de `PUBLIC`, asi que revocarle a `PUBLIC` no lo toca.
+--
+-- Resultado medido, no supuesto: `has_function_privilege('anon', ...)` decia
+-- **true**. La comprobacion 21 de `prueba_alta_conductor.sql` lo cazo -esperaba
+-- un rechazo y obtuvo una contrasena-.
+--
+-- POR QUE NO LO SUFRIERON LAS DEMAS FUNCIONES DEL PANEL. Porque a todas se les
+-- concede `execute` a `authenticated` a proposito, y todas **comprueban
+-- `is_admin()` dentro**. Esta era la unica que debia quedar cerrada, justamente
+-- porque no comprueba nada: solo devuelve texto aleatorio. Concederla es dar un
+-- generador de contrasenas a cualquiera que pase por ahi -no rompe nada por si
+-- solo, pero no tiene ningun motivo para existir-.
+--
+-- LO QUE SE MIRO DE PASO, Y LA CONCLUSION TRANQUILIZADORA. Se listaron todas las
+-- funciones del esquema que `anon` puede ejecutar, y aparecen varias operativas:
+-- `cancel_request`, `accept_ride_offer`, `cancel_ride`, `reject_ride_offer`. **Se
+-- probaron llamandolas sin sesion en vez de suponer**, y las cuatro **se
+-- defienden solas**: comprueban la propiedad con `auth.uid()`, que sin sesion es
+-- nulo, y responden "Esa solicitud no es tuya" / "Esa oferta no es tuya". Las
+-- demas de la lista son funciones de disparador, que no se pueden llamar sueltas.
+--
+-- Asi que **no hay ningun agujero abierto ahi**: hay permisos que sobran. Queda
+-- anotado como hallazgo H22 para revisarlo entero en la Fase 22 -seguridad y
+-- auditoria-, que es donde toca, y no se toca ahora: son funciones vivas de las
+-- fases 11 a 18 y cambiarles los permisos sin volver a probar el ciclo completo
+-- seria arriesgar mas de lo que se gana.
+-- =============================================================================
+
+revoke all on function public.generate_initial_password() from anon, authenticated;

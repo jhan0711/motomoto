@@ -1084,6 +1084,18 @@ export type Database = {
         Args: { p_driver_id: string; p_vehicle_id: string };
         Returns: undefined;
       };
+      admin_create_driver: {
+        Args: {
+          p_email: string;
+          p_full_name: string;
+          p_phone: string;
+          p_vehicle_id?: string;
+        };
+        Returns: {
+          driver_id: string;
+          initial_password: string;
+        }[];
+      };
       admin_create_place: {
         Args: {
           p_description?: string;
@@ -1216,6 +1228,10 @@ export type Database = {
           unit_number: number;
           vehicle_id: string;
         }[];
+      };
+      admin_reset_driver_password: {
+        Args: { p_driver_id: string };
+        Returns: string;
       };
       admin_set_account_status: {
         Args: {
@@ -1358,6 +1374,7 @@ export type Database = {
           unit_number: number;
         }[];
       };
+      generate_initial_password: { Args: never; Returns: string };
       get_active_request: {
         Args: never;
         Returns: {

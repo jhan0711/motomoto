@@ -24,6 +24,45 @@
 
 begin;
 
+-- -----------------------------------------------------------------------------
+-- LA FRANJA NOCTURNA SE APARTA, PARA QUE ESTE ARCHIVO NO DEPENDA DE LA HORA
+-- -----------------------------------------------------------------------------
+--
+-- Este archivo comprueba la tarifa que nace con la solicitud, y `request_ride`
+-- calcula el valor con `now()`: no admite que se le pase una hora. Asi que las
+-- comprobaciones que esperan 4.000 -la urbana de dia- **fallaban al ejecutarlas
+-- de noche**, devolviendo los 7.000 de la franja nocturna. Paso el 2026-08-27 a
+-- las 22:20 hora de Amalfi, con tres comprobaciones en rojo y el servidor
+-- teniendo razon.
+--
+-- Es exactamente la leccion que el bloque especial dejo escrita al hacer
+-- `prueba_calculo_tarifa.sql` -"todas las comprobaciones pasan la hora a mano,
+-- ninguna deja now(); una prueba que no fije la hora pasaria por la tarde y
+-- fallaria a medianoche"-, **y a este archivo no se le aplico**.
+--
+-- Como aqui no se puede fijar la hora, se aparta la franja: se mueve a una que
+-- no incluya el momento de la ejecucion, sea cual sea. Como todo lo demas del
+-- archivo, se deshace con el `rollback` del final y produccion no se entera.
+do $franja$
+declare
+  v_hora integer;
+begin
+  select extract(hour from now() at time zone (
+    select value #>> '{}' from public.app_settings where key = 'fare_timezone'
+  ))::integer into v_hora;
+
+  -- Una ventana de una hora que empieza justo despues de la hora actual: nunca
+  -- cae encima de "ahora", corra el archivo a la hora que corra.
+  update public.app_settings
+  set value = to_jsonb(((v_hora + 2) % 24))
+  where key = 'night_fare_start_hour';
+
+  update public.app_settings
+  set value = to_jsonb(((v_hora + 3) % 24))
+  where key = 'night_fare_end_hour';
+end
+$franja$;
+
 create temp table resultados (
   n integer,
   comprobacion text,
