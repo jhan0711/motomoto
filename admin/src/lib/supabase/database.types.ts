@@ -1084,6 +1084,17 @@ export type Database = {
         Args: { p_driver_id: string; p_vehicle_id: string };
         Returns: undefined;
       };
+      admin_create_place: {
+        Args: {
+          p_description?: string;
+          p_lat: number;
+          p_lng: number;
+          p_name: string;
+          p_rural_amount?: number;
+          p_sort_order?: number;
+        };
+        Returns: string;
+      };
       admin_create_vehicle: {
         Args: {
           p_max_passengers?: number;
@@ -1143,6 +1154,23 @@ export type Database = {
           vehicle_id: string;
         }[];
       };
+      admin_list_places: {
+        Args: never;
+        Returns: {
+          description: string;
+          distance_from_center_m: number;
+          is_active: boolean;
+          lat: number;
+          lng: number;
+          name: string;
+          needs_fare: boolean;
+          place_id: string;
+          rural_amount: number;
+          rural_is_active: boolean;
+          sort_order: number;
+          usage_count: number;
+        }[];
+      };
       admin_list_vehicles: {
         Args: never;
         Returns: {
@@ -1178,12 +1206,26 @@ export type Database = {
         };
         Returns: undefined;
       };
+      admin_set_rural_fare: {
+        Args: { p_amount: number; p_place_id: string };
+        Returns: undefined;
+      };
       admin_unassign_vehicle: {
         Args: { p_driver_id: string };
         Returns: undefined;
       };
       admin_update_driver_contact: {
         Args: { p_driver_id: string; p_full_name: string; p_phone: string };
+        Returns: undefined;
+      };
+      admin_update_place: {
+        Args: {
+          p_description: string;
+          p_is_active: boolean;
+          p_name: string;
+          p_place_id: string;
+          p_sort_order: number;
+        };
         Returns: undefined;
       };
       admin_update_vehicle: {

@@ -71,18 +71,20 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   Verificado en servidor con 16 comprobaciones; **falta que el usuario lo vea en pantalla**
 - **Los botones del panel dejaron de ser planos**, tambien a peticion suya: hover, pulsacion y
   foco de teclado, centralizados en tres clases
-- **Trabajo siguiente:** decidir entre 4b —el alta de conductores, que obliga a decidir sobre la
-  clave `service_role`—, 4c —documentos, con bucket nuevo— o el paso 6, tarifas y lugares
-- **Ultimo commit:** `d6be25a`, "fase 20 paso 4a", con sus catorce archivos. Antes, `1690efb` el
-  paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y `611e0e8` todo el bloque especial. **SIN
-  COMITEAR: el paso 5 entero, el doble turno y los botones** —las migraciones `20260827010000`,
-  `20260827020000`, `20260827040000` y `20260827050000`; `prueba_vehiculos.sql` y
-  `prueba_doble_turno.sql`; las correcciones de `prueba_recaudo.sql` y
-  `prueba_solicitud_con_valor.sql` para que monten su propia asignacion; el modulo
-  `admin/src/features/vehicles/`, la pantalla `/motorratones`, las clases de boton en
-  `globals.css` y los 17 botones migrados; los cambios de `src/features/ride/errors.ts` y
-  `src/features/driver/driver-service.ts` en la aplicacion movil; los tipos regenerados y este
-  archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
+- **El paso 6a esta hecho y verificado**, pantallas incluidas: lugares y tarifas rurales, con D229
+  aplicada **midiendo la distancia** y no preguntando. **Encontro un lugar roto en produccion**
+  —"Vereda Guayabito", activa y sin tarifa desde la Fase 9—, que quedo desactivada conservando
+  sus coordenadas
+- **Trabajo siguiente:** decidir entre 6b —tarifas urbanas, tipos de carga y parametros—, 4b —el
+  alta de conductores, que obliga a decidir sobre la clave `service_role`— o 4c —documentos, con
+  bucket nuevo—
+- **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
+  Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
+  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 6a entero** —las migraciones
+  `20260827080000`, `20260827090000` y `20260827100000`; `supabase/dev-tools/prueba_lugares.sql`;
+  el modulo `admin/src/features/places/`, la pantalla `/lugares` y su entrada en la navegacion;
+  los tipos regenerados y este archivo—. **El commit del paso 3 costo dos intentos**: el primero
+  no llego a hacerse y se
   detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
   que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
@@ -663,6 +665,7 @@ aplicacion sigue sin tocar dinero.
 | D245 | **Aprobar a un conductor y bloquear su cuenta son dos acciones distintas** | Y por eso son dos funciones, no una con un parametro. Bloquear la cuenta deja a la persona sin poder entrar en la aplicacion; retirar la aprobacion la deja entrar pero no trabajar. La empresa usa las dos en momentos distintos: la primera ante un problema grave, la segunda cuando caduca un papel. Juntarlas obligaria a explicar en la pantalla una diferencia que los nombres ya dicen solos |
 | D246 | **UN MOTORRATON LO PUEDEN LLEVAR VARIAS PERSONAS, PERO SOLO UNA CONECTADA A LA VEZ** | Pedido por el usuario el 2026-08-27 -"algunos tienen doble turno"- y decidido entre tres opciones. **Modifica una regla de la Fase 5**: se retira el indice `dva_one_active_per_vehicle`. Lo que aquel indice protegia -que dos conductores no aparezcan al volante de la misma unidad- se protege ahora donde de verdad se decide, en `is_available`, porque es la columna por la que filtra `find_available_drivers`: si dos companeros pudieran estar disponibles a la vez, **los dos recibirian ofertas y los dos podrian aceptar con un solo motorraton fisico**. Se descarto reasignar en cada cambio de turno -obliga a acordarse dos veces al dia- y se descarto quitar el limite sin mas -deja el hueco abierto-. Lo que NO cambia: `dva_one_active_per_driver` sigue en pie, un conductor tiene una sola unidad |
 | D247 | **El mensaje del companero conectado usa el texto del servidor, no el catalogo** | Unica excepcion en el proyecto a traducir por `hint`. El servidor manda "Juan Perez ya esta conectado con el motorraton 99", y ese dato -quien y cual- no se puede tener en el cliente. **Con el nombre delante, el conductor resuelve llamando a su companero; sin el, tiene que llamar a la oficina.** Sigue siendo el `hint` el que decide que caso es (D88); el texto solo se muestra, y el catalogo conserva un respaldo generico por si llegara vacio |
+| D248 | **La ubicacion de un lugar no se edita: se desactiva y se crea otro** | Mover un lugar cambia su distancia al centro, y con ella dos cosas que deciden precios: si necesita tarifa rural (D229) y a que destino se pega un punto suelto del mapa (D230). Un campo de coordenadas en el formulario invitaria a corregir "una chincheta mal puesta" sin ver que eso puede cambiar lo que paga la gente por viajes que no tienen nada que ver. Desactivar y crear otro **ademas conserva el historial** de los viajes que usaron el sitio viejo |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4280,7 +4283,8 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 4c | Documentos de conductores y vehiculos | Pendiente. **No existe el bucket** |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
-| 6 | Lugares, tarifas urbanas y rurales, tipos de carga (con D229) | Pendiente |
+| 6a | Lugares y tarifas rurales (con D229) | **HECHO Y VERIFICADO**, pantallas incluidas |
+| 6b | Tarifas urbanas, tipos de carga y parametros | Pendiente |
 | 7 | Listado de pasajeros con bloqueo | Pendiente |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
@@ -4835,15 +4839,92 @@ llevaban el mismo problema y se arreglaron igual.
 
 ---
 
+### Lo que se hizo: paso 6a, lugares y tarifas rurales (2026-08-27)
+
+**El paso 6 son cinco areas y se partio en dos.** Lugares y tarifas rurales van juntas **porque
+D229 las ata**; las tarifas urbanas, los tipos de carga y los parametros son catalogos pequenos y
+fijos, y van en 6b.
+
+`supabase/migrations/20260827080000_admin_places_and_rural_fares.sql`, sus dos correcciones
+`20260827090000` y `20260827100000`, `supabase/dev-tools/prueba_lugares.sql` (25 comprobaciones),
+el modulo `admin/src/features/places/` y la pantalla `/lugares`.
+
+**CUARTA APARICION DEL MISMO HUECO**, y en las tablas donde mas importa: `places_all_admin` y
+`rural_fares_all_admin` permitian **cambiar un precio con un UPDATE directo y sin dejar rastro**.
+Se cerraron las dos. **Faltan `urban_fares`, `cargo_types` y `app_settings`**, que se cierran en
+6b.
+
+**D229 SE APLICO CON EL DATO, NO CON EL CRITERIO.** La decision decia que el panel no dejara
+crear un lugar sin decidir su tarifa. Aqui no se pregunta "¿es rural?" y se confia en la
+respuesta: **se mide la distancia al centro y se compara con `unpriced_destination_max_km`, el
+mismo parametro que usa D219 para rebotar destinos sin precio**. Si el lugar cae fuera de ese
+radio y no trae tarifa, no se crea. Asi la regla del panel y la del servidor son **el mismo
+numero**, y afinar una afina la otra. El mensaje de rechazo **da los kilometros**, porque quien
+lo lee tiene que poder decidir si pone precio o si movio mal la chincheta.
+
+**UN HALLAZGO CON DATOS DE PRODUCCION, Y ES EL QUE JUSTIFICA TODO EL PASO.** Al medir los 63
+lugares reales aparecio **"Vereda Guayabito": activa en la lista del pasajero, a 6,3 km del
+centro y sin tarifa**. Al elegirla, el servidor la rebotaba con `DESTINATION_NOT_PRICED`. Llevaba
+asi **desde la Fase 9**, desde antes de que existieran las tarifas, y no habia molestado a nadie
+solo porque nunca la uso ningun viaje.
+
+**El usuario pidio borrarla y se propuso desactivarla en su lugar**, con el precedente de D232 -a
+"La vibora" se la renombro y apago, no se borro- y un motivo concreto: **borrarla pierde sus
+coordenadas**, y recrearla obligaria a volver a conseguirlas. Se desactivo **llamando a la
+funcion del panel**, no con un UPDATE, para que quedara en la auditoria igual que si se hubiera
+pulsado el boton. Quedan sus coordenadas intactas: `-75.09602, 6.85448`.
+
+**Y AL DESACTIVARLA APARECIO UN FALLO DEL ASISTENTE.** El contador de lugares sin tarifa **se
+quedo en 1**: `needs_fare` no miraba si el lugar estaba activo. Un lugar apagado no sale en la
+lista del pasajero, asi que **no puede rebotar**: no hay nada que arreglar, y un aviso que
+siempre esta encendido es un aviso que nadie mira. Corregido en `20260827100000`, con dos
+comprobaciones nuevas -la 24 y la 25- que ademas miden que **al reactivarlo el aviso vuelve
+solo**, que es lo que prueba que la condicion esta en el sitio correcto.
+
+**DOS ERRORES DEL ASISTENTE, Y LOS DOS SON EL MISMO.** Se llamo a `is_within_service_area` y a
+`quote_fare` **suponiendo sus firmas en vez de mirarlas**: la primera recibe longitud y latitud
+sueltas, no un punto; la segunda pone el tipo de servicio antes que los pasajeros. Las dos
+existen desde hace fases. **La regla 2 del proyecto -verificar, no suponer- vale tambien para las
+firmas de las funciones propias, no solo para los datos.** Lo unico bueno: un error de tipos en
+PL/pgSQL no salta al crear la funcion, solo al llamarla, asi que lo cazo la primera comprobacion
+que intento crear un lugar. Sin la prueba, habria aparecido en el panel.
+
+**Y UNA EXPECTATIVA MIA EQUIVOCADA, no un fallo del codigo.** La comprobacion 18 media un viaje
+entre dos lugares con tarifa propia y esperaba el precio del destino. **D233 dice que con dos
+rurales distintos gana el mas caro**, asi que el codigo tenia razon. Se reescribio con un origen
+urbano, que es lo que se queria medir.
+
+**Tres decisiones de la pantalla que no son adorno:**
+
+- **La ubicacion no se puede editar** (D248). Mover un lugar cambia su distancia al centro, y con
+  ella si necesita tarifa (D229) y a que destino se pega un punto suelto (D230). Es una operacion
+  con consecuencias sobre los precios, no un campo mas de un formulario
+- **Quitar una tarifa la apaga, no la borra.** El precio se conserva por si el destino vuelve a
+  atenderse, y la pantalla lo dice, porque desde fuera "quitar" suena a perder el dato
+- **El aviso rojo solo aparece cuando hay algo roto**, con un enlace que filtra la lista
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las funciones | `prueba_lugares.sql` | **25 de 25** |
+| Regresion completa | Los diecisiete archivos | **380 comprobaciones, 0 fallando** |
+| El estado real de los lugares | Consulta al servidor | 63 lugares, 61 activos, 28 con tarifa, **0 rotos** |
+| `/lugares` sin sesion | `GET` | 307 a `/acceso` |
+| Panel y aplicacion movil | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Funciona** |
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
-- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a y 5 estan **hechos y verificados** (seccion
+- **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 5 y 6a estan **hechos y verificados** (seccion
   15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y modifica
-  una regla de la Fase 5**. Falta decidir si sigue 4b, 4c o el paso 6. **El arbol de trabajo NO
-  esta limpio**: falta comitear todo lo del paso 5 en adelante, listado en la cabecera
+  una regla de la Fase 5**. Falta decidir si sigue 6b, 4b o 4c. **El arbol de trabajo NO esta
+  limpio**: falta comitear todo lo del paso 6a, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

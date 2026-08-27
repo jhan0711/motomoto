@@ -2,17 +2,18 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Truck, Users } from 'lucide-react';
+import { LayoutDashboard, MapPin, Truck, Users } from 'lucide-react';
 
 /*
  * Las secciones del panel, en el orden en que se van construyendo. Las que
- * faltan -tarifas, pasajeros, servicios, reportes- se anaden aqui segun llegan
+ * faltan -pasajeros, servicios, reportes- se anaden aqui segun llegan
  * sus pasos, y la navegacion no hay que volver a tocarla.
  */
 const SECCIONES = [
   { href: '/', etiqueta: 'Tablero', icono: LayoutDashboard },
   { href: '/conductores', etiqueta: 'Conductores', icono: Users },
   { href: '/motorratones', etiqueta: 'Motorratones', icono: Truck },
+  { href: '/lugares', etiqueta: 'Lugares y tarifas', icono: MapPin },
 ] as const;
 
 export function PanelNav() {
