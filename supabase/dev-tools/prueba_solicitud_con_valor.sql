@@ -128,7 +128,16 @@ begin
   where p.role = 'passenger' and p.status = 'active' and p.id <> v_pas
   order by p.created_at limit 1;
 
-  select d.id into v_cond from public.drivers d order by d.id limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
 
   -- LA PRUEBA CREA SU PROPIA ASIGNACION SI NO LA HAY, en vez de dar por hecho
   -- que el conductor tiene motorraton. Dejo de ser cierto el 2026-08-27, cuando

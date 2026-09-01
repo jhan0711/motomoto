@@ -240,7 +240,16 @@ declare
   v_org  extensions.geography;
   v_dst  extensions.geography;
 begin
-  select d.id into v_cond from public.drivers d order by d.id limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
   select v.id, v.max_passengers into v_veh, v_cap
   from public.vehicles v order by v.unit_number limit 1;
   select p.id into v_otro
@@ -481,8 +490,13 @@ begin
   where p.role = 'passenger' and p.status = 'active' and p.id <> v_pas
   order by p.created_at limit 1;
 
-  select d.id into v_cond1 from public.drivers d order by d.id limit 1;
-  select d.id into v_cond2 from public.drivers d where d.id <> v_cond1 order by d.id limit 1;
+  -- LOS DOS APROBADOS, por el mismo motivo que el bloque de arriba: un conductor
+  -- dado de alta desde el panel nace pendiente, y si cae el primero desordena el
+  -- reparto de papeles de esta prueba -uno con oferta, otro sin ella-.
+  select d.id into v_cond1 from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
+  select d.id into v_cond2 from public.drivers d
+  where d.id <> v_cond1 and d.approval_status = 'approved' order by d.id limit 1;
 
   -- Al conductor 1 se le OFRECE la encomienda, sin aceptarla todavia. Es el caso
   -- que importa: tiene que ver que le proponen antes de decidir.

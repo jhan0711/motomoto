@@ -62,7 +62,16 @@ declare
 begin
   -- Se toma un conductor y un vehiculo que ya existen: la prueba no mide el alta
   -- de conductores, que es del paso 4.
-  select d.id into v_cond from public.drivers d limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' limit 1;
   select v.id into v_veh from public.vehicles v limit 1;
 
   select extensions.st_x(location::extensions.geometry),

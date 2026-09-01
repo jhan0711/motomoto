@@ -1,7 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Inbox, LoaderCircle, Pencil, Plus, User, UserMinus } from 'lucide-react';
+import {
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
+  Inbox,
+  LoaderCircle,
+  Pencil,
+  Plus,
+  User,
+  UserMinus,
+} from 'lucide-react';
 import {
   asignarVehiculo,
   crearVehiculo,
@@ -13,6 +23,7 @@ import { ESTILO_ESTADO, ETIQUETA_ESTADO, leerConductores } from './types';
 import type { Vehicle } from './types';
 import { VehicleDialog } from './vehicle-dialog';
 import { AssignDialog } from './assign-dialog';
+import { DocumentsPanel } from '@/features/documents/documents-panel';
 
 export function VehiclesList() {
   const [vehiculos, setVehiculos] = useState<Vehicle[]>([]);
@@ -23,6 +34,8 @@ export function VehiclesList() {
   const [creando, setCreando] = useState(false);
   const [asignando, setAsignando] = useState<Vehicle | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  // Plegados, por lo mismo que en la ficha del conductor.
+  const [conDocumentos, setConDocumentos] = useState<string | null>(null);
 
   const consultar = useCallback(async () => {
     const r = await listarVehiculos();
@@ -226,6 +239,34 @@ export function VehiclesList() {
                 </button>
               ))}
             </div>
+
+            <button
+              type="button"
+              onClick={() =>
+                setConDocumentos((actual) =>
+                  actual === vehiculo.vehicle_id ? null : vehiculo.vehicle_id,
+                )
+              }
+              aria-expanded={conDocumentos === vehiculo.vehicle_id}
+              className="btn mt-3 h-9 gap-1.5 px-2 font-normal text-text-secondary hover:bg-surface-pressed"
+            >
+              {conDocumentos === vehiculo.vehicle_id ? (
+                <ChevronDown size={15} />
+              ) : (
+                <ChevronRight size={15} />
+              )}
+              Documentos
+            </button>
+
+            {conDocumentos === vehiculo.vehicle_id && (
+              <div className="mt-2">
+                <DocumentsPanel
+                  owner="vehicle"
+                  ownerId={vehiculo.vehicle_id}
+                  ownerNombre={`Motorratón ${vehiculo.unit_number} · ${vehiculo.plate}`}
+                />
+              </div>
+            )}
           </article>
         ))}
       </div>

@@ -82,16 +82,19 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   clave `service_role`** (D250). **La prueba que lo cierra la hizo el usuario: el conductor creado
   desde el panel entro de verdad en la aplicacion**, que es lo unico que valida E28 y que no se
   puede comprobar desde SQL
-- **Trabajo siguiente:** decidir entre 4c —documentos, con bucket nuevo— o el paso 7, el listado
-  de pasajeros
+- **El paso 4c esta hecho en servidor**, y con el **se acabo el hueco de las politicas
+  `_all_admin`**: cero `for all` en todo el esquema, comprobado. **Las pantallas de documentos
+  estan construidas pero NADIE HA SUBIDO UN ARCHIVO todavia**: es lo primero que hay que probar
+- **Trabajo siguiente:** probar la subida de documentos y seguir con el paso 7, el listado de
+  pasajeros con bloqueo
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
-  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4b entero** —las migraciones
-  `20260827160000` y `20260827170000`; `supabase/dev-tools/prueba_alta_conductor.sql`; la
-  correccion de la franja nocturna en `prueba_solicitud_con_valor.sql`; los tres componentes
-  nuevos de `admin/src/features/drivers/` y los cambios en su lista y su fila; los tipos
-  regenerados y este archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a
-  hacerse y se
+  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
+  `20260827190000`; `supabase/dev-tools/prueba_documentos.sql`; el modulo
+  `admin/src/features/documents/` y su enganche en las fichas de conductor y de motorraton; **las
+  correcciones de los siete sitios que elegian "el primer conductor"** en `prueba_encomiendas`,
+  `prueba_recaudo`, `prueba_solicitud_con_valor` y `prueba_tablero`; los tipos regenerados y este
+  archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
   detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
   que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
   2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
@@ -683,6 +686,7 @@ aplicacion sigue sin tocar dinero.
 | D249 | **Los precios y los parametros se editan de uno en uno, no con un formulario y un boton** | Un formulario con veinte campos y un "Guardar" al final invita a tocar cuatro cosas a la vez; si una falla la validacion del servidor, quien lo usa no sabe cual de las cuatro, y las otras tres pueden haberse guardado o no. Editando en el sitio, **cada cambio lleva su propia respuesta y su propia linea de auditoria**, que es justo lo que se quiere de algo que decide cuanto paga la gente |
 | D250 | **Las cuentas de conductor se crean con una funcion `security definer`, NO con la clave `service_role`** | Decidido con el usuario el 2026-08-27 entre las dos opciones. La `service_role` es la via oficial de Supabase, pero **salta toda la RLS para cualquier operacion**: quien la tenga puede leer y escribir cualquier cosa de cualquier usuario, y hay que custodiarla. La funcion corre con privilegios tambien, pero **acotada a una operacion y con `is_admin()` dentro**: un agujero aqui da de alta conductores, un agujero con la `service_role` da todo. Ademas el proyecto ya crea cuentas asi desde la Fase 12, en las semillas |
 | D251 | **La contrasena inicial la genera el sistema y se muestra una sola vez** | El panel no deja elegirla: cuando las elige una persona para veinte conductores, acaban siendo todas parecidas. El formato es **dictable por telefono** —`Moto-XXXX-9999`, sin O, I, L ni S, que se confunden con 0, 1 y 5 al hablar—, porque asi es como llega al conductor. **Nunca se escribe en la auditoria**: un registro que la guardara seria un almacen de contrasenas en claro que cualquier administrador podria leer. Si se pierde, se genera otra |
+| D252 | **Un documento se sube primero y se registra despues** | El archivo no pasa por SQL: Storage tiene su propia API. Se eligio ese orden y no el contrario porque **un archivo sin fila es basura recuperable, y una fila sin archivo es un documento que la empresa cree tener y no tiene**. Si el registro falla, el panel borra el archivo recien subido; si esa limpieza tambien falla, queda un huerfano en el bucket, que se puede encontrar y borrar. La otra forma deja mentiras en la base de datos |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4297,7 +4301,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 3 | Tablero con los servicios en curso | **HECHO Y VERIFICADO** |
 | 4a | Gestion de los conductores que ya existen | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 4b | Alta de un conductor nuevo | **HECHO Y VERIFICADO**, con inicio de sesion real |
-| 4c | Documentos de conductores y vehiculos | Pendiente. **No existe el bucket** |
+| 4c | Documentos de conductores y vehiculos | **HECHO Y VERIFICADO EN SERVIDOR.** Pantallas sin probar |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
 | 6a | Lugares y tarifas rurales (con D229) | **HECHO Y VERIFICADO**, pantallas incluidas |
@@ -5108,15 +5112,86 @@ sigue en 22–5.
 
 ---
 
+### Lo que se hizo: paso 4c, documentos de conductores y vehiculos (2026-08-27)
+
+**Cierra el bloque de la flota y, con el, el hueco de las politicas `_all_admin`.**
+`supabase/migrations/20260827190000_admin_documents.sql`,
+`supabase/dev-tools/prueba_documentos.sql` (24 comprobaciones) y el modulo
+`admin/src/features/documents/`, colgado de las fichas de conductor y de motorraton.
+
+**ESTADO AL EMPEZAR**, medido: `document_types` con 2 filas, `documents` con **cero**, y un solo
+bucket, `avatars`. La tabla existe desde la Fase 5 y **nunca se habia usado**.
+
+**El bucket `documents` es privado, y con mas motivo que el de las fotos.** Una foto de perfil
+sale en la calle; una cedula no se recupera si se filtra. 5 MB, imagenes y PDF -las matriculas y
+los seguros suelen llegar asi-.
+
+**QUIEN VE QUE.** Solo el administrador y **el propio conductor sus propios papeles**. No los de
+otro conductor, y **tampoco los del vehiculo aunque lo comparta por doble turno**: los papeles
+del motorraton son de la empresa. **Y puede verlos pero no borrarlos** (comprobacion 21): si
+pudiera, se libraria de una licencia vencida antes de que la empresa la mirara.
+
+**EL ORDEN DE LA SUBIDA ESTA ELEGIDO, no es casual** (D252). El archivo no pasa por SQL: el panel
+lo sube a Storage y **despues** registra la fila. Se eligio asi porque **un archivo sin fila es
+basura recuperable y una fila sin archivo es un documento que la empresa cree tener y no tiene**.
+Si el registro falla, el panel borra el archivo que acaba de subir.
+
+**`requires_expiry` deja de ser decorativo.** Existe desde la Fase 5 y nada lo hacia cumplir: la
+comprobacion 6 mide que un tipo que pide vencimiento lo pide de verdad, porque un seguro sin
+fecha no se puede vigilar. La pantalla ademas avisa **al elegir el tipo**, no al fallar el envio:
+para entonces el archivo ya se subio y hubo que borrarlo.
+
+**Tres estados de vencimiento y no dos** -vencido, vence en menos de 30 dias, al dia-, porque
+piden acciones distintas: uno hay que resolverlo ya, el otro se puede planificar.
+
+**Este si borra de verdad, al reves que casi todo el proyecto.** Un documento no es historial de
+una operacion: es un papel que puede estar mal escaneado o ser el equivocado. La funcion
+**devuelve la ruta** para que el panel borre tambien el archivo —si no, el bucket acumularia
+cedulas de gente que ya no trabaja alli— y la auditoria conserva lo que habia, que es lo unico
+que quedara de ese documento.
+
+**CON ESTO SE ACABO EL HUECO QUE APARECIO CINCO VECES.** Comprobado contra `pg_policies`:
+**cero politicas `for all`** en todo el esquema. Las nueve tablas que el panel gestiona pasan
+todas por funciones auditadas.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las cinco funciones | `prueba_documentos.sql` | **24 de 24** |
+| Regresion completa | Los veinte archivos | **454 comprobaciones, 0 fallando** |
+| Politicas `for all` que quedan | `pg_policies` | **0** |
+| Panel | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **Las pantallas** | — | **SIN PROBAR TODAVIA** |
+
+**LO QUE FALTA POR VERIFICAR, y se dice tal cual:** nadie ha subido un archivo de verdad. El
+archivo de pruebas lo advierte en su cabecera —Storage tiene su propia API y sus politicas se
+evaluan alli, no en estas funciones—, asi que **que el archivo suba, se vea con su enlace firmado
+y se borre esta sin comprobar**. Es lo primero que hay que hacer al retomar.
+
+**LOS DOS CONDUCTORES CREADOS PROBANDO ROMPIERON CINCO PRUEBAS, y no por un fallo.** Siete sitios
+elegian "el primer conductor que haya" sin mirar su estado; al nacer "juan" pendiente de aprobar
+—que es lo correcto—, todo lo que dependia de su disponibilidad se caia con
+`drivers_available_only_when_approved`. Corregidos los siete: ahora piden un conductor aprobado.
+**Quinta vez que una prueba se rompe por heredar una premisa del mundo real**, y la regla ya
+esta escrita: **una prueba no toma lo que encuentra, toma lo que necesita.**
+
+La primera correccion fue **parcial y lo destapo otra rotura**: `prueba_encomiendas.sql` usa
+`v_cond1` y `v_cond2` en un bloque aparte, que el arreglo no toco, y al quedar desalineados el
+conductor "sin oferta" resulto ser el mismo que si la tenia. Corregido tambien.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
-  (seccion 15.22), pantallas incluidas, **mas el doble turno (D246), que no estaba en el plan y
-  modifica una regla de la Fase 5**. Falta decidir si sigue 4c o el paso 7. **El arbol de trabajo
-  NO esta limpio**: falta comitear todo lo del paso 4b, listado en la cabecera
+  con sus pantallas probadas; **el 4c esta hecho en servidor pero sus pantallas no se han
+  probado**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla de la
+  Fase 5. Quedan los pasos 7 a 11. **El arbol de trabajo NO esta limpio**: falta comitear lo del
+  paso 4c, listado en la cabecera
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

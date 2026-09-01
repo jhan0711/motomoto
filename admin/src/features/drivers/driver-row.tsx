@@ -1,7 +1,18 @@
 'use client';
 
 import { useState } from 'react';
-import { Ban, Check, CircleSlash, KeyRound, Pencil, Star, Truck, UserCheck } from 'lucide-react';
+import {
+  Ban,
+  Check,
+  ChevronDown,
+  ChevronRight,
+  CircleSlash,
+  KeyRound,
+  Pencil,
+  Star,
+  Truck,
+  UserCheck,
+} from 'lucide-react';
 import type { Driver } from './types';
 import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
 import {
@@ -12,6 +23,7 @@ import {
 } from './driver-actions';
 import { EditContactDialog } from './edit-contact-dialog';
 import { PasswordNotice } from './password-notice';
+import { DocumentsPanel } from '@/features/documents/documents-panel';
 
 interface Props {
   conductor: Driver;
@@ -24,6 +36,13 @@ export function DriverRow({ conductor, onCambio }: Props) {
   const [editando, setEditando] = useState(false);
   // La contrasena recien generada, solo mientras el dialogo la ensena.
   const [credencial, setCredencial] = useState<string | null>(null);
+
+  /*
+   * Los documentos van plegados. Cada ficha abierta es una consulta mas y una
+   * lista larga de golpe: con veinte conductores en pantalla, abrirlos todos
+   * llenaria la pagina de papeles que nadie pidio ver.
+   */
+  const [verDocumentos, setVerDocumentos] = useState(false);
 
   const aprobado = conductor.approval_status === 'approved';
   const bloqueada = conductor.account_status === 'blocked';
@@ -177,6 +196,26 @@ export function DriverRow({ conductor, onCambio }: Props) {
           {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
         </button>
       </div>
+
+      <button
+        type="button"
+        onClick={() => setVerDocumentos((v) => !v)}
+        aria-expanded={verDocumentos}
+        className="btn mt-3 h-9 gap-1.5 px-2 font-normal text-text-secondary hover:bg-surface-pressed"
+      >
+        {verDocumentos ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+        Documentos
+      </button>
+
+      {verDocumentos && (
+        <div className="mt-2">
+          <DocumentsPanel
+            owner="driver"
+            ownerId={conductor.driver_id}
+            ownerNombre={conductor.full_name}
+          />
+        </div>
+      )}
 
       {credencial !== null && (
         <PasswordNotice

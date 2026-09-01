@@ -1116,6 +1116,10 @@ export type Database = {
         };
         Returns: string;
       };
+      admin_delete_document: {
+        Args: { p_document_id: string };
+        Returns: string;
+      };
       admin_list_active_services: {
         Args: never;
         Returns: {
@@ -1156,6 +1160,38 @@ export type Database = {
           name: string;
           sort_order: number;
           usage_count: number;
+        }[];
+      };
+      admin_list_document_types: {
+        Args: never;
+        Returns: {
+          code: string;
+          document_type_id: string;
+          is_active: boolean;
+          name: string;
+          owner: Database['public']['Enums']['document_owner'];
+          requires_expiry: boolean;
+          sort_order: number;
+          usage_count: number;
+        }[];
+      };
+      admin_list_documents: {
+        Args: {
+          p_owner: Database['public']['Enums']['document_owner'];
+          p_owner_id: string;
+        };
+        Returns: {
+          document_id: string;
+          document_type_id: string;
+          expires_at: string;
+          expires_soon: boolean;
+          file_path: string;
+          is_expired: boolean;
+          issued_at: string;
+          requires_expiry: boolean;
+          type_name: string;
+          uploaded_at: string;
+          uploaded_by_name: string;
         }[];
       };
       admin_list_drivers: {
@@ -1229,6 +1265,16 @@ export type Database = {
           vehicle_id: string;
         }[];
       };
+      admin_register_document: {
+        Args: {
+          p_document_type_id: string;
+          p_expires_at?: string;
+          p_file_path: string;
+          p_issued_at?: string;
+          p_owner_id: string;
+        };
+        Returns: string;
+      };
       admin_reset_driver_password: {
         Args: { p_driver_id: string };
         Returns: string;
@@ -1301,6 +1347,18 @@ export type Database = {
           p_cargo_type_id: string;
           p_is_active?: boolean;
           p_name: string;
+          p_sort_order?: number;
+        };
+        Returns: string;
+      };
+      admin_upsert_document_type: {
+        Args: {
+          p_code: string;
+          p_document_type_id: string;
+          p_is_active?: boolean;
+          p_name: string;
+          p_owner: Database['public']['Enums']['document_owner'];
+          p_requires_expiry?: boolean;
           p_sort_order?: number;
         };
         Returns: string;

@@ -82,8 +82,18 @@ begin
   where p.role = 'passenger' and p.status = 'active' and p.id <> v_pas
   order by p.created_at limit 1;
 
-  select d.id into v_cond from public.drivers d order by d.id limit 1;
-  select d.id into v_cond2 from public.drivers d where d.id <> v_cond order by d.id limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
+  select d.id into v_cond2 from public.drivers d
+  where d.id <> v_cond and d.approval_status = 'approved' order by d.id limit 1;
 
   -- LA PRUEBA CREA SU PROPIA ASIGNACION SI NO LA HAY, en vez de dar por hecho
   -- que el conductor tiene motorraton. Dejo de ser cierto el 2026-08-27, cuando
@@ -214,7 +224,16 @@ declare
   v_of_parcel uuid;
   v_row record;
 begin
-  select d.id into v_cond from public.drivers d order by d.id limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
   select o.id into v_of_semana from public.ride_offers o
   where o.request_id = 'ea000000-0000-4000-8000-000000000002';
   select o.id into v_of_parcel from public.ride_offers o
@@ -273,12 +292,22 @@ declare
   v_n     integer;
   v_h     text;
 begin
-  select d.id into v_cond from public.drivers d order by d.id limit 1;
+    -- SE ELIGE UN CONDUCTOR APROBADO, no "el primero que haya". Al dar de alta a
+  -- alguien desde el panel (paso 4b) nace **pendiente de aprobar**, y si ese cae
+  -- el primero en el orden, todo lo que dependa de su disponibilidad se cae con
+  -- `drivers_available_only_when_approved`. Paso el 2026-08-27, con un conductor
+  -- creado desde el panel minutos antes.
+  --
+  -- Quinta vez que una prueba se rompe por una premisa heredada del mundo real.
+  -- **Una prueba no toma lo que encuentra: toma lo que necesita.**
+  select d.id into v_cond from public.drivers d
+  where d.approval_status = 'approved' order by d.id limit 1;
   -- Se busca ANTES de cambiar de rol. `drivers` tiene RLS, y buscarlo ya como
   -- 'authenticated' sin `auth.uid()' puesto todavia devolveria cero filas, no
   -- un error: `json_build_object('sub', null, ...)` construye una reclamacion
   -- valida pero vacia, y `auth.uid()` sale nulo sin que nada avise.
-  select d.id into v_cond2 from public.drivers d where d.id <> v_cond order by d.id limit 1;
+  select d.id into v_cond2 from public.drivers d
+  where d.id <> v_cond and d.approval_status = 'approved' order by d.id limit 1;
 
   execute 'set local role authenticated';
   execute format('set local request.jwt.claims to %L',
