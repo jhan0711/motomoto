@@ -82,11 +82,12 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   clave `service_role`** (D250). **La prueba que lo cierra la hizo el usuario: el conductor creado
   desde el panel entro de verdad en la aplicacion**, que es lo unico que valida E28 y que no se
   puede comprobar desde SQL
-- **El paso 4c esta hecho en servidor**, y con el **se acabo el hueco de las politicas
-  `_all_admin`**: cero `for all` en todo el esquema, comprobado. **Las pantallas de documentos
-  estan construidas pero NADIE HA SUBIDO UN ARCHIVO todavia**: es lo primero que hay que probar
-- **Trabajo siguiente:** probar la subida de documentos y seguir con el paso 7, el listado de
-  pasajeros con bloqueo
+- **El paso 4c esta hecho y verificado**, subida de un archivo real incluida, y con el **se acabo
+  el hueco de las politicas `_all_admin`**: cero `for all` en todo el esquema, comprobado
+- **El paso 7 esta hecho y verificado**, pantallas incluidas. Aparecio de paso que **la
+  calificacion del pasajero nunca se habia mirado**: existe desde la Fase 17 en los dos sentidos,
+  pero solo la del conductor esta precalculada
+- **Trabajo siguiente:** el paso 8, el listado e inspeccion de servicios con su linea de tiempo
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -687,6 +688,7 @@ aplicacion sigue sin tocar dinero.
 | D250 | **Las cuentas de conductor se crean con una funcion `security definer`, NO con la clave `service_role`** | Decidido con el usuario el 2026-08-27 entre las dos opciones. La `service_role` es la via oficial de Supabase, pero **salta toda la RLS para cualquier operacion**: quien la tenga puede leer y escribir cualquier cosa de cualquier usuario, y hay que custodiarla. La funcion corre con privilegios tambien, pero **acotada a una operacion y con `is_admin()` dentro**: un agujero aqui da de alta conductores, un agujero con la `service_role` da todo. Ademas el proyecto ya crea cuentas asi desde la Fase 12, en las semillas |
 | D251 | **La contrasena inicial la genera el sistema y se muestra una sola vez** | El panel no deja elegirla: cuando las elige una persona para veinte conductores, acaban siendo todas parecidas. El formato es **dictable por telefono** —`Moto-XXXX-9999`, sin O, I, L ni S, que se confunden con 0, 1 y 5 al hablar—, porque asi es como llega al conductor. **Nunca se escribe en la auditoria**: un registro que la guardara seria un almacen de contrasenas en claro que cualquier administrador podria leer. Si se pierde, se genera otra |
 | D252 | **Un documento se sube primero y se registra despues** | El archivo no pasa por SQL: Storage tiene su propia API. Se eligio ese orden y no el contrario porque **un archivo sin fila es basura recuperable, y una fila sin archivo es un documento que la empresa cree tener y no tiene**. Si el registro falla, el panel borra el archivo recien subido; si esa limpieza tambien falla, queda un huerfano en el bucket, que se puede encontrar y borrar. La otra forma deja mentiras en la base de datos |
+| D253 | **Bloquear a un pasajero con un servicio en curso exige motivo escrito, pero no se prohibe** | Diferencia deliberada con D244. Alli, a un conductor conduciendo **si** se le impide retirarle la aprobacion, porque el perjudicado es un tercero: el pasajero que va dentro del motorraton. Aqui el afectado es el propio bloqueado, y **puede haber una urgencia que justifique dejarlo fuera ahora mismo**. Se piden diez caracteres de motivo y la auditoria guarda tanto el texto como el hecho de que habia un viaje vivo. Desbloquear no pide nada: devolver el acceso no necesita justificarse igual que quitarlo |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4301,12 +4303,12 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 3 | Tablero con los servicios en curso | **HECHO Y VERIFICADO** |
 | 4a | Gestion de los conductores que ya existen | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 4b | Alta de un conductor nuevo | **HECHO Y VERIFICADO**, con inicio de sesion real |
-| 4c | Documentos de conductores y vehiculos | **HECHO Y VERIFICADO EN SERVIDOR.** Pantallas sin probar |
+| 4c | Documentos de conductores y vehiculos | **HECHO Y VERIFICADO**, subida real incluida |
 | 5 | Gestion de vehiculos y asignacion conductor-vehiculo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | — | **DOBLE TURNO** (fuera del plan, pedido el 2026-08-27) | **HECHO Y VERIFICADO EN SERVIDOR** |
 | 6a | Lugares y tarifas rurales (con D229) | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 6b | Tarifas urbanas, tipos de carga y parametros | **HECHO Y VERIFICADO**, pantallas incluidas |
-| 7 | Listado de pasajeros con bloqueo | Pendiente |
+| 7 | Listado de pasajeros con bloqueo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
 | 10 | Reportes y calificaciones (D204) | Pendiente |
@@ -5162,12 +5164,15 @@ todas por funciones auditadas.
 | Regresion completa | Los veinte archivos | **454 comprobaciones, 0 fallando** |
 | Politicas `for all` que quedan | `pg_policies` | **0** |
 | Panel | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
-| **Las pantallas** | — | **SIN PROBAR TODAVIA** |
+| **La subida de un archivo real** | **El usuario, desde el panel** | **Funciono** |
 
-**LO QUE FALTA POR VERIFICAR, y se dice tal cual:** nadie ha subido un archivo de verdad. El
-archivo de pruebas lo advierte en su cabecera —Storage tiene su propia API y sus politicas se
-evaluan alli, no en estas funciones—, asi que **que el archivo suba, se vea con su enlace firmado
-y se borre esta sin comprobar**. Es lo primero que hay que hacer al retomar.
+**Y SE COMPROBO CONTRA STORAGE, no solo contra la fila.** Despues de que el usuario subiera un
+documento se consultaron las dos mitades: la fila en `documents` y el objeto en
+`storage.objects`. **Coinciden**: un PDF de 728 KB en
+`driver/<id-del-conductor>/<uuid>.pdf`, con su tipo MIME y subido por el administrador. Era la
+comprobacion que el archivo de pruebas no podia hacer —Storage tiene su propia API y sus
+politicas se evaluan alli—, y es justo la que decide si D252 funciona: **archivo y ficha
+existiendo a la vez**.
 
 **LOS DOS CONDUCTORES CREADOS PROBANDO ROMPIERON CINCO PRUEBAS, y no por un fallo.** Siete sitios
 elegian "el primer conductor que haya" sin mirar su estado; al nacer "juan" pendiente de aprobar
@@ -5182,16 +5187,78 @@ conductor "sin oferta" resulto ser el mismo que si la tenia. Corregido tambien.
 
 ---
 
+### Lo que se hizo: paso 7, listado de pasajeros con bloqueo (2026-08-27)
+
+**EL PASO MAS CORTO DE LA FASE, y conviene decir por que: el bloqueo ya existia.**
+`admin_set_account_status` se construyo en el paso 2 y sirve igual para un pasajero que para un
+conductor —por eso se llamo "cuenta" y no "conductor"—, con su auditoria y su regla de no
+bloquearse a uno mismo. Aqui solo faltaba **la lista desde la que decidir**.
+
+`supabase/migrations/20260827220000_admin_passengers.sql`,
+`supabase/dev-tools/prueba_pasajeros.sql` (20 comprobaciones), el modulo
+`admin/src/features/passengers/` y la pantalla `/pasajeros`.
+
+**QUE VE LA EMPRESA DE UN PASAJERO, y por que cada dato:**
+
+- **Los desenlaces por separado, no un total.** "Veinte servicios" no dice si fueron bien. Con
+  los datos reales se vio de inmediato lo que la pantalla sirve para ver: **Carlos Diaz tiene 2
+  cancelados y 0 terminados**, mientras Ana Gomez tiene 7 y 7
+- **Su calificacion, la que le ponen los conductores.** Existe en los dos sentidos desde la Fase
+  17 pero **nunca se habia mirado**: solo `drivers.rating_average` esta precalculada. **Aqui se
+  calcula al vuelo y no se guarda**, porque la del conductor se lee en cada oferta —el pasajero la
+  ve antes de aceptar— y esta se mira desde una pantalla y de vez en cuando: un disparador que la
+  mantuviera seria mas cosas que pueden desincronizarse a cambio de nada
+- **Si tiene un servicio en curso**, para no bloquear a ciegas a quien va montado ahora mismo
+
+**D253: bloquear a alguien con un servicio en curso EXIGE MOTIVO ESCRITO, pero no se prohibe.**
+Es la diferencia deliberada con D244, donde a un conductor conduciendo **si** se le impide
+retirarle la aprobacion: alli el perjudicado es un tercero —el pasajero que va dentro—; aqui el
+afectado es el propio bloqueado, y **puede haber una urgencia real que justifique dejarlo fuera
+ahora mismo**, como que agreda al conductor. Se piden diez caracteres y **la auditoria guarda el
+motivo y el hecho de que habia un viaje vivo**, que es el dato que explicara la decision dentro
+de seis meses.
+
+**Dos detalles de la pantalla que salieron del dato real, no del diseno:**
+
+- **El porcentaje de cancelaciones solo se muestra con cinco servicios o mas.** Con dos, un 50%
+  no significa nada y ensenarlo invita a decidir sobre ruido
+- **El detalle dice quien cancelo cada servicio y por que.** Es lo que responde "¿por que cancela
+  tanto?" antes de decidir, y sin eso el numero de cancelaciones acusa al pasajero de algo que
+  pudo hacer el conductor
+
+**El porcentaje se calcula en la pantalla y no en el servidor**, a proposito: la empresa decide si
+un 40% es mucho, y ese criterio va a cambiar. Guardarlo lo convertiria en una regla.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las dos funciones | `prueba_pasajeros.sql` | **20 de 20** |
+| Regresion completa | Los veintiun archivos | **474 comprobaciones, 0 fallando** |
+| `/pasajeros` sin sesion | `GET` | 307 a `/acceso` |
+| Panel y aplicacion movil | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Funciona** |
+| Como quedaron los datos | Consulta tras las pruebas | Los cuatro pasajeros activos, ninguno bloqueado por descuido |
+
+**TRES ERRORES DEL ASISTENTE, TODOS DE MONTAJE DE PRUEBAS, y el tercero se repite.** Dos con
+`rides_timeline_order`: primero se pusieron las tres fechas iguales, y despues separadas pero sin
+`driver_arrived_at`. **La restriccion exige que exista la llegada si hay inicio** —un viaje no
+puede empezar antes de que el conductor llegue— y se leyo su definicion con
+`pg_get_constraintdef` en vez de seguir adivinando. Y el tercero fue **otra vez `v_row.column1`
+sobre un `select ... into` de un solo valor**, que ya habia pasado en `prueba_conductores.sql` y
+en `prueba_documentos.sql`: **tercera vez, y por eso queda escrito aqui**.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
   mapa a Mapbox y el bloque especial de tarifas, encomiendas y carga (seccion 15.21), que esta
   TERMINADO Y COMITEADO**. **La Fase 20 esta en curso**
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
-  con sus pantallas probadas; **el 4c esta hecho en servidor pero sus pantallas no se han
-  probado**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla de la
-  Fase 5. Quedan los pasos 7 a 11. **El arbol de trabajo NO esta limpio**: falta comitear lo del
-  paso 4c, listado en la cabecera
+  con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
+  contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
+  de la Fase 5. **Quedan los pasos 8 a 11**: servicios, asignacion manual, reportes y R10
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

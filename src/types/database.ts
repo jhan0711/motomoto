@@ -4,7 +4,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: '14.17';
+    PostgrestVersion: '14.5';
   };
   graphql_public: {
     Tables: {
@@ -1120,6 +1120,21 @@ export type Database = {
         Args: { p_document_id: string };
         Returns: string;
       };
+      admin_get_passenger_rides: {
+        Args: { p_limit?: number; p_passenger_id: string };
+        Returns: {
+          cancellation_reason: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          destination_label: string;
+          driver_name: string;
+          fare_amount: number;
+          origin_label: string;
+          request_id: string;
+          requested_at: string;
+          service_type: Database['public']['Enums']['service_type'];
+          status: Database['public']['Enums']['ride_request_status'];
+        }[];
+      };
       admin_list_active_services: {
         Args: never;
         Returns: {
@@ -1211,6 +1226,23 @@ export type Database = {
           rating_count: number;
           unit_number: number;
           vehicle_id: string;
+        }[];
+      };
+      admin_list_passengers: {
+        Args: never;
+        Returns: {
+          cancelled_count: number;
+          completed_count: number;
+          created_at: string;
+          expired_count: number;
+          full_name: string;
+          has_active_request: boolean;
+          last_request_at: string;
+          passenger_id: string;
+          phone: string;
+          rating_average: number;
+          rating_count: number;
+          status: Database['public']['Enums']['user_status'];
         }[];
       };
       admin_list_places: {
