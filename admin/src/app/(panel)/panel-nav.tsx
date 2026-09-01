@@ -2,15 +2,24 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, MapPin, SlidersHorizontal, Truck, User, Users } from 'lucide-react';
+import {
+  LayoutDashboard,
+  ListOrdered,
+  MapPin,
+  SlidersHorizontal,
+  Truck,
+  User,
+  Users,
+} from 'lucide-react';
 
 /*
  * Las secciones del panel, en el orden en que se van construyendo. Las que
- * faltan -servicios, reportes- se anaden aqui segun llegan
+ * faltan -reportes- se anaden aqui segun llegan
  * sus pasos, y la navegacion no hay que volver a tocarla.
  */
 const SECCIONES = [
   { href: '/', etiqueta: 'Tablero', icono: LayoutDashboard },
+  { href: '/servicios', etiqueta: 'Servicios', icono: ListOrdered },
   { href: '/conductores', etiqueta: 'Conductores', icono: Users },
   { href: '/motorratones', etiqueta: 'Motorratones', icono: Truck },
   { href: '/pasajeros', etiqueta: 'Pasajeros', icono: User },

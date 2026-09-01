@@ -1135,6 +1135,79 @@ export type Database = {
           status: Database['public']['Enums']['ride_request_status'];
         }[];
       };
+      admin_get_ride_detail: {
+        Args: { p_request_id: string };
+        Returns: {
+          accepted_at: string;
+          assigned_at: string;
+          cancellation_reason: string;
+          cancelled_at: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          completed_at: string;
+          contact_phone: string;
+          destination_label: string;
+          distance_m: number;
+          driver_arrived_at: string;
+          driver_id: string;
+          driver_name: string;
+          driver_phone: string;
+          duration_s: number;
+          expires_at: string;
+          fare_amount: number;
+          fare_cargo_amount: number;
+          fare_is_night: boolean;
+          fare_is_rural: boolean;
+          fare_reference: string;
+          fare_trip_amount: number;
+          offers_expired: number;
+          offers_rejected: number;
+          offers_total: number;
+          origin_label: string;
+          parcel_description: string;
+          passenger_count: number;
+          passenger_id: string;
+          passenger_name: string;
+          passenger_phone: string;
+          pickup_reference: string;
+          plate: string;
+          request_id: string;
+          requested_at: string;
+          service_type: Database['public']['Enums']['service_type'];
+          started_at: string;
+          status: Database['public']['Enums']['ride_request_status'];
+          track_first_at: string;
+          track_last_at: string;
+          track_points: number;
+          unit_number: number;
+        }[];
+      };
+      admin_get_ride_offers: {
+        Args: { p_request_id: string };
+        Returns: {
+          distance_m: number;
+          driver_id: string;
+          driver_name: string;
+          expires_at: string;
+          offer_id: string;
+          offered_at: string;
+          responded_at: string;
+          response: Database['public']['Enums']['ride_offer_response'];
+          response_seconds: number;
+          unit_number: number;
+        }[];
+      };
+      admin_get_ride_ratings: {
+        Args: { p_request_id: string };
+        Returns: {
+          comment: string;
+          created_at: string;
+          rated_name: string;
+          rater_name: string;
+          rater_role: Database['public']['Enums']['user_role'];
+          rating_id: string;
+          stars: number;
+        }[];
+      };
       admin_list_active_services: {
         Args: never;
         Returns: {
@@ -1260,6 +1333,36 @@ export type Database = {
           rural_is_active: boolean;
           sort_order: number;
           usage_count: number;
+        }[];
+      };
+      admin_list_rides: {
+        Args: {
+          p_from?: string;
+          p_limit?: number;
+          p_offset?: number;
+          p_search?: string;
+          p_status?: Database['public']['Enums']['ride_request_status'];
+          p_to?: string;
+        };
+        Returns: {
+          cancelled_at: string;
+          cancelled_by: Database['public']['Enums']['actor_type'];
+          completed_at: string;
+          destination_label: string;
+          driver_id: string;
+          driver_name: string;
+          duration_minutes: number;
+          fare_amount: number;
+          origin_label: string;
+          passenger_count: number;
+          passenger_id: string;
+          passenger_name: string;
+          request_id: string;
+          requested_at: string;
+          service_type: Database['public']['Enums']['service_type'];
+          status: Database['public']['Enums']['ride_request_status'];
+          total_count: number;
+          unit_number: number;
         }[];
       };
       admin_list_settings: {

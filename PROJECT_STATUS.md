@@ -87,7 +87,13 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **El paso 7 esta hecho y verificado**, pantallas incluidas. Aparecio de paso que **la
   calificacion del pasajero nunca se habia mirado**: existe desde la Fase 17 en los dos sentidos,
   pero solo la del conductor esta precalculada
-- **Trabajo siguiente:** el paso 8, el listado e inspeccion de servicios con su linea de tiempo
+- **El paso 8 esta hecho y verificado**, pantallas incluidas. Lo mas util no es el listado sino
+  **las ofertas de cada servicio**: dicen a quien le llego, quien rechazo y quien dejo pasar el
+  tiempo, que es lo que convierte "nadie lo tomo" en algo accionable
+- **LOS 36 DESTINOS RURALES ESTAN COMPLETOS** desde el 2026-08-28. El usuario trajo las ocho
+  coordenadas que faltaban y **el esquema no tuvo que cambiar ni una linea**. Comprobado que cada
+  uno cobra lo suyo y que **los 33 lugares urbanos siguen en $4.000**
+- **Trabajo siguiente:** el paso 9, la asignacion manual de conductor a una solicitud (D7)
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -689,6 +695,8 @@ aplicacion sigue sin tocar dinero.
 | D251 | **La contrasena inicial la genera el sistema y se muestra una sola vez** | El panel no deja elegirla: cuando las elige una persona para veinte conductores, acaban siendo todas parecidas. El formato es **dictable por telefono** —`Moto-XXXX-9999`, sin O, I, L ni S, que se confunden con 0, 1 y 5 al hablar—, porque asi es como llega al conductor. **Nunca se escribe en la auditoria**: un registro que la guardara seria un almacen de contrasenas en claro que cualquier administrador podria leer. Si se pierde, se genera otra |
 | D252 | **Un documento se sube primero y se registra despues** | El archivo no pasa por SQL: Storage tiene su propia API. Se eligio ese orden y no el contrario porque **un archivo sin fila es basura recuperable, y una fila sin archivo es un documento que la empresa cree tener y no tiene**. Si el registro falla, el panel borra el archivo recien subido; si esa limpieza tambien falla, queda un huerfano en el bucket, que se puede encontrar y borrar. La otra forma deja mentiras en la base de datos |
 | D253 | **Bloquear a un pasajero con un servicio en curso exige motivo escrito, pero no se prohibe** | Diferencia deliberada con D244. Alli, a un conductor conduciendo **si** se le impide retirarle la aprobacion, porque el perjudicado es un tercero: el pasajero que va dentro del motorraton. Aqui el afectado es el propio bloqueado, y **puede haber una urgencia que justifique dejarlo fuera ahora mismo**. Se piden diez caracteres de motivo y la auditoria guarda tanto el texto como el hecho de que habia un viaje vivo. Desbloquear no pide nada: devolver el acceso no necesita justificarse igual que quitarlo |
+| D254 | **Los cuatro destinos de la zona de la mina se cargan tal cual, aunque queden a 98 metros** | Decidido con el usuario el 2026-08-28 tras medirlos. El Taparo, Los Tanques, Entrada a la Mina y La Mina caben en medio kilometro con hasta 13.000 pesos de diferencia, cuando la separacion minima entre los 28 anteriores era de 219 m. **Se cargan porque elegidos de la lista cobran exacto**, que es como se piden casi siempre; solo una coordenada suelta en esa zona se resolveria al vecino por D230. Sus precios reflejan la distancia **por carretera** y no en linea recta, asi que aplanarlos seria cobrar mal. Se descarto bajar el radio de D230, que habria afectado a los 36 destinos para arreglar una zona |
+| D255 | **El recorrido del servicio se ensena como datos, no como mapa** | `ride_locations` tiene 12 puntos en 10 viajes: uno por viaje. No es la tabla, es que **el emulador no puede producir movimiento** -medido en la Fase 14- y nadie ha conducido de verdad con la aplicacion. Un mapa con un punto no ensena nada y ademas obligaria a montar Mapbox en el panel. Se muestran los puntos, la primera y la ultima hora y la distancia que calculo `complete_ride`. **El mapa se pone cuando haya rastros de verdad**, y entonces se vera si sirve |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4309,7 +4317,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 6a | Lugares y tarifas rurales (con D229) | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 6b | Tarifas urbanas, tipos de carga y parametros | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 7 | Listado de pasajeros con bloqueo | **HECHO Y VERIFICADO**, pantallas incluidas |
-| 8 | Listado e inspeccion de servicios, con linea de tiempo y recorrido | Pendiente |
+| 8 | Listado e inspeccion de servicios, con linea de tiempo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
 | 10 | Reportes y calificaciones (D204) | Pendiente |
 | 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
@@ -5250,6 +5258,110 @@ en `prueba_documentos.sql`: **tercera vez, y por eso queda escrito aqui**.
 
 ---
 
+### Lo que se hizo: paso 8, listado e inspeccion de servicios (2026-08-28)
+
+`supabase/migrations/20260828010000_admin_rides.sql`,
+`supabase/dev-tools/prueba_servicios.sql` (23 comprobaciones), el modulo
+`admin/src/features/rides/` y la pantalla `/servicios`.
+
+**LO QUE YA EXISTIA Y NO SE REHIZO.** `list_driver_history` y `list_passenger_history` son de la
+Fase 16 y **siguen siendo de sus duenos**: cada uno ve lo suyo, con las reglas de privacidad de
+D198 -el nombre del pasajero solo viaja si el conductor acepto-. Las funciones de este paso son
+otra cosa: **la empresa mirando su propia operacion**, y por eso **si ensenan las dos partes
+juntas con sus telefonos**. Para resolver una queja hace falta ver a los dos.
+
+**Cuatro funciones**: el listado con filtros y total para paginar, el detalle con la linea de
+tiempo completa, las ofertas y las calificaciones.
+
+**LO MAS UTIL DEL PASO NO ES EL LISTADO: SON LAS OFERTAS.** `admin_get_ride_offers` dice a que
+conductores les llego un servicio, cual rechazo, cual dejo pasar el tiempo y **cuanto tardo cada
+uno en responder**. Eso convierte "nadie lo tomo" -9 de los 57 servicios reales- en algo
+accionable: **no es lo mismo que no le llegara a nadie que que le llegara a cinco y ninguno lo
+quisiera**. La pantalla lo dice explicitamente cuando no hubo ninguna oferta.
+
+**La linea de tiempo ensena tambien los pasos que NO ocurrieron, apagados.** Ver que un servicio
+nunca llego a "el conductor llego" dice tanto como ver que si. Y la cancelacion **sustituye al
+final en vez de sumarse**: un servicio cancelado no termino.
+
+**D255: EL RECORRIDO SE DEVUELVE COMO DATOS, NO COMO MAPA.** `ride_locations` tiene hoy **12
+puntos repartidos en 10 viajes** -uno por viaje-, y no es un fallo de la tabla: **el emulador no
+puede producir movimiento**, medido desde la Fase 14, y nadie ha conducido de verdad con la
+aplicacion. Un mapa con un punto no ensena nada, asi que el panel muestra cuantos puntos hay y
+entre que horas. **El mapa se pondra cuando haya rastros de verdad**, y entonces se vera si sirve.
+
+**El total de la paginacion lo calcula el servidor sobre lo filtrado** -`count(*) over ()`- y
+viaja en cada fila. Sin eso, la pantalla tendria que pedir el listado entero solo para saber
+cuantas paginas hay.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las cuatro funciones | `prueba_servicios.sql` | **23 de 23** |
+| Regresion completa | Los veintidos archivos | **497 comprobaciones, 0 fallando** |
+| Contra los datos reales | Consulta al servidor | 57 servicios: 36 cancelados, 12 terminados, 9 sin tomar |
+| `/servicios` sin sesion | `GET` | 307 a `/acceso` |
+| Panel y aplicacion movil | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Funciona** |
+
+**Un error del asistente, y es LA CUARTA VEZ:** `v_row.column1` sobre un `select ... into` de un
+solo valor, que ya habia pasado en `prueba_conductores`, `prueba_documentos` y `prueba_pasajeros`.
+Queda escrito en el archivo por eso.
+
+---
+
+### LOS 36 DESTINOS RURALES, COMPLETOS (2026-08-28)
+
+**Se cierra lo que quedaba abierto desde el bloque especial del 2026-08-25.** El usuario trajo las
+coordenadas de los ocho que faltaban -Sorrento, Entrada a la Mina, Los Tanques, La Mina, La
+Aguacatera, Cajamarca, Palmitas y La Blanquita- en `docs/destinos-rurales.csv`.
+`supabase/migrations/20260828040000_seed_rural_fares_batch3.sql`.
+
+**El esquema no tuvo que cambiar ni una linea.** Entraron como filas, que es exactamente lo que se
+buscaba al disenarlo asi en el paso 1 del bloque especial: las tarifas rurales entran como filas
+cuando lleguen las coordenadas, sin tocar el esquema.
+
+**LO QUE SE MIDIO ANTES DE ESCRIBIR NADA**, que es lo que en la carga anterior destapo el problema
+de D230: los ocho **caen dentro del area de servicio**, **ninguno repite nombre**, y todos estan
+lo bastante lejos del centro como para necesitar tarifa propia (D229).
+
+**LO QUE ENCONTRO ESA MEDICION, Y SE DECIDIO CON EL USUARIO (D254).** Cuatro destinos de la zona
+de la mina quedan muy juntos y con precios muy distintos:
+
+| Entre | Distancia | Diferencia |
+|---|---|---|
+| El Taparo ($12.000) y Los Tanques ($17.000) | **98 m** | $5.000 |
+| Entrada a la Mina ($15.000) y La Mina ($25.000) | **232 m** | $10.000 |
+| El Taparo ($12.000) y La Mina ($25.000) | 528 m | **$13.000** |
+
+Para comparar: **la separacion minima entre los 28 ya cargados era de 219 m**. Esta es menos de la
+mitad, con el doble de diferencia de precio.
+
+**Cuando importa y cuando no**, que es lo que permitio decidir: si el pasajero **elige el destino
+de la lista** -como se pide casi siempre- viaja el `place_id` y **la tarifa es exacta**. Solo una
+**coordenada suelta** -"Tu ubicacion actual" o una chincheta- se resuelve por D230 al lugar
+nombrado mas cercano, y ahi 98 metros separan cobrar 12.000 de cobrar 17.000.
+
+**No es un fallo del codigo ni de los datos.** La empresa tiene cuatro puntos de referencia juntos
+en esa zona, y sus precios reflejan lo lejos que queda cada uno **por carretera**, no en linea
+recta. El usuario decidio cargarlos tal cual, que es lo que respeta lo que la empresa cobra de
+verdad.
+
+**Verificado despues de cargar:**
+
+| Que | Resultado |
+|---|---|
+| Cada destino cobra su tarifa, preguntando a `quote_fare` | **8 de 8 exactos** |
+| **Los lugares urbanos no se contaminaron** | **33 de 33 siguen cobrando $4.000** |
+| Tarifas rurales activas | **36**, la lista completa |
+| Regresion | 497 comprobaciones, 0 fallando |
+
+**Esa segunda fila es la que importaba.** En la carga de agosto, medir antes destapo que 32
+lugares urbanos -el parque incluido- habrian empezado a cobrar tarifa rural. Esta vez la misma
+comprobacion salio limpia.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
@@ -5258,7 +5370,7 @@ en `prueba_documentos.sql`: **tercera vez, y por eso queda escrito aqui**.
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
   contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
-  de la Fase 5. **Quedan los pasos 8 a 11**: servicios, asignacion manual, reportes y R10
+  de la Fase 5. **Quedan los pasos 9 a 11**: asignacion manual, reportes y R10
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)
