@@ -150,14 +150,16 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **EL SUPER ADMIN DE VERDAD YA EXISTE** (2026-09-02): `jhank.45617@gmail.com` -que era el
   pasajero de prueba- pasa a `super_admin` con `supabase/dev-tools/promote_jhank_super_admin.sql`.
   La contrasena la pone el usuario. Detalle en 15.24
-- **AHORA EN CURSO: la Fase 23, Pruebas.** Seis pasos (seccion 15.25). **Pasos 1-5 hechos y
-  verificados**, cada uno comiteado por el usuario: auditoria (1), tres scripts nuevos que
-  absorben nueve perdidos + `remove_second_driver` + checklists (2), corredor unico
-  `run-tests.mjs` / `npm run test:db` -36 scripts, 743 comprobaciones- (3), `jest-expo` con 55
-  pruebas en 10 archivos -logica pura y componentes- (4), y `.github/workflows/ci.yml` con tres
-  trabajos: cliente movil, panel y regresion de BD (5). **El paso 2 destapo la regresion D268**
-  en `accept_ride_offer`, corregida en `20260903000000`. Falta el paso 6, el barrido en
-  dispositivo. **SIN COMITEAR:** solo `.github/workflows/ci.yml` y este documento (paso 5)
+- **Fase 23, Pruebas: LOS SEIS PASOS HECHOS Y VERIFICADOS** (seccion 15.25). Auditoria (1);
+  tres scripts nuevos que absorben nueve perdidos + `remove_second_driver` + checklists (2);
+  corredor unico `run-tests.mjs` / `npm run test:db` -36 scripts, 743 comprobaciones- (3);
+  `jest-expo` con 55 pruebas en 10 archivos, logica pura y componentes (4); `.github/workflows/ci.yml`
+  con tres trabajos -cliente movil, panel, regresion de BD- (5); barrido de la app en la tablet
+  a 711 y 800 dp, claro y oscuro, mas el checklist de lo que necesita un telefono con GPS en
+  movimiento -bloqueado por hardware- (6). **El paso 2 destapo la regresion D268** en
+  `accept_ride_offer`, corregida en `20260903000000`. Pasos 1-4 comiteados por el usuario.
+  **SIN COMITEAR:** `.github/workflows/ci.yml` y este documento (pasos 5 y 6). Falta decidir
+  si la fase se da por cerrada con el checklist de GPS pendiente de aparato
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -1229,7 +1231,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 21 | Gestion de conductores y vehiculos | **ABSORBIDA en la Fase 20** (pasos 4a/4b/4c/5 + doble turno). Sin trabajo propio |
 | 22 | Seguridad y auditoria | **COMPLETADA Y COMITEADA** (`059cc12`). Los ocho pasos (seccion 15.23) |
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
-| 23 | Pruebas | **EN CURSO** (2026-09-02). Seis pasos acordados (seccion 15.25) |
+| 23 | Pruebas | **LOS SEIS PASOS HECHOS Y VERIFICADOS** (2026-09-02, seccion 15.25). Pasos 1-4 comiteados; 5 y 6 sin comitear. Destapo y corrigio la regresion D268. Queda el checklist de GPS en movimiento, bloqueado por hardware |
 | 24 | Optimizacion | Pendiente |
 | 25 | Preparacion para produccion | Pendiente |
 | 26 | Publicacion y despliegue | Pendiente |
@@ -6714,7 +6716,7 @@ pruebas de cliente de logica pura **y** de componentes.
 | 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla. **HECHO el 2026-09-02** | Hecho |
 | 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno. **HECHO el 2026-09-02** | Hecho |
 | 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto. **HECHO el 2026-09-02** | Hecho |
-| 6 | **Dispositivo**: barrido a 800 dp en el emulador con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados | Pendiente |
+| 6 | **Dispositivo**: barrido a 800 dp con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados. **HECHO el 2026-09-02** | Hecho |
 
 ### Lo que se hizo: paso 1, la auditoria de los scripts perdidos (2026-09-02)
 
@@ -6871,7 +6873,53 @@ Verificado en local: `npm ci` con el lock en sincronia, los cuatro comandos del
 cliente movil en verde, los cuatro del panel en verde (incluida la compilacion
 con marcadores), `npm run test:db` 743/0 y `supabase link` idempotente.
 
-Siguiente: paso 6, el barrido en dispositivo.
+### Lo que se hizo: paso 6, el barrido en dispositivo
+
+**Barrido en la tablet real** (`25040RP0AL`, 1600x2560 @ 360 dpi = 711 dp de
+ancho nativo), la app cargada desde Metro. Se recorrio el flujo del pasajero
+-bienvenida, iniciar sesion, mapa principal, buscador de destino, perfil, "Mis
+viajes"- en cuatro combinaciones: ancho nativo (~711 dp) y **emulado a 800 dp**
+(`wm size 1800x2560`, densidad sin tocar), en **modo claro y oscuro**. Capturas
+en el scratchpad de la sesion. Todo se restauro al terminar (`wm size reset`,
+`night yes`).
+
+**Resultado: sin defectos.**
+
+- Las pantallas de formulario y de lista (perfil, "Mis viajes", iniciar sesion)
+  **acotan el contenido a una columna centrada** (`MAX_CONTENT_WIDTH`); la hoja
+  inferior del mapa va a ancho completo a proposito. Nada se desborda, se corta
+  ni se estira feo a 800 dp.
+- El modo claro y el oscuro pintan bien en las dos: botones, tarjetas, esqueletos
+  de carga, colores de estado.
+- La tablet **resuelve ubicacion real** (esta en Medellin), asi que la puerta de
+  "activar ubicacion" y el centrado del mapa funcionan de verdad. El buscador de
+  destino mezcla los lugares de Amalfi con resultados del geocoder.
+- El `formatWhen` en pantalla ("26 de agosto, 4:42 p. m.") coincide letra por
+  letra con lo que fija su prueba de Jest del paso 4.
+- **No se barrio el lado del conductor** en dispositivo esta pasada (disponibilidad,
+  tarjeta de oferta, viaje activo). Queda como pendiente de barrido, no como
+  hallazgo.
+
+### Checklist: lo que necesita un telefono Android con GPS y datos, MOVIENDOSE, en Amalfi
+
+**Todo esto esta BLOQUEADO** hasta tener ese aparato. La tablet da ubicacion pero
+no se mueve por la carretera, y desde Medellin no se puede ejercer nada de la
+zona de Amalfi. Procedimiento listo para cuando exista el telefono:
+
+| # | Que probar | Como | Por que no se puede hoy |
+|---|---|---|---|
+| 1 | **R9: un punto de rastro cada 50 m** durante `in_progress` | Aceptar un viaje como conductor, recorrer >150 m de calle real, luego mirar `ride_locations` de ese viaje | La posicion no cambia sin movimiento fisico |
+| 2 | **El marcador del conductor moviendose** en la pantalla del pasajero, con < 15 s de retraso (criterio de aceptacion 4) | Dos aparatos: uno conductor en movimiento, otro pasajero mirando el mapa del viaje | Igual que arriba; ademas hace falta un segundo aparato |
+| 3 | **El recorrido historico dibujado** en el detalle del viaje, con la distancia real y no la recta | Terminar un viaje del punto 1 y abrir su detalle en "Mis viajes" | Depende del rastro del punto 1 |
+| 4 | **R5 de verdad en `confirm_driver_arrival`** | Como conductor, tocar "Llegue" estando a > 150 m del origen (debe rechazar) y a < 150 m (debe permitir) | La distancia se mide contra la ubicacion real del aparato |
+| 5 | **Reconexion del realtime al volver de segundo plano** con el telefono bloqueado un rato (D152) | Bloquear el aparato del pasajero 5-10 min durante un viaje, desbloquear, ver que el marcador salta a la posicion actual y no a la de hace 10 min | El websocket solo se cae de verdad con la pantalla apagada un rato |
+| 6 | **Zona de servicio (D150)**, el caso "dentro" | Pedir un servicio con origen y destino dentro del poligono de Amalfi | Desde Medellin el origen siempre cae fuera; solo se prueba el rechazo, no el camino feliz |
+| 7 | **Tarifa rural y nocturna con ubicacion real** | Pedir a un corregimiento (Portachuelo, La Gardenia...) y de noche, comprobar el valor | Necesita estar fisicamente en la zona rural |
+| 8 | **Permisos de ubicacion negados / "solo esta vez"** en un aparato limpio | Instalar, abrir, negar el permiso, ver el mensaje y la salida | La tablet ya tiene el permiso concedido |
+
+Siguiente: cerrar la Fase 23. Falta el commit del usuario de los pasos 5 y 6, y
+decidir si la fase se da por terminada con el checklist del punto anterior
+pendiente de hardware.
 
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
