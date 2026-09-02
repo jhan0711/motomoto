@@ -6963,8 +6963,8 @@ actualiza del sistema" y "lo primero que hay que mirar si algo va lento (Fase 24
 |---|---|---|---|
 | 1 | **Linea base.** Sin tocar nada: trafico y tamano de payload de `driver_locations` en un viaje, arranque en frio por logcat en la tablet, latencia del puntero de punta a punta | Numeros "antes" en esta seccion | **Hecho** (2026-09-02, medidas abajo) |
 | 2 | **Consultas calientes.** `explain (analyze, buffers)` sobre `find_available_drivers`, `admin_list_rides`, historial del pasajero y `list_driver_active_rides` con datos reales. Indices que falten, RLS que escanee de mas | Hallazgos abajo; la accion cae en el paso 3 y en un pendiente aparte | **Hecho** (2026-09-02) |
-| 3 | **`driver_locations` en tiempo real.** Segun el paso 1: recortar columnas de la publicacion si sobran, revisar indice `driver_id`/`updated_at`, mirar `replica identity` | Migracion acotada + medicion | Pendiente |
-| 4 | **Arranque en frio.** Diferir lo que no hace falta en el primer frame (Mapbox, lectura de settings) | Cambio en el cliente + medicion | Pendiente |
+| 3 | **`driver_locations` en tiempo real.** Segun el paso 1: recortar columnas de la publicacion si sobran, revisar indice `driver_id`/`updated_at`, mirar `replica identity` | Indice muerto borrado; el recorte del payload NO es posible (wal2json); test nuevo de tiempo real | **Hecho** (2026-09-02) |
+| 4 | **Arranque en frio** (acotado a lo que hace la app tras arrancar el JS). Diferir lo que no hace falta en el primer pintado | Medicion + dos llamadas menos en el primer pintado | **Hecho** (2026-09-02) |
 | 5 | **Suscripciones de realtime.** Auditar cada `useEffect` con `postgres_changes`: que cierre en el cleanup, que no se duplique al re-renderizar, contar canales vivos en una sesion tipica | Correcciones si hay fugas | Pendiente |
 | 6 | **Cierre.** Repetir todas las mediciones del paso 1 y dejar el "despues" al lado del "antes" | Comparativa | Pendiente |
 
@@ -7050,10 +7050,99 @@ micro-optimizacion es delicada y no se paga hoy. Queda anotado.
 **No hace falta migracion propia del paso 2:** el unico cambio -borrar el
 indice- encaja en el paso 3, que es "revisar el indice `driver_id`/`updated_at`".
 
+### Lo que se hizo: paso 3, `driver_locations` en tiempo real (2026-09-02)
+
+**Se borro `driver_locations_updated_idx`** (`20260903120000`). Verificado: la
+tabla se queda con `pkey` y el gist de `location`; la regresion sigue verde. Es
+un btree menos que reescribir en cada update de posicion -la escritura mas
+frecuente del sistema- sin que ningun plan lo echara de menos.
+
+**El recorte del payload del evento NO se pudo hacer, y queda escrito para que no
+se reintente.** El evento de `postgres_changes` de `driver_locations` lleva las
+ocho columnas; el cliente usa cuatro. Se probo acotar la publicacion con una
+lista de columnas (`alter publication ... add table driver_locations (lat, lng, heading, updated_at)`).
+La lista se aplico -`pg_publication_rel.prattrs` lo confirma- pero **el evento
+seguia trayendo `location`, `speed_kmh` y `accuracy_m`**, medido de punta a punta
+con `prueba_posicion_realtime.mjs` antes y despues, y tras esperar 90 s a que
+Realtime refrescara su cache. Causa: **Supabase Realtime decodifica el WAL con
+`wal2json`** (slot `supabase_realtime_replication_slot...`), y `wal2json` no
+respeta las listas de columnas de las publicaciones -eso es de `pgoutput`, PG15-.
+La migracion se reescribio para hacer solo el borrado del indice, y
+`20260903130000` devuelve `driver_locations` a la publicacion sin lista.
+
+  **La unica via real para adelgazar ese payload** es pasar la posicion del
+  conductor de `postgres_changes` a **Broadcast** con un trigger que arme el
+  mensaje con las cuatro columnas. Es una reescritura de `use-driver-location.ts`
+  y de la RLS del canal; queda fuera de la Fase 24. Anotado como pendiente.
+
+**`supabase/dev-tools/prueba_posicion_realtime.mjs` (NUEVO, 8 comprobaciones).**
+Primer y unico test de punta a punta del canal de tiempo real de la posicion: el
+conductor de prueba se pone disponible y publica posicion, el pasajero de prueba
+pide un servicio y el conductor lo acepta -asi se abre
+`driver_locations_select_active_passenger`-, el pasajero se suscribe y se mueve al
+conductor. Comprueba que el evento llega, que trae `lat`/`lng`/`heading`/`updated_at`
+listos para pintar sin re-consulta, y que `updated_at` es una marca fresca que
+`edadDesde` puede leer. Lo recoge `npm run test:db` solo (empieza por `prueba_`).
+Existe para que un cambio futuro en la publicacion o en la RLS que rompa "el
+pasajero ve moverse al conductor" -criterio de aceptacion 4- se note aqui.
+
+**De paso, medido:** la propagacion por tiempo real (UPDATE -> evento en el
+cliente) va en **236-523 ms** en varias corridas. Es la pata de tiempo real del
+puntero; encaja con los ~0,5 s que estimaba el diagnostico de la Fase 22.
+
+### Lo que se midio e hizo: paso 4, el arranque en frio (2026-09-02)
+
+**Medido en la tablet** con marcas temporales (`console.log`, quitadas al
+terminar) en cinco puntos del arranque, con sesion valida (el caso real de un
+usuario que uso la app hace poco). Desde `Running "main"`:
+
+| Tramo | Cuanto | Que es |
+|---|---|---|
+| `main` -> modulos evaluados | ~3 s | Cargar el grafo de imports (Mapbox, iconos, expo-*) |
+| modulos -> el efecto de sesion corre | **~10 s** | React monta el arbol. **Dominado por Hermes compilando modulos grandes -`passenger/index.tsx` (2.100 lineas) + todo lo que importa- en la PRIMERA evaluacion.** En un build de release el bytecode ya viene compilado: este tramo casi desaparece |
+| efecto -> `auth: sesion restaurada` | **~150 ms** | Supabase lee la sesion de AsyncStorage. **No es el cuello de botella**, al reves de lo que parecia |
+| auth -> perfil cargado | ~0,9 s | Un `fetchProfile`. Inherente: hay que saber el rol antes de enrutar |
+| perfil -> `PassengerHome` montado | ~0,4 s | |
+| montado -> ubicacion lista | ~1,4 s | Primer *fix* de GPS. Lo pone el sistema operativo, no se optimiza desde aqui |
+| ubicacion -> lugares -> mapa listo | ~0,6 s | En paralelo |
+
+**Conclusion:** el numero grande del arranque en frio es **compilacion de modulos
+en modo desarrollo, que no existe en produccion**. El trabajo de la app despues
+de arrancar el JS -auth + perfil + [ubicacion ∥ lugares ∥ mapa]- son **~3,5 s ya
+bastante magros**: los hooks son diferidos y con cache, la secuencia es paralela,
+y los dos costes reales -un `fetchProfile` y el primer *fix* de GPS- son
+inherentes.
+
+**La correccion (una):** `useCargoTypes` y `useNumericSetting('driver_location_stale_seconds')`
+pedian su dato en el primer pintado sin necesitarlo. Ahora llevan un `enabled`:
+
+- `useCargoTypes(serviceType === 'parcel')` — el catalogo de carga se lee la
+  primera vez que el pasajero toca "Encomienda", no al abrir la app.
+- `useNumericSetting('driver_location_stale_seconds', 120, solicitud?.conductor != null)`
+  — ese parametro solo sirve con un motorraton asignado a quien seguir.
+
+Son **dos llamadas de red menos compitiendo con las del primer pintado** (mapa,
+lugares, perfil). En wifi la mejora esta dentro del ruido -~120 ms sobre 3,5 s-,
+como se esperaba; el valor esta en una conexion mala, que es la de Amalfi por
+datos moviles: dos peticiones menos a la vez y dos conexiones menos abiertas.
+
+Verificado: `tsc` y `lint` limpios, Jest 55/55, y en la tablet el catalogo de
+carga aparece al cambiar a "Encomienda" y la app arranca bien.
+
+**Anotado para la Fase 25:** con el build de release ya hecho, tomar la medida
+de arranque de produccion de una vez y ver si vale la pena partir
+`passenger/index.tsx` o cargar Mapbox de forma diferida.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
 
+- **La posicion del conductor en tiempo real podria ir a Broadcast.** Encontrado en la Fase 24,
+  paso 3. `postgres_changes` manda la fila entera de `driver_locations` (8 columnas) y el cliente
+  usa 4; el recorte por lista de columnas de la publicacion no sirve porque Realtime usa
+  `wal2json`. Pasar a Broadcast con un trigger que arme el mensaje adelgaza el payload que
+  viaja a los telefonos, pero es una reescritura de `use-driver-location.ts` y de la RLS del
+  canal. Se agenda aparte. Detalle en la seccion 15.26
 - **Busqueda del panel (`admin_list_rides`) no escala.** Encontrado en la Fase 24, paso 2. El
   buscador hace `ILIKE '%x%'` sobre cuatro columnas + `count(*) over()`: escaneo completo de
   `ride_requests` + joins en cada busqueda. A 58 filas no se nota; a 10.000+ si. Arreglo:

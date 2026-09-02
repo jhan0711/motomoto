@@ -64,7 +64,7 @@ async function fetchNumericSetting(key: string, fallback: number): Promise<numbe
  * parpadear, y en el caso normal, que es que el parametro siga en su valor
  * habitual, no se nota nada.
  */
-export function useNumericSetting(key: string, fallback: number): number {
+export function useNumericSetting(key: string, fallback: number, enabled = true): number {
   const [value, setValue] = useState(cache.get(key) ?? fallback);
 
   const cargar = useCallback(async () => {
@@ -74,14 +74,17 @@ export function useNumericSetting(key: string, fallback: number): number {
   }, [key, fallback]);
 
   useEffect(() => {
-    if (cache.has(key)) return;
+    // `enabled` en falso: el parametro no hace falta todavia. Se evita una
+    // llamada de red que competiria con las del primer pintado. En cuanto haga
+    // falta -y `enabled` pase a cierto- se lee, una sola vez por sesion.
+    if (!enabled || cache.has(key)) return;
 
     // Diferido fuera del cuerpo del efecto, por la misma razon que en
     // use-location y use-places: el compilador de React rechaza un setState
     // alcanzable sincronamente desde un efecto.
     const id = setTimeout(() => void cargar(), 0);
     return () => clearTimeout(id);
-  }, [cargar, key]);
+  }, [cargar, key, enabled]);
 
   return value;
 }

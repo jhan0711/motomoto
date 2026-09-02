@@ -24,7 +24,7 @@ export interface UseCargoTypesResult {
   error: string | null;
 }
 
-export function useCargoTypes(): UseCargoTypesResult {
+export function useCargoTypes(enabled = true): UseCargoTypesResult {
   const [cargoTypes, setCargoTypes] = useState<CargoType[]>(cache ?? []);
   const [loading, setLoading] = useState(cache === null);
   const [error, setError] = useState<string | null>(null);
@@ -42,14 +42,17 @@ export function useCargoTypes(): UseCargoTypesResult {
   }, []);
 
   useEffect(() => {
-    if (cache !== null) return;
+    // `enabled` en falso -el pasajero aun no ha tocado "encomienda"-: no se pide
+    // el catalogo, que no hace falta para el primer pintado y competiria con las
+    // llamadas que si. Se lee la primera vez que `enabled` pasa a cierto.
+    if (!enabled || cache !== null) return;
 
     // Diferido fuera del cuerpo del efecto, mismo motivo que en use-places: el
     // compilador de React rechaza un setState alcanzable sincronamente desde un
     // efecto.
     const id = setTimeout(() => void cargar(), 0);
     return () => clearTimeout(id);
-  }, [cargar]);
+  }, [cargar, enabled]);
 
   return { cargoTypes, loading, error };
 }

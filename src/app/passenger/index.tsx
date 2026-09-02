@@ -137,7 +137,11 @@ export default function PassengerHome() {
   } = useRideDraft();
   const { places } = usePlaces();
   const maxPasajeros = useMaxPassengers();
-  const { cargoTypes } = useCargoTypes();
+  // El catalogo de carga solo hace falta cuando el pasajero elige "encomienda".
+  // Pedirlo en el primer pintado era una llamada de red compitiendo con las que
+  // si pintan la pantalla (Fase 24 paso 4).
+  const { cargoTypes } = useCargoTypes(serviceType === 'parcel');
+
 
   /** Cuantos van de verdad. En una encomienda son cero, sin importar lo que
    * quedara guardado en el borrador de la ultima vez que fue un viaje de
@@ -691,7 +695,13 @@ export default function PassengerHome() {
    * es justo lo que evita que la pantalla diga que un motorraton viene mientras
    * el buscador ya lo da por desconectado.
    */
-  const segundosParaCaducar = useNumericSetting('driver_location_stale_seconds', 120);
+  // Solo sirve cuando hay un motorraton asignado a quien seguir. Hasta entonces
+  // no se lee: es otra llamada fuera del primer pintado (Fase 24 paso 4).
+  const segundosParaCaducar = useNumericSetting(
+    'driver_location_stale_seconds',
+    120,
+    solicitud?.conductor != null,
+  );
   const posicionCaducada =
     posicionConductor !== null && posicionConductor.ageSeconds > segundosParaCaducar;
 

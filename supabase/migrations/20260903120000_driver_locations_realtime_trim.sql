@@ -1,0 +1,36 @@
+-- =============================================================================
+-- Fase 24, paso 3: quitarle a `driver_locations` un indice que solo pesa
+-- =============================================================================
+--
+-- LO QUE SE MIDIO (paso 1 y 2, seccion 15.26):
+--
+--   - `driver_locations_updated_idx` (`btree updated_at DESC`) NO lo elige ningun
+--     plan. Se creo en `20260729004136` para "descartar rapido las posiciones
+--     caducadas", pero `find_available_drivers` llega a `driver_locations` por
+--     join sobre `driver_id` (PK), no por rango de `updated_at`; y la tabla tiene
+--     UNA FILA POR CONDUCTOR -decenas, no crece-, asi que el planificador siempre
+--     hace seq scan. Nada ordena por `updated_at`. Mientras tanto ese btree se
+--     reescribe en CADA update de posicion (cada 7 s por conductor en viaje), que
+--     es la escritura mas frecuente del sistema. Coste de escritura sin beneficio
+--     de lectura: se borra.
+--
+-- LO QUE NO SE PUDO HACER, y por que -para que no se vuelva a intentar-:
+--
+--   El evento de tiempo real de `driver_locations` lleva las OCHO columnas; el
+--   cliente solo usa cuatro (`lat`, `lng`, `heading`, `updated_at`). Se intento
+--   acotar la publicacion con una lista de columnas
+--   (`alter publication ... add table driver_locations (lat, lng, heading, updated_at)`).
+--   **No sirve:** Supabase Realtime decodifica el WAL con `wal2json`, y `wal2json`
+--   ignora las listas de columnas de las publicaciones (esa es una funcion de
+--   `pgoutput`, PG15). Comprobado de punta a punta con `prueba_posicion_realtime.mjs`:
+--   el evento seguia trayendo `location`, `speed_kmh` y `accuracy_m` con la lista
+--   puesta. La unica via real para adelgazar ese payload es pasar la posicion del
+--   conductor de `postgres_changes` a Broadcast con un trigger que arma el mensaje
+--   -paquete propio-, que es una reescritura del cliente y queda fuera de la Fase 24.
+--
+-- LO QUE NO CAMBIA: `replica identity` sigue en `default` (PK = `driver_id`),
+-- correcto. El indice gist de `location` se queda -es el unico acceso que podria
+-- encarecerse si la flota crece-. El disparador que rellena `lat`/`lng` tampoco.
+-- =============================================================================
+
+drop index if exists public.driver_locations_updated_idx;
