@@ -14,7 +14,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   17 calificaciones, 18 cancelaciones y errores operativos (comprometida por el usuario el
   2026-08-21), 19 notificaciones, 20 panel administrativo (`c7cd03c`),
   21 gestion de conductores y vehiculos (absorbida en la 20),
-  22 seguridad y auditoria (comiteada el 2026-09-02, `059cc12`)
+  22 seguridad y auditoria (`059cc12`), y el bloque de super admin y usuarios administradores
+  (comiteado el 2026-09-02, `563f2d0`)
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -136,16 +137,22 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **PENDIENTE PARA PRODUCCION** (no es codigo, no bloquea nada hoy): recompilar el cliente movil
   **arm64** con `allowBackup: false` antes de repartir a aparatos de verdad -la del emulador ya
   esta-. El `location_interval_in_ride_seconds` del servidor esta en 7 (dato, no codigo)
-- **BLOQUE ESPECIAL DE SUPER ADMIN Y USUARIOS ADMINISTRADORES: TERMINADO Y VERIFICADO** (seccion
-  15.24), los cuatro pasos. Rol `super_admin`, `is_admin()` lo incluye (D264), D265 -un admin no
-  toca a otro admin-, `admin_create_admin` / `admin_reset_admin_password` / `admin_list_admins`,
-  la pantalla `/administradores` del panel -enlace y ruta solo para el super admin-, y la prueba
-  e2e en el navegador (un administrador creado desde el panel que entra de verdad). **SIN
-  COMITEAR** -lo comitea el usuario-. **La liquidacion mensual de la plataforma queda aplazada**
-  hasta que el usuario la apruebe (D267)
+- **BLOQUE ESPECIAL DE SUPER ADMIN Y USUARIOS ADMINISTRADORES: TERMINADO, VERIFICADO Y COMITEADO**
+  (`563f2d0`, "Panel super admin"), los cuatro pasos. Rol `super_admin`, `is_admin()` lo incluye
+  (D264), D265 -un admin no toca a otro admin-, `admin_create_admin` /
+  `admin_reset_admin_password` / `admin_list_admins`, la pantalla `/administradores` del panel
+  -enlace y ruta solo para el super admin-, y la prueba e2e en el navegador. **La liquidacion
+  mensual de la plataforma queda aplazada** hasta que el usuario la apruebe (D267). Detalle en la
+  seccion 15.24
 - **En verde:** 32 archivos de `prueba_*.sql`, mas `prueba_super_admin` (11) y
   `prueba_gestion_admins` (13); `typecheck`/`lint`/`format:check` en 0 en la aplicacion movil y
   el panel
+- **EL SUPER ADMIN DE VERDAD YA EXISTE** (2026-09-02): `jhank.45617@gmail.com` -que era el
+  pasajero de prueba- pasa a `super_admin` con `supabase/dev-tools/promote_jhank_super_admin.sql`.
+  La contrasena la pone el usuario. Detalle en 15.24
+- **AHORA EN CURSO: la Fase 23, Pruebas.** Seis pasos (seccion 15.25): auditoria de los scripts
+  perdidos, corredor unico, pruebas de cliente con `jest`, CI en GitHub Actions -checks mas la
+  regresion de BD-, y el checklist de pruebas en dispositivo. **SIN COMITEAR** lo de la Fase 23
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -153,8 +160,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   `location_interval_in_ride_seconds` bajado de 10 a 7 en `app_settings` (7,0 s medidos). El
   arreglo de fondo -que el pasajero use la posicion del propio evento- es el paso 7 de la Fase 22.
   Detalle en la seccion 15.23
-- **Ultimo commit:** `059cc12`, "fase 22 terminada". Antes, `c7cd03c` la Fase 20. El commit de
-  la Fase 22 lleva **7 migraciones** (`20260902170000`-`20260902230000`), **6 pruebas nuevas** -4
+- **Ultimo commit:** `563f2d0`, "Panel super admin". Antes, `059cc12` la Fase 22 y `c7cd03c` la
+  Fase 20. El commit de la Fase 22 lleva **7 migraciones** (`20260902170000`-`20260902230000`), **6 pruebas nuevas** -4
   SQL (`prueba_grants_anon`, `prueba_h15_telefono_contraparte`, `prueba_posicion_conductor`,
   `prueba_barrido_seguridad`) y 2 `.mjs` (`prueba_cambio_contrasena_sesiones`,
   `prueba_contraste_colores`)-, **5 pruebas ajustadas** (`prueba_bloqueo_y_senal`,
@@ -163,15 +170,14 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   `src/features/ride/use-driver-location.ts`, `src/features/auth/auth-service.ts`, `app.config.ts`,
   `admin/src/features/config/*`, ...). El `location_interval_in_ride_seconds` en 7 es un dato en
   el servidor, no fue en el commit; `android/` no sube al repositorio
-- **SIN COMITEAR (bloque super admin):** 3 migraciones (`20260902233000` el enum,
-  `20260902234000` `is_super_admin` + D265, `20260902235000` la gestion de administradores);
-  `seed_super_admin.sql`, `prueba_super_admin.sql` y `prueba_gestion_admins.sql` nuevos;
-  `prueba_auditoria.sql` ajustada; en la aplicacion movil `session.tsx`, `account-status.tsx` y
-  los tipos; en el panel `login-form.tsx`, `proxy.ts`, `(panel)/layout.tsx`,
-  `(panel)/panel-nav.tsx`, el modulo nuevo `features/admins/`, la pantalla
-  `(panel)/administradores/`, `PasswordNotice` movido a `features/shared/` y los tipos. **Se
-  corrigio de paso un fallo de `lint` que `059cc12` traia de la Fase 22** (acceso a un `ref`
-  durante el render en `use-driver-location.ts`)
+- **Antes del `563f2d0`:** el commit del bloque super admin lleva 3 migraciones
+  (`20260902233000`-`20260902235000`), `seed_super_admin.sql` + `prueba_super_admin.sql` +
+  `prueba_gestion_admins.sql` nuevos, `prueba_auditoria.sql` ajustada, cambios en la aplicacion
+  movil (`session.tsx`, `account-status.tsx`, tipos) y en el panel (`login-form.tsx`, `proxy.ts`,
+  `(panel)/layout.tsx`, `(panel)/panel-nav.tsx`, el modulo `features/admins/`, la pantalla
+  `(panel)/administradores/`, `PasswordNotice` movido a `features/shared/`). **Corrigio de paso
+  un fallo de `lint` que `059cc12` traia de la Fase 22** (acceso a un `ref` durante el render en
+  `use-driver-location.ts`). **Working tree limpio.**
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -1216,8 +1222,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | 20 | Panel administrativo | **COMPLETADA Y COMITEADA** (`c7cd03c`). Once pasos + doble turno (seccion 15.22) |
 | 21 | Gestion de conductores y vehiculos | **ABSORBIDA en la Fase 20** (pasos 4a/4b/4c/5 + doble turno). Sin trabajo propio |
 | 22 | Seguridad y auditoria | **COMPLETADA Y COMITEADA** (`059cc12`). Los ocho pasos (seccion 15.23) |
-| — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y VERIFICADO** (2026-09-02), los cuatro pasos. Pendiente el commit. La liquidacion mensual, aplazada (D267) |
-| 23 | Pruebas | Pendiente |
+| — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
+| 23 | Pruebas | **EN CURSO** (2026-09-02). Seis pasos acordados (seccion 15.25) |
 | 24 | Optimizacion | Pendiente |
 | 25 | Preparacion para produccion | Pendiente |
 | 26 | Publicacion y despliegue | Pendiente |
@@ -2349,13 +2355,16 @@ nada, refrescar el conductor de prueba**, porque su ubicacion caduca a los dos m
 
 | Script | Comprobaciones | Que protege |
 |---|---|---|
-| `prueba_capacidad.sql` | 15 | La regla que sustituyo a R7 |
-| `prueba_asientos.sql` | 13 | Que el buscador reste los asientos ocupados |
-| `prueba_ciclo.sql` | 12 | El ciclo entero por las funciones reales |
-| `prueba_interruptor.sql` | 1 | Que aceptar no encienda la disponibilidad de quien la apago |
+| `prueba_capacidad.sql` | 14 | La regla que sustituyo a R7, el filtro por asientos y `pickup_reference` (D172) |
+| `prueba_transiciones.sql` | 23 | El ciclo entero por las funciones reales, las guardias de orden, R5, E32 y `NO_DRIVERS_AVAILABLE` |
+| `prueba_recorrido.sql` | 12 | El rastro (quien escribe, quien lee) y la distancia solo del recorrido (E33) |
 
-En dispositivo, con `demo_01_montar.sql` y `demo_02_segunda_solicitud.sql`, y `demo_03_limpiar.sql`
-al terminar, que ademas devuelve `offer_response_seconds` a los veinte segundos de R2:
+> Los cuatro archivos que antes listaba este checklist -`prueba_capacidad`, `prueba_asientos`,
+> `prueba_ciclo`, `prueba_interruptor`- se habian perdido del repositorio. La Fase 23 (paso 2)
+> los reescribio consolidados en los tres de arriba.
+
+En dispositivo, con `seed_active_service.sql` para montar el escenario y `remove_active_service.sql`
+al terminar (sustituyen a los `demo_0*.sql`, que quedaron obsoletos en la Fase 20):
 
 1. Con un servicio de 2 encima, el conductor sigue en **Disponible**
 2. La tarjeta del motorraton dice **"Un asiento libre · 2 a bordo"**
@@ -2791,15 +2800,16 @@ src/types/database.ts                    regenerado
 
 ### Pruebas
 
-**35 comprobaciones automaticas**, todas en verde y dentro de transacciones que se
-deshacen.
+Todas en verde y dentro de transacciones que se deshacen.
 
 | Script | Comprobaciones | Que protege |
 |---|---|---|
-| `prueba_transiciones.sql` | 12 | Que no se pueda saltar ni repetir un paso, R5, y que el viaje sea de su conductor |
-| `prueba_recorrido.sql` | 7 | Quien puede escribir el rastro y que la distancia mida solo el viaje |
-| `prueba_paradas.sql` | 4 | Dos servicios en estados distintos, que es de donde sale la lista |
-| `prueba_ciclo_completo.sql` | 12 | El ciclo entero, **comprobando las dos vistas en cada paso** |
+| `prueba_transiciones.sql` | 23 | Que no se pueda saltar ni repetir un paso, R5, que el viaje sea de su conductor, E32, `NO_DRIVERS_AVAILABLE` y el ciclo organico entero por las funciones reales |
+| `prueba_recorrido.sql` | 12 | Quien escribe el rastro y quien lo lee, la distancia solo del recorrido (E33), y `list_driver_active_rides` con dos servicios en estados distintos (D161) |
+
+> Este checklist listaba `prueba_transiciones`, `prueba_recorrido`, `prueba_paradas` y
+> `prueba_ciclo_completo`, **perdidos del repositorio**. La Fase 23 (paso 2) los reescribio
+> consolidados en los dos de arriba; `prueba_paradas` quedo dentro de `prueba_recorrido`.
 
 **En dispositivo:** el ciclo completo tocado uno por uno desde la pantalla del conductor,
 el cambio de estado llegando al pasajero en tiempo real, la despedida al terminar, la
@@ -6487,7 +6497,7 @@ de una tabla esperando `0`. Ahora `anon` **ni tiene permiso**: el intento rebota
 
 ---
 
-## 15.24 BLOQUE ESPECIAL: SUPER ADMIN Y USUARIOS ADMINISTRADORES (TERMINADO, PENDIENTE DE COMMIT)
+## 15.24 BLOQUE ESPECIAL: SUPER ADMIN Y USUARIOS ADMINISTRADORES (TERMINADO Y COMITEADO, `563f2d0`)
 
 **PEDIDO POR EL USUARIO EL 2026-09-02.** No es una fase del plan de 26; se trata como bloque
 especial entre la Fase 22 y la 23, igual que el de tarifas y encomiendas, para no renumerar el
@@ -6550,8 +6560,16 @@ oculto el error entre los avisos de entorno. Se corrigio aqui sacando el `ref` y
 antiguedad desde `updatedAt`, que ya vive en el estado. Regla que deja: mirar la salida entera de
 `lint`, no la ultima linea.
 
-**Cuenta de prueba:** `superadmin.prueba@motomoto-qa.co` / `SuperAdmin.2026`. La de verdad -el
-dueno de la plataforma- se crea en la Fase 25, como el `admin`.
+**Cuenta de prueba:** `superadmin.prueba@motomoto-qa.co` / `SuperAdmin.2026`.
+
+**EL SUPER ADMIN DE VERDAD, YA CREADO (2026-09-02).** A peticion del usuario, su cuenta
+`jhank.45617@gmail.com` -que era el pasajero "Jhan Roldan"- pasa a `super_admin` con
+`supabase/dev-tools/promote_jhank_super_admin.sql`. **Conserva sus 40 solicitudes**; desde D264
+deja de poder pedir servicios como pasajero, para lo cual el usuario creara otra cuenta. Se
+desactivo `profiles_protect_columns` para el UPDATE del rol -no se pudo usar la maniobra de
+borrar y reinsertar la fila como en las semillas, porque tiene datos colgando por clave
+foranea-. **La contrasena la pone el usuario** desde el panel de Supabase o por recuperacion
+por correo: no se toca desde SQL.
 
 **Verificado:**
 
@@ -6666,6 +6684,129 @@ liquidacion mensual sigue aplazada (D267).
 | D265 | **Un administrador no puede tocar la cuenta de otro administrador** | Hoy `admin_set_account_status` esta abierta a cualquier `is_admin()` y con un solo administrador daba igual. Con varios, el administrador A podria bloquear al administrador B o al super admin. La funcion pasa a rechazar cuando el objetivo es `admin` o `super_admin` y quien llama no es `super_admin` |
 | D266 | **Las cuentas de administrador se crean con `security definer`, no con `service_role`** | Mismo criterio que D250 para los conductores: la funcion corre con privilegios pero acotada a una operacion y con `is_super_admin()` dentro. La contrasena inicial la genera el sistema en el formato dictable de D251 y se muestra una sola vez |
 | D267 | **La liquidacion mensual se aplaza** | El usuario pidio hacer primero la gestion de administradores y decidir despues si la parte de cobro se aprueba. Lo acordado sobre "que cuenta como servicio" y "el mes en hora de Colombia" queda escrito arriba para cuando se retome |
+| D268 | **`accept_ride_offer` recupera las tres guardias que perdio en la Fase 20 paso 11** | La reescritura de `20260902150000` partio de una version vieja (patron E30) y borro el `and is_available` (D164), el `exception when unique_violation` de la carrera y el cierre de las demas ofertas `pending`. Migracion `20260903000000` las devuelve sin tocar el corte al bloqueado. Lo destapo `prueba_transiciones.sql` en la Fase 23 |
+
+---
+
+## 15.25 FASE 23: PRUEBAS (EN CURSO)
+
+**EMPEZADA EL 2026-09-02.** No construye funcionalidad: consolida y formaliza la suite de
+pruebas, monta CI y anade las primeras pruebas del cliente. Lo que depende de movimiento real
+-la regla de los 50 m de R9, el marcador del pasajero moviendose, el rastro- **sigue bloqueado
+sin un telefono con GPS**; este trabajo lo deja documentado como procedimiento listo.
+
+**El usuario pidio "hacerlo todo":** CI completo -checks mas la regresion de base de datos- y
+pruebas de cliente de logica pura **y** de componentes.
+
+### Los seis pasos acordados
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | **Auditoria** de los 10 scripts "perdidos", los 3 `demo_*` y los pares `seed_`/`remove_`. **HECHA el 2026-09-02** — veredicto abajo | Hecho |
+| 2 | Cerrar los huecos de la auditoria: rehacer solo los scripts que falten de verdad, anadir los `remove_` que falten, y **corregir los checklists de las secciones 15.12 y 15.14** para que apunten a archivos que existen. **HECHO el 2026-09-02** — y destapo la regresion D268 | Hecho |
+| 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla | Pendiente |
+| 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno | Pendiente |
+| 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto | Pendiente |
+| 6 | **Dispositivo**: barrido a 800 dp en el emulador con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados | Pendiente |
+
+### Lo que se hizo: paso 1, la auditoria de los scripts perdidos (2026-09-02)
+
+Se reviso que cubre cada script perdido y si esa cobertura ya esta en los 31 `prueba_*.sql`
+actuales. **Los 10 archivos siguen sin estar en el disco** -no en carpetas temporales, no en
+ningun sitio-, asi que lo que haya que conservar hay que reescribirlo.
+
+| Script perdido | Cubre | Veredicto |
+|---|---|---|
+| `prueba_posicion.sql` (8) | Quien ve la posicion de un conductor | **CUBIERTO** por `prueba_posicion_conductor.sql` (Fase 22, paso 7): comprobaciones 5 y 6 |
+| `prueba_referencia.sql` (16) | Restriccion de `pickup_reference`, normalizacion, privacidad D172, **regresion E30** | **PARCIAL.** La regresion E30 esta entera en `prueba_solicitud_con_valor.sql` ("la mitad de este archivo"). La restriccion + normalizacion + D172: HUECO |
+| `prueba_asientos.sql` (13) | Que `find_available_drivers` reste los asientos ocupados | **CASI CUBIERTO.** `prueba_solicitud_con_valor` (comp. 29-30, con la medida de H21) y `prueba_doble_turno` (comp. 15). Falta poco: se anade al script de capacidad |
+| `prueba_transiciones.sql` (12) | Que no se pueda saltar ni repetir un paso del viaje, R5, y que el viaje sea del conductor | **HUECO GRANDE.** Ningun script actual llama a `start_driving_to_pickup`, `confirm_driver_arrival` ni `start_ride`: todos montan el viaje con un `insert` directo. Las guardias de la maquina de estados **no las prueba nada** |
+| `prueba_ciclo.sql` (12) / `prueba_ciclo_completo.sql` (12) | El ciclo entero por las funciones reales, `NO_DRIVERS_AVAILABLE`, las dos vistas en cada paso | **HUECO.** Solapa con transiciones; se hace junto |
+| `prueba_interruptor.sql` (1) | Que aceptar no encienda la disponibilidad de quien la apago (E32) | **HUECO** (una comprobacion). Se anade al de transiciones |
+| `prueba_recorrido.sql` (7) | Quien puede escribir en `ride_locations` y que la distancia mida solo el viaje (E33) | **HUECO** |
+| `prueba_paradas.sql` (4) | `list_driver_active_rides` con dos servicios en estados distintos (D161) | **HUECO** (pequeno). Se anade al de recorrido |
+| `prueba_capacidad.sql` (15) | La regla de capacidad por asientos que sustituyo a R7 (D161) | **HUECO PARCIAL.** El arreglo de H21 esta medido; la aceptacion por capacidad no |
+| `demo_01_montar.sql` / `demo_02_segunda_solicitud.sql` / `demo_03_limpiar.sql` | Montaje manual para probar en dispositivo | **OBSOLETOS.** Los sustituye `seed_active_service.sql` + `remove_active_service.sql` (Fase 20, paso 3). El checklist de 15.12 se corrige para apuntar ahi |
+
+**Pares `seed_`/`remove_`:** falta `remove_second_driver.sql`. `seed_admin.sql`,
+`seed_super_admin.sql` y `promote_jhank_super_admin.sql` son fixtures permanentes -una cuenta de
+administrador no es "dato de prueba que se limpia"-, no llevan `remove_`.
+
+**PLAN PARA EL PASO 2, tres scripts nuevos que absorben nueve perdidos:**
+
+- `prueba_transiciones.sql` — las cuatro funciones de transicion (guardias de orden, repeticion,
+  R5, propiedad), el ciclo organico entero, `NO_DRIVERS_AVAILABLE` y el interruptor E32.
+- `prueba_recorrido.sql` — politica de escritura de `ride_locations`, la distancia de E33, y la
+  lista de paradas de `list_driver_active_rides`.
+- `prueba_capacidad.sql` — la aceptacion por capacidad de asientos, el resto de `find_available_drivers`,
+  y la restriccion + normalizacion de `pickup_reference` con la privacidad de D172.
+
+Y `remove_second_driver.sql`, mas la correccion de los checklists de 15.12 y 15.14.
+
+### Lo que se hizo: paso 2
+
+Tres scripts nuevos, un `remove_` y los dos checklists corregidos. Todo verde
+contra el servidor.
+
+**`prueba_transiciones.sql` (NUEVO, 23 comprobaciones).** Absorbe los perdidos
+`prueba_transiciones`, `prueba_ciclo`, `prueba_ciclo_completo` y `prueba_interruptor`.
+Cubre: propiedad del viaje en las cuatro funciones de transicion, guardias de
+orden (no saltar, no repetir), R5 en sus tres casos (sin cobertura se permite, a
+2 km se rechaza, en el punto se permite), `start_ride` arrastra la solicitud,
+`complete_ride` sin dos puntos deja distancia nula y no reenciende disponibilidad,
+`NO_DRIVERS_AVAILABLE`, E32/D164, el ciclo organico entero por las funciones
+reales, y permisos (anon no, `assert_ride_driver` cerrada).
+
+**`prueba_recorrido.sql` (NUEVO, 12 comprobaciones).** Absorbe `prueba_recorrido` y
+`prueba_paradas`. `list_driver_active_rides` con dos servicios en estados
+distintos, en orden, con `pickup_reference` (D161, D172); quien puede escribir en
+`ride_locations` (el conductor solo desde `driver_on_the_way`, ni el pasajero ni
+en `assigned`); quien puede leerlo (participante y admin si, un tercero no); y E33
+-la distancia de `complete_ride` mide ~110 m de recorrido y no el kilometro de
+aproximacion registrado antes de `started_at`-.
+
+**`prueba_capacidad.sql` (NUEVO, 14 comprobaciones).** Absorbe `prueba_capacidad`,
+`prueba_asientos` y la parte de `prueba_referencia` que no era regresion de E30.
+`find_available_drivers` descuenta los asientos ocupados; `enforce_ride_capacity`
+rechaza `accept_ride_offer` cuando el grupo no cabe (`VEHICLE_CAPACITY_EXCEEDED`) y
+el rechazo no deja la oferta ni la solicitud a medias; la restriccion
+`rr_pickup_reference_length` (81 caracteres y solo-espacios se rechazan, 80
+justos entran); y D172 -la referencia no es columna de `list_driver_offers`, y si
+aparece en `list_driver_active_rides` tras aceptar-.
+
+**`remove_second_driver.sql` (NUEVO).** El `remove_` que le faltaba a
+`seed_second_driver.sql`. No se ejecuto: borraria el segundo conductor de prueba,
+que es un fixture vivo.
+
+**Checklists corregidos.** Seccion 15.12 (Fase 13) y seccion 15.14 (Fase 15)
+listaban archivos perdidos; ahora apuntan a los tres nuevos y a
+`seed_active_service.sql` en vez de los `demo_0*.sql`.
+
+**HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
+comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
+de `accept_ride_offer` en `20260902150000_blocked_driver_and_r10.sql` (Fase 20,
+paso 11) partio de una version anterior a `20260805222621` y perdio, sin
+notarlo:
+
+1. El `and is_available` del recalculo — quedaba `is_available = (v_free > 0)`,
+   que **reencendia al conductor que apago el interruptor a mano** en cuanto
+   aceptaba una oferta ya recibida. Contra D164.
+2. El `exception when unique_violation` al marcar la oferta aceptada — al perdedor
+   de la carrera entre dos conductores le salia el error crudo del indice.
+3. El cierre de las demas ofertas `pending` de la misma solicitud — se quedaban
+   vivas en la tabla.
+
+Es el patron E30. Corregido en `20260903000000_accept_offer_restore_lost_guards.sql`:
+reescribe desde la version de `20260902150000` (la que manda) y devuelve las tres
+lineas, sin tocar el corte al bloqueado ni nada mas. **D268.**
+
+Verificado: `prueba_transiciones` 23/23, `prueba_recorrido` 12/12,
+`prueba_capacidad` 14/14, y en verde tambien tras la migracion D268
+`prueba_asignacion`, `prueba_bloqueo_y_senal`, `prueba_solicitud_con_valor`,
+`prueba_doble_turno`, `prueba_cancelaciones`, `prueba_servicios`, `prueba_recaudo`,
+`prueba_notificaciones`.
+
+Siguiente: paso 3, el corredor de pruebas.
 
 ---
 
@@ -6679,12 +6820,11 @@ liquidacion mensual sigue aplazada (D267).
 - **Recuperar el ancho de 800 dp para las pruebas.** Se simula con `adb shell wm size` y
   `wm density`, o con un AVD de tablet. Desde la Fase 4 se probaba en los dos anchos por D76, y
   la Fase 14 se cerro solo con 411 dp
-- **Los scripts de prueba no estan en el repositorio.** `prueba_capacidad.sql`,
-  `prueba_asientos.sql`, `prueba_ciclo.sql`, `prueba_interruptor.sql`, `prueba_referencia.sql`
-  `prueba_posicion.sql`, `prueba_transiciones.sql`, `prueba_recorrido.sql`,
-  `prueba_paradas.sql` y `prueba_ciclo_completo.sql` viven en carpetas temporales, pero los checklists de regresion de las
-  secciones 15.12 y 15.14 los nombran como si estuvieran a mano. **Hoy esa lista apunta a
-  archivos que nadie tiene.** Recogerlos en `supabase/dev-tools/` antes de la Fase 23
+- **RESUELTO en la Fase 23, pasos 1 y 2** (2026-09-02). Los 10 scripts perdidos se auditaron:
+  `prueba_posicion` ya estaba cubierto por `prueba_posicion_conductor`, y el resto se reescribio
+  consolidado en `prueba_transiciones.sql`, `prueba_recorrido.sql` y `prueba_capacidad.sql`, todos
+  en `supabase/dev-tools/`. Los `demo_0*.sql` quedaron obsoletos. Se anadio `remove_second_driver.sql`.
+  Los checklists de 15.12 y 15.14 apuntan ya a archivos que existen. Detalle en la seccion 15.25
 - **RESUELTO en la Fase 22, paso 1** (2026-09-02). `anon` ya no puede ejecutar ninguna funcion
   de `public`: dos migraciones, `20260902170000` y `20260902180000`. Detalle en la seccion 15.23
 - **Decidir la coordenada del parque (H17).** `AMALFI_CENTER` esta a 353 m del parque que dice
