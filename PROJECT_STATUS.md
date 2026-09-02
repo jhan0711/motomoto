@@ -97,7 +97,12 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   en la tarjeta de las solicitudes que nadie ha tomado. Aparecio de paso que **la lista de
   candidatos y la asignacion no aplicaban las mismas reglas** (D257), y que **el total de las
   pruebas podia decir "0 fallando" con comprobaciones en rojo**: arreglado en los 23 archivos
-- **Trabajo siguiente:** el paso 10, reportes y calificaciones (D204)
+- **El paso 10a esta hecho y verificado**, pantalla incluida: la bandeja de reportes y las
+  calificaciones vistas en conjunto. Cerro de paso **un hueco que venia de la Fase 1** (D258): el
+  administrador podia reescribir la descripcion de un reporte, o sea la queja de alguien
+- **Trabajo siguiente:** el paso 10b, el boton de "reportar un problema" en la aplicacion movil.
+  **Hasta que exista, la bandeja seguira vacia en produccion**, que es lo esperado. Con el se
+  deciden las categorias, que son del negocio del usuario y no del programa
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -703,6 +708,9 @@ aplicacion sigue sin tocar dinero.
 | D255 | **El recorrido del servicio se ensena como datos, no como mapa** | `ride_locations` tiene 12 puntos en 10 viajes: uno por viaje. No es la tabla, es que **el emulador no puede producir movimiento** -medido en la Fase 14- y nadie ha conducido de verdad con la aplicacion. Un mapa con un punto no ensena nada y ademas obligaria a montar Mapbox en el panel. Se muestran los puntos, la primera y la ultima hora y la distancia que calculo `complete_ride`. **El mapa se pone cuando haya rastros de verdad**, y entonces se vera si sirve |
 | D256 | **Se puede asignar a mano a un conductor desconectado** | Es el punto entero de la anulacion manual del despachador (D7): si solo valieran los conectados, bastaria con el reparto automatico, que ya los busca. La empresa asigna a mano justamente cuando el reparto no ha dado con nadie, y ahi hace falta poder llamar a alguien que no esta con la aplicacion abierta. La lista lo ensena desconectado, que es informacion util, pero no se lo impide |
 | D257 | **Lo que la lista de candidatos ofrece, la asignacion tiene que aceptarlo** | El 2026-09-01 no coincidian: `admin_list_assignable_drivers` daba por asignable a alguien cuyo companero de doble turno (D250) estaba conectado, y `admin_assign_driver` lo rechazaba con `COMPANION_ALREADY_AVAILABLE`. El despachador elegia y no pasaba nada, **con el pasajero esperando**. Cualquier condicion nueva en `admin_assign_driver` hay que **espejarla en la lista**, y las dos quedan escritas igual a proposito. La prueba lo vigila en la comprobacion 20, que mira las dos funciones sobre el mismo escenario |
+| D258 | **Un reporte no se modifica, solo se gestiona** | `reports_update_admin` dejaba al administrador reescribir cualquier columna, **la descripcion incluida**. Un reporte es lo que alguien dijo que le paso: si se puede editar deja de ser evidencia, y quien lo escribio no se entera. La politica se quito el 2026-09-01; la gestion pasa por `admin_set_report_status`, que deja rastro en la auditoria, y `protect_report_columns` vigila las columnas del reportante **venga de donde venga la escritura**. Mismo criterio que las `_all_admin` del paso 4c, pero aqui lo que se protege no es un catalogo sino una queja |
+| D259 | **Cerrar un reporte exige escribir que se hizo, y avisa a quien lo puso** | Un reporte resuelto sin una linea explicando por que no le sirve a nadie: ni a quien se quejo, que no se entera, ni a la empresa dentro de tres meses. Al cerrarlo se le manda un aviso al reportante -`report_resolved`-, que es la mitad que faltaba de D204: **la queja se atiende y quien la puso lo sabe**. Marcar "en revision" no pide nota ni manda aviso: que alguien lo este mirando todavia no es noticia |
+| D260 | **La contraparte de un reporte solo si quien reporta estuvo en ese viaje** | La regla era un `case` de dos ramas y el "si no" se tragaba al que no era ni el pasajero ni el conductor, **senalando al pasajero del viaje como si fuera la otra parte**. Puede pasar de verdad: `reports_insert_own` solo comprueba que el reportante sea uno mismo, nada obliga a que el viaje sea suyo. Se deja asi -alguien puede senalar un servicio que vio- pero entonces **no se inventa contraparte**, porque sobre ese nombre se decide a quien se llama a pedir explicaciones. La pantalla lo dice en vez de callarlo |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4325,7 +4333,8 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 7 | Listado de pasajeros con bloqueo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | **HECHO Y VERIFICADO**, pantalla incluida |
-| 10 | Reportes y calificaciones (D204) | Pendiente |
+| 10a | La bandeja de reportes y las calificaciones en conjunto (D204) | **HECHO Y VERIFICADO**, pantalla incluida |
+| 10b | El boton de "reportar un problema" en la aplicacion movil (D204) | Pendiente |
 | 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
 
 ### Lo que se hizo: paso 1, el proyecto y el acceso (2026-08-26)
@@ -5434,6 +5443,88 @@ encontraban vivos. **`remove_active_service.sql` antes de la regresion**, siempr
 
 ---
 
+### Lo que se hizo: paso 10a, la bandeja de reportes (2026-09-01)
+
+`supabase/migrations/20260901120000_admin_reports_inbox.sql`,
+`supabase/migrations/20260901140000_report_counterpart_only_if_involved.sql`,
+`supabase/dev-tools/prueba_reportes.sql` (32 comprobaciones),
+`supabase/dev-tools/seed_reports.sql` y `remove_reports.sql`, el modulo
+`admin/src/features/reports/` y la pantalla `/reportes`.
+
+**ESTO ES LA MITAD DE LO QUE D204 PROMETIO.** En la Fase 12 se decidio no poner el boton de
+reportar en la aplicacion **porque no habia donde leer los reportes**: un boton que manda una queja
+que nadie puede ver promete atencion que no existe. La bandeja se hizo aqui; el boton es el paso
+10b, y hasta entonces **la bandeja seguira vacia en produccion**, que es lo esperado.
+
+**LO QUE YA EXISTIA Y NO SE REHIZO.** La tabla `reports` esta desde la Fase 1 con sus estados, sus
+indices y su coherencia de resuelto. No se le toco la forma: **se le puso encima quien la
+gestiona**.
+
+**SE CERRO UN HUECO QUE VENIA DE LA FASE 1 (D258).** `reports_update_admin` era un `for update` con
+`using (is_admin())`: dejaba al administrador **reescribir cualquier columna del reporte, la
+descripcion incluida**. Es el mismo tipo de agujero que las politicas `_all_admin` del paso 4c,
+pero aqui pesa mas que en un catalogo: **un reporte es lo que alguien dijo que le paso**. Si se
+puede editar deja de ser evidencia, y quien lo escribio no tiene forma de enterarse. Ahora la
+gestion pasa solo por `admin_set_report_status` -que deja rastro en la auditoria- y un disparador
+protege las columnas del reportante **venga de donde venga la escritura**, no solo desde el panel.
+
+**D259: CERRAR UN REPORTE EXIGE ESCRIBIR QUE SE HIZO, Y AVISA A QUIEN LO PUSO.** Un reporte que
+pasa a resuelto sin una linea no le sirve ni a quien se quejo -que no se entera de nada- ni a la
+empresa dentro de tres meses. Marcar "lo estoy mirando" no pide explicacion ni manda aviso: eso
+todavia no es noticia para nadie.
+
+**D260: LA CONTRAPARTE SOLO SI QUIEN REPORTA ESTUVO EN ESE VIAJE.** Lo encontro el asistente
+mirando la vista previa **antes de ensenarle la pantalla al usuario**: la regla era un `case` de
+dos ramas -"si el que reporta es el pasajero, el conductor; si no, el pasajero"- y ese "si no" se
+tragaba **al que no era ninguno de los dos**, senalando al pasajero del viaje como si fuera la
+otra parte. Puede pasar de verdad: `reports_insert_own` solo comprueba que el reportante sea uno
+mismo, **nada obliga a que el viaje sea suyo**. Se deja asi a proposito -alguien puede senalar un
+servicio que vio- pero entonces la bandeja no puede inventarse una contraparte: **sobre esa linea
+se decide a quien se llama a pedir explicaciones**. La pantalla ademas lo dice: "quien lo reporto
+no iba en este servicio".
+
+**LA BANDEJA SE ORDENA AL REVES QUE TODO LO DEMAS DEL PANEL**: los sin resolver primero y, entre
+ellos, **los mas viejos arriba**. Una bandeja no se lee como un historial; lo urgente es lo que
+lleva mas tiempo esperando respuesta, no lo ultimo que entro. Y cada fila dice **cuanto lleva
+esperando**, no solo la fecha, que obligaria a hacer la resta a mano.
+
+**LAS CATEGORIAS NO SE INVENTARON AQUI.** `category` es texto libre y la aplicacion todavia no
+manda ninguna: **son categorias del negocio del usuario, no del programa**, y se deciden con el en
+el paso 10b. Mientras tanto el filtro se llena con las que haya en los datos.
+
+**LAS CALIFICACIONES NO REPITEN LAS DEL PASO 8.** `admin_get_ride_ratings` responde "que paso en
+este servicio" y se mira desde un servicio. `admin_list_ratings` responde la pregunta contraria,
+que es la que hace falta para actuar: **donde estan las malas**. Una empresa no revisa servicio por
+servicio buscando una estrella.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las cinco funciones y el disparador | `prueba_reportes.sql` | **32 de 32** |
+| Regresion completa | Los veinticuatro archivos | **549 comprobaciones, 0 fallando** |
+| Que el admin ya no puede reescribir una queja | La prueba, con RLS y con permisos | Las dos puertas cerradas |
+| Panel | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Revisada** |
+
+**DOS ERRORES DEL ASISTENTE, Y LOS DOS SON VIEJOS CONOCIDOS.**
+
+**1. Se supusieron columnas en vez de mirarlas.** `rides.fare_amount` no existe -el valor vive en
+`ride_requests`- y la linea de tiempo de `rides` exige **que no falte ningun paso por el medio**:
+sin `driver_arrived_at` no puede haber `started_at`. Tres intentos hasta leer la restriccion.
+
+**2. Una prueba dando por supuesto un mundo vacio, y van SIETE.** Las comprobaciones que contaban
+filas se descuadraron en cuanto se sembraron los reportes para que el usuario mirase la pantalla.
+Arreglado filtrando por el nombre de los reportantes de la prueba: **ahora vale con la base como
+este**, que es como tendria que haber estado escrita desde el principio.
+
+**Y una comprobacion mal escrita que acusaba al servidor de un fallo suyo.** Las dos que
+demuestran que el administrador no puede escribir directo esperaban una excepcion, pero **un
+`update` que RLS no deja pasar no da error: afecta cero filas y sigue**. Decian FALLA teniendo el
+servidor razon. Se mira el efecto, no la excepcion.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
@@ -5442,7 +5533,7 @@ encontraban vivos. **`remove_active_service.sql` antes de la regresion**, siempr
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
   contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
-  de la Fase 5. **Quedan los pasos 10 y 11**: reportes y R10
+  de la Fase 5. **Quedan el paso 10b y el 11**: el boton de reportar y R10
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

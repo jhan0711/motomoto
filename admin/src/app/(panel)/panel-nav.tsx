@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   ListOrdered,
   MapPin,
+  MessageSquareWarning,
   SlidersHorizontal,
   Truck,
   User,
@@ -13,9 +14,9 @@ import {
 } from 'lucide-react';
 
 /*
- * Las secciones del panel, en el orden en que se van construyendo. Las que
- * faltan -reportes- se anaden aqui segun llegan
- * sus pasos, y la navegacion no hay que volver a tocarla.
+ * Las secciones del panel, en el orden en que se van construyendo. Ya estan
+ * todas las previstas: cada paso anadio la suya aqui y la navegacion no hubo
+ * que rehacerla.
  */
 const SECCIONES = [
   { href: '/', etiqueta: 'Tablero', icono: LayoutDashboard },
@@ -25,6 +26,7 @@ const SECCIONES = [
   { href: '/pasajeros', etiqueta: 'Pasajeros', icono: User },
   { href: '/lugares', etiqueta: 'Lugares', icono: MapPin },
   { href: '/tarifas', etiqueta: 'Tarifas', icono: SlidersHorizontal },
+  { href: '/reportes', etiqueta: 'Reportes', icono: MessageSquareWarning },
 ] as const;
 
 export function PanelNav() {

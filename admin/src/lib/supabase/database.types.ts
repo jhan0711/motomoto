@@ -1355,6 +1355,67 @@ export type Database = {
           usage_count: number;
         }[];
       };
+      admin_list_ratings: {
+        Args: {
+          p_limit?: number;
+          p_max_stars?: number;
+          p_offset?: number;
+          p_only_with_comment?: boolean;
+          p_rated_id?: string;
+        };
+        Returns: {
+          comment: string;
+          created_at: string;
+          rated_id: string;
+          rated_name: string;
+          rated_role: Database['public']['Enums']['user_role'];
+          rater_name: string;
+          rater_role: Database['public']['Enums']['user_role'];
+          rating_id: string;
+          request_id: string;
+          ride_id: string;
+          ride_route: string;
+          stars: number;
+          total_count: number;
+        }[];
+      };
+      admin_list_report_categories: {
+        Args: never;
+        Returns: {
+          category: string;
+          cuantos: number;
+        }[];
+      };
+      admin_list_reports: {
+        Args: {
+          p_from?: string;
+          p_limit?: number;
+          p_offset?: number;
+          p_search?: string;
+          p_status?: Database['public']['Enums']['report_status'];
+          p_to?: string;
+        };
+        Returns: {
+          category: string;
+          counterpart_name: string;
+          created_at: string;
+          description: string;
+          report_id: string;
+          reporter_id: string;
+          reporter_name: string;
+          reporter_phone: string;
+          reporter_role: Database['public']['Enums']['user_role'];
+          reporter_was_in_ride: boolean;
+          resolution_notes: string;
+          resolved_at: string;
+          resolved_by_name: string;
+          ride_id: string;
+          ride_requested_at: string;
+          ride_route: string;
+          status: Database['public']['Enums']['report_status'];
+          total_count: number;
+        }[];
+      };
       admin_list_rides: {
         Args: {
           p_from?: string;
@@ -1447,6 +1508,14 @@ export type Database = {
           p_driver_id: string;
           p_reason?: string;
           p_status: Database['public']['Enums']['driver_approval_status'];
+        };
+        Returns: undefined;
+      };
+      admin_set_report_status: {
+        Args: {
+          p_notes?: string;
+          p_report_id: string;
+          p_status: Database['public']['Enums']['report_status'];
         };
         Returns: undefined;
       };
