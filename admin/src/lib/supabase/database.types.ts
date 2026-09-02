@@ -1217,6 +1217,7 @@ export type Database = {
         Returns: {
           accepted_at: string;
           destination_label: string;
+          driver_blocked: boolean;
           driver_id: string;
           driver_location_age_seconds: number;
           driver_name: string;
@@ -1238,6 +1239,7 @@ export type Database = {
           ride_id: string;
           ride_status: Database['public']['Enums']['ride_status'];
           service_type: Database['public']['Enums']['service_type'];
+          signal_lost: boolean;
           status: Database['public']['Enums']['ride_request_status'];
           unit_number: number;
           waiting_seconds: number;

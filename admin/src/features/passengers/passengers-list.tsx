@@ -22,7 +22,7 @@ import {
   porcentajeCancelado,
 } from './types';
 import type { Passenger, PassengerRide } from './types';
-import { BlockDialog } from './block-dialog';
+import { BlockDialog } from '@/features/shared/block-dialog';
 
 export function PassengersList() {
   const [pasajeros, setPasajeros] = useState<Passenger[]>([]);
@@ -277,6 +277,7 @@ export function PassengersList() {
 
       {bloqueando !== null && (
         <BlockDialog
+          avisoServicioEnCurso="Tiene un servicio en curso ahora mismo. Si lo bloqueas, dejará de poder ver dónde va o cancelar. Escribe por qué."
           nombre={bloqueando.full_name}
           conServicioEnCurso={bloqueando.has_active_request}
           onCerrar={() => setBloqueando(null)}

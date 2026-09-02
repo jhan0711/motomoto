@@ -103,8 +103,14 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **El paso 10b esta hecho y verificado en la tablet**, con un reporte de verdad mandado desde la
   aplicacion que **aparecio en la bandeja del panel**. Con esto **D204 queda cerrado entero**: la
   queja se puede poner, se lee, se gestiona y se le avisa a quien la puso
-- **Trabajo siguiente:** el paso 11, R10 (conductor sin senal) y el bloqueo del conductor a mitad
-  de operacion (D215, D216). **Es el ultimo paso de la Fase 20**
+- **El paso 11 esta hecho y verificado**, pantallas incluidas, y **con el se cierra la Fase 20
+  entera**. Midiendo antes de escribir se vio que **bloquear a un conductor casi no le impedia
+  trabajar**: con la sesion abierta seguia aceptando servicios. Ahora no acepta ofertas, no se
+  conecta y se le apaga la disponibilidad, **pero termina el viaje que lleva** (D262)
+- **Trabajo siguiente:** lo decide el usuario. La Fase 20 no deja nada pendiente dentro de si
+  misma; lo que sigue abierto en el proyecto es **H22** -grants de mas a `anon` en funciones
+  operativas, aplazado a la Fase 22- y el mapa del recorrido (D255), que espera a que haya rastros
+  de verdad
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -714,6 +720,8 @@ aplicacion sigue sin tocar dinero.
 | D259 | **Cerrar un reporte exige escribir que se hizo, y avisa a quien lo puso** | Un reporte resuelto sin una linea explicando por que no le sirve a nadie: ni a quien se quejo, que no se entera, ni a la empresa dentro de tres meses. Al cerrarlo se le manda un aviso al reportante -`report_resolved`-, que es la mitad que faltaba de D204: **la queja se atiende y quien la puso lo sabe**. Marcar "en revision" no pide nota ni manda aviso: que alguien lo este mirando todavia no es noticia |
 | D260 | **La contraparte de un reporte solo si quien reporta estuvo en ese viaje** | La regla era un `case` de dos ramas y el "si no" se tragaba al que no era ni el pasajero ni el conductor, **senalando al pasajero del viaje como si fuera la otra parte**. Puede pasar de verdad: `reports_insert_own` solo comprueba que el reportante sea uno mismo, nada obliga a que el viaje sea suyo. Se deja asi -alguien puede senalar un servicio que vio- pero entonces **no se inventa contraparte**, porque sobre ese nombre se decide a quien se llama a pedir explicaciones. La pantalla lo dice en vez de callarlo |
 | D261 | **Las categorias de reporte son distintas para el pasajero y para el conductor, y se guardan como texto en espanol** | Decidido con el usuario el 2026-09-02. Siete motivos para el pasajero y seis para el conductor: "no me pago" no le sirve al pasajero y "me cobraron de mas" no le sirve al conductor, y una lista comun obligaria a cada uno a saltarse la mitad. **Se guarda la etiqueta, no un codigo**: `reports.category` es texto libre y el panel la ensena tal cual, asi se evita la misma traduccion en dos sitios, y **los reportes viejos conservan el texto que se les enseno** si manana se cambia el de la lista. Son categorias del negocio, no del programa: cambiarlas es editar `src/features/report/categories.ts` |
+| D262 | **Al bloquear a un conductor, el viaje que lleva encima se termina** | Decidido con el usuario el 2026-09-02. Cortarlo dejaria al pasajero **a mitad de camino**, de noche o lejos del pueblo, y la aplicacion no sabe conseguirle otro motorraton en el sitio: **quien va dentro no tiene la culpa de lo que hizo el conductor**. Lo que se corta es todo lo demas -no acepta ofertas, no se conecta, se le apaga la disponibilidad en el acto-, asi que ese es su ultimo servicio. El tablero lo dice pegado a su nombre, porque el servicio sigue en la lista y sin eso nada lo distinguiria |
+| D263 | **R10 avisa en el tablero y no cancela nada, con umbral configurable** | La regla lo dice desde la Fase 2 y se mantiene: quedarse sin cobertura tres minutos en la carretera de Amalfi es normal, no una emergencia, y quien decide si pasa algo es la empresa llamando. El umbral es `driver_signal_lost_seconds` en `app_settings` (180) para ajustarlo mirando el tablero sin tocar codigo. **`signal_lost` es nulo mientras no hay conductor**, no falso: sin nadie asignado no hay de quien esperar senal, y decir que la hay seria mentir en la direccion peligrosa |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4338,7 +4346,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 9 | Asignacion manual de conductor a una solicitud (D7) | **HECHO Y VERIFICADO**, pantalla incluida |
 | 10a | La bandeja de reportes y las calificaciones en conjunto (D204) | **HECHO Y VERIFICADO**, pantalla incluida |
 | 10b | El boton de "reportar un problema" en la aplicacion movil (D204) | **HECHO Y VERIFICADO EN LA TABLET**, circuito completo |
-| 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
+| 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | **HECHO Y VERIFICADO**, pantallas incluidas |
 
 ### Lo que se hizo: paso 1, el proyecto y el acceso (2026-08-26)
 
@@ -5587,6 +5595,86 @@ que lo aclaro. Conviene esperar de verdad antes de dar por rota una pantalla en 
 
 ---
 
+### Lo que se hizo: paso 11, que el bloqueo muerda y la alerta de R10 (2026-09-02)
+
+`supabase/migrations/20260902150000_blocked_driver_and_r10.sql`,
+`supabase/migrations/20260902160000_restore_active_services_columns.sql`,
+`supabase/dev-tools/prueba_bloqueo_y_senal.sql` (23 comprobaciones), la tarjeta y el tablero del
+panel, y el dialogo de bloqueo, que pasa a `admin/src/features/shared/`.
+
+**CON ESTO SE CIERRA LA FASE 20 Y TAMBIEN D215 Y D216**, que llevaban desde la Fase 18 esperando a
+que existiera un panel donde ensenar la alerta.
+
+**LO QUE SE MIDIO ANTES DE ESCRIBIR NADA, Y ERA PEOR DE LO QUE DECIA D216.** Se monto en el
+servidor un conductor con un pasajero dentro, se le bloqueo, y se le pregunto que podia seguir
+haciendo:
+
+| Estando bloqueado | Antes |
+|---|---|
+| Aceptar una oferta que ya tenia | **Lo dejaba** |
+| Ponerse disponible | **Lo dejaba** |
+| Bloquearlo conduciendo pedia motivo | **No** |
+| El tablero decia que estaba bloqueado | **No** |
+
+**El bloqueo frenaba el inicio de sesion y nada mas**: con la sesion ya abierta el conductor seguia
+trabajando. D216 lo dejo escrito como "falta la alerta" y result ser un agujero en la operacion.
+
+**LO QUE YA ESTABA BIEN Y NO SE TOCO.** `find_available_drivers` **ya filtraba por
+`p.status = 'active'`** desde la Fase 11: el reparto automatico nunca ha ofrecido nada a un
+bloqueado. El hueco estaba en las ofertas **que ya tenia recibidas** antes del bloqueo, y ahi se
+puso la comprobacion: en el momento de aceptar, que es cuando se decide de verdad.
+
+**D262: EL VIAJE QUE LLEVA ENCIMA SE TERMINA.** Decidido con el usuario. Cortarlo dejaria al
+pasajero tirado a mitad de camino -de noche o lejos del pueblo, y la aplicacion no sabe conseguirle
+otro motorraton en el sitio-, y **quien va dentro no tiene la culpa de lo que hizo el conductor**.
+Lo que se corta es todo lo demas: ese es el ultimo viaje. La comprobacion 14 vigila que esa puerta
+siga abierta, que es **la mas facil de cerrar sin querer** al escribir las otras.
+
+**R10 AVISA, NO CANCELA**, como dice la regla desde la Fase 2. Que un telefono se quede sin
+cobertura tres minutos en la carretera de Amalfi es lo normal, no una emergencia; quien decide si
+pasa algo es la empresa, llamando. El umbral vive en `app_settings`
+-`driver_signal_lost_seconds`, 180- para que se ajuste mirando el tablero y sin tocar codigo, y la
+comprobacion 6 demuestra que **se respeta de verdad** y no solo que este guardado.
+
+**`signal_lost` ES NULO EN `searching`, NO FALSO**, y la diferencia importa: sin conductor asignado
+no hay de quien esperar senal. Decir "hay senal" de un servicio que aun no tiene motorraton seria
+mentir en la direccion peligrosa.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El bloqueo y la alerta | `prueba_bloqueo_y_senal.sql` | **23 de 23** |
+| Regresion completa | Los veinticinco archivos | **578 comprobaciones, 0 fallando** |
+| Panel | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **Las pantallas** | **El usuario, en su navegador** | **Funcionan** |
+| Lo que dejo su prueba | Consulta al servidor | Auditoria con su motivo y `had_active_request: true`; la disponibilidad, apagada sola |
+
+**TRES ERRORES DEL ASISTENTE EN ESTE PASO.**
+
+**1. Se reescribio de memoria una funcion que habia que recrear, y se perdieron ocho columnas.**
+Anadirle dos columnas a `admin_list_active_services` obliga a soltarla -`create or replace` no
+puede cambiar el tipo de retorno- y en vez de partir de su definicion real se escribio de nuevo:
+desaparecieron `ride_id`, `fare_is_rural`, `requested_at`, `expires_at`, `ride_status`,
+`driver_id`, `driver_phone`, `plate` y `accepted_at`. **Lo cazo `prueba_tablero`, del paso 3**, que
+es exactamente para lo que esta la regresion. Se restauro desde el original en
+`20260902160000`. **Regla que deja: recrear una funcion se hace copiando su definicion, no
+recordandola.**
+
+**2. Se cambio la regla del servidor sin mirar que pantallas la llamaban.** El servidor empezo a
+exigir motivo para bloquear conductores con servicio en curso, pero la pantalla de conductores es
+del paso 4a -de cuando eso nunca se pedia- y mandaba siempre `null`. **El usuario vio "No pudimos
+completar la operacion. Intentalo de nuevo."**, el mensaje de reserva, porque tampoco sabia
+traducir el codigo nuevo. Se arreglo reutilizando el dialogo que ya existia en Pasajeros desde el
+paso 7, movido a `features/shared/`: cada rol pasa su propio aviso, porque el caso no es el mismo.
+
+**3. Una comprobacion mal escrita que acusaba al servidor.** La 22 esperaba que un pasajero no
+viera **ninguna** fila del tablero, dando por supuesto un `is_admin()` que esa funcion nunca tuvo:
+es `security invoker` a proposito desde el paso 3 y por RLS el pasajero **ve la suya**, que ya
+podia ver. Lo que hay que comprobar es que no ve las ajenas, y eso es lo que comprueba ahora.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
@@ -5595,7 +5683,7 @@ que lo aclaro. Conviene esperar de verdad antes de dar por rota una pantalla en 
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
   contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
-  de la Fase 5. **Queda solo el paso 11**: R10 y el bloqueo a mitad de operacion
+  de la Fase 5. **La fase esta completa**: los once pasos hechos y verificados
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

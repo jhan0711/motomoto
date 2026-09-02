@@ -1,4 +1,15 @@
-import { Box, Clock, MapPin, Phone, Search, Signal, User, UserPlus } from 'lucide-react';
+import {
+  Ban,
+  Box,
+  Clock,
+  MapPin,
+  Phone,
+  Search,
+  Signal,
+  SignalZero,
+  User,
+  UserPlus,
+} from 'lucide-react';
 import type { ActiveService } from './types';
 import { ETIQUETA_ESTADO } from './types';
 import {
@@ -139,14 +150,45 @@ export function ServiceCard({
                 {servicio.unit_number !== null && (
                   <span className="text-text-secondary"> · Motorratón {servicio.unit_number}</span>
                 )}
+                {/*
+                 * Que el conductor este bloqueado se dice AQUI, pegado a su
+                 * nombre. Antes no se veia por ningun lado: la empresa bloqueaba
+                 * a alguien y el servicio seguia en el tablero igual que los
+                 * demas, sin nada que dijera que ese es el ultimo que va a hacer.
+                 * Termina el viaje que lleva (D262), y por eso sigue en la lista.
+                 */}
+                {servicio.driver_blocked === true && (
+                  <span className="mt-1 flex items-center gap-1.5 text-xs text-on-danger-subtle">
+                    <Ban size={12} />
+                    Cuenta bloqueada · termina este servicio y no toma más
+                  </span>
+                )}
               </dd>
             </div>
 
             <div>
               <dt className="text-xs text-text-secondary">Última posición</dt>
-              <dd className="mt-0.5 flex items-center gap-1.5 text-text-primary">
-                <Signal size={14} className="text-text-tertiary" />
+              {/*
+               * R10. La alerta va DENTRO del dato que la provoca, no en un aviso
+               * aparte: quien mira la fila tiene que ver a la vez cuanto hace que
+               * no se sabe nada y que eso ya pasa de la cuenta. El umbral lo pone
+               * la empresa en los parametros; aqui solo se pinta lo que dice el
+               * servidor.
+               */}
+              <dd
+                className={`mt-0.5 flex items-center gap-1.5 ${
+                  servicio.signal_lost === true
+                    ? 'rounded-md bg-danger-subtle px-2 py-1 text-on-danger-subtle'
+                    : 'text-text-primary'
+                }`}
+              >
+                {servicio.signal_lost === true ? (
+                  <SignalZero size={14} />
+                ) : (
+                  <Signal size={14} className="text-text-tertiary" />
+                )}
                 {formatearAntiguedadPosicion(servicio.driver_location_age_seconds)}
+                {servicio.signal_lost === true && <span>· sin señal</span>}
               </dd>
             </div>
           </>

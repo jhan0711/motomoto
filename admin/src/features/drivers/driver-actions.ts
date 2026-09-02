@@ -27,6 +27,11 @@ const MENSAJES: Record<string, string> = {
   EMAIL_TAKEN: 'Ya existe una cuenta con ese correo.',
   VEHICLE_NOT_ACTIVE: 'Ese motorratón no existe o no está activo.',
   CANNOT_CHANGE_OWN_ACCOUNT: 'No puedes cambiar el estado de tu propia cuenta.',
+  // Desde el paso 11 el servidor tambien lo exige para los conductores, no
+  // solo para los pasajeros: bloquear a alguien que va con un pasajero dentro
+  // pide explicacion.
+  ACTIVE_RIDE_NEEDS_REASON:
+    'Ese conductor tiene un servicio en curso. Escribe el motivo del bloqueo, de al menos 10 caracteres.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {

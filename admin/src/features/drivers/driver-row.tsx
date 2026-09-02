@@ -13,6 +13,7 @@ import {
   Truck,
   UserCheck,
 } from 'lucide-react';
+import { BlockDialog } from '@/features/shared/block-dialog';
 import type { Driver } from './types';
 import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
 import {
@@ -36,6 +37,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
   const [editando, setEditando] = useState(false);
   // La contrasena recien generada, solo mientras el dialogo la ensena.
   const [credencial, setCredencial] = useState<string | null>(null);
+  const [bloqueando, setBloqueando] = useState(false);
 
   /*
    * Los documentos van plegados. Cada ficha abierta es una consulta mas y una
@@ -182,14 +184,24 @@ export function DriverRow({ conductor, onCambio }: Props) {
           Nueva contraseña
         </button>
 
+        {/*
+         * DESBLOQUEAR VA DIRECTO; BLOQUEAR PASA POR EL DIALOGO. Devolver a
+         * alguien al trabajo no es la decision delicada, quitarselo si, y desde
+         * el paso 11 **el servidor exige motivo si el conductor va con un
+         * pasajero dentro**. Antes este boton mandaba siempre `null` y el
+         * servidor lo rechazaba con un error que la pantalla no sabia explicar:
+         * el usuario veia "no pudimos completar la operacion" y nada mas.
+         */}
         <button
           type="button"
           disabled={trabajando}
-          onClick={() =>
-            void ejecutar(() =>
-              cambiarEstadoCuenta(conductor.driver_id, bloqueada ? 'active' : 'blocked', null),
-            )
-          }
+          onClick={() => {
+            if (bloqueada) {
+              void ejecutar(() => cambiarEstadoCuenta(conductor.driver_id, 'active', null));
+              return;
+            }
+            setBloqueando(true);
+          }}
           className="btn btn-secundario h-9 gap-1.5 px-3"
         >
           {bloqueada ? <UserCheck size={15} /> : <Ban size={15} />}
@@ -223,6 +235,23 @@ export function DriverRow({ conductor, onCambio }: Props) {
           nombre={conductor.full_name}
           password={credencial}
           onCerrar={() => setCredencial(null)}
+        />
+      )}
+
+      {bloqueando && (
+        <BlockDialog
+          nombre={conductor.full_name}
+          conServicioEnCurso={conductor.has_active_ride}
+          avisoServicioEnCurso="Va con un pasajero dentro ahora mismo. Ese servicio lo va a terminar: lo que se corta es que tome otros. Escribe por qué lo bloqueas."
+          onCerrar={() => setBloqueando(false)}
+          onBloquear={async (motivo) => {
+            const r = await cambiarEstadoCuenta(conductor.driver_id, 'blocked', motivo);
+            if (r.ok) {
+              setBloqueando(false);
+              onCambio();
+            }
+            return r;
+          }}
         />
       )}
 

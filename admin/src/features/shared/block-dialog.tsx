@@ -2,25 +2,46 @@
 
 import { useState } from 'react';
 import { LoaderCircle, TriangleAlert } from 'lucide-react';
-import type { Resultado } from './passenger-actions';
+/**
+ * El resultado de cualquiera de las dos acciones de bloqueo. Se declara aqui y
+ * no se importa de un modulo concreto: **este dialogo lo usan pasajeros y
+ * conductores**, y depender de uno de los dos lo ataria al que llego primero.
+ */
+export interface Resultado {
+  ok: boolean;
+  mensaje?: string;
+}
 
 interface Props {
   nombre: string;
-  /** Cierto cuando va montado en un motorraton ahora mismo. */
+  /** Cierto cuando tiene un servicio vivo ahora mismo. */
   conServicioEnCurso: boolean;
+  /**
+   * Que se le dice a quien bloquea cuando hay un servicio en curso. **Cambia
+   * segun a quien se bloquea**: al pasajero se le queda sin poder ver donde va;
+   * al conductor se le corta el trabajo nuevo pero **termina el que lleva**
+   * (D262), y eso hay que decirlo o parece que se deja al pasajero tirado.
+   */
+  avisoServicioEnCurso: string;
   onCerrar: () => void;
   onBloquear: (motivo: string | null) => Promise<Resultado>;
 }
 
 /**
- * Confirmar el bloqueo de un pasajero.
+ * Confirmar el bloqueo de una cuenta, de pasajero o de conductor.
  *
  * **El motivo solo es obligatorio si tiene un servicio en curso** (D253). Esa es
  * la regla del servidor y aqui se refleja tal cual: pedirlo siempre convertiria
  * en tramite algo que casi siempre es rutina, y no pedirlo nunca dejaria sin
  * explicacion el unico caso en que hace falta.
  */
-export function BlockDialog({ nombre, conServicioEnCurso, onCerrar, onBloquear }: Props) {
+export function BlockDialog({
+  nombre,
+  conServicioEnCurso,
+  avisoServicioEnCurso,
+  onCerrar,
+  onBloquear,
+}: Props) {
   const [motivo, setMotivo] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
@@ -48,17 +69,14 @@ export function BlockDialog({ nombre, conServicioEnCurso, onCerrar, onBloquear }
           Bloquear a {nombre}
         </h3>
         <p className="mt-2 text-sm text-text-secondary">
-          No podrá entrar en la aplicación ni pedir servicios. Su historial se conserva y puedes
-          desbloquearlo cuando quieras.
+          No podrá entrar en la aplicación. Su historial se conserva y puedes desbloquearlo cuando
+          quieras.
         </p>
 
         {conServicioEnCurso && (
           <div className="mt-3 flex items-start gap-2 rounded-lg bg-warning-subtle px-3 py-2.5 text-sm text-on-warning">
             <TriangleAlert size={18} className="mt-px shrink-0" />
-            <span>
-              Tiene un servicio en curso ahora mismo. Si lo bloqueas, dejará de poder ver dónde va o
-              cancelar. Escribe por qué.
-            </span>
+            <span>{avisoServicioEnCurso}</span>
           </div>
         )}
 

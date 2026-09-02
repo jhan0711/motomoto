@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, Inbox, LoaderCircle, RefreshCw, SignalZero } from 'lucide-react';
 import { useActiveServices } from './use-active-services';
 import { ServiceCard } from './service-card';
 import { AssignDialog } from './assign-dialog';
@@ -26,6 +26,10 @@ export function Dashboard() {
     estado,
     cuantos: servicios.filter((s) => s.status === estado).length,
   }));
+
+  // R10: cuantos servicios en curso llevan sin dar senal. Lo decide el servidor
+  // con el umbral de los parametros; aqui solo se cuentan.
+  const sinSenal = servicios.filter((s) => s.signal_lost === true).length;
 
   return (
     <section>
@@ -65,6 +69,27 @@ export function Dashboard() {
         >
           <AlertCircle size={18} className="mt-px shrink-0" />
           <span>No pudimos actualizar el tablero. Se muestra la última información conocida.</span>
+        </div>
+      )}
+
+      {/*
+       * R10 ARRIBA DEL TODO, y separado de los recuentos por estado. Un servicio
+       * cuyo conductor lleva minutos sin dar senal **no se distingue de los
+       * demas mirando la lista**: hay que bajar hasta su tarjeta para verlo. Este
+       * aviso dice cuantos hay antes de mirar ninguna.
+       */}
+      {sinSenal > 0 && (
+        <div
+          role="alert"
+          className="mt-4 flex items-start gap-2 rounded-lg bg-danger-subtle px-3 py-2.5 text-sm text-on-danger-subtle"
+        >
+          <SignalZero size={18} className="mt-px shrink-0" />
+          <span>
+            {sinSenal === 1
+              ? 'Un servicio en curso lleva rato sin recibir la posición del conductor.'
+              : `${sinSenal} servicios en curso llevan rato sin recibir la posición del conductor.`}{' '}
+            Conviene llamar para saber si todo va bien.
+          </span>
         </div>
       )}
 
