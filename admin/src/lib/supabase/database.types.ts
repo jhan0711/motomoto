@@ -1080,6 +1080,10 @@ export type Database = {
     };
     Functions: {
       accept_ride_offer: { Args: { p_offer_id: string }; Returns: string };
+      admin_assign_driver: {
+        Args: { p_driver_id: string; p_reason?: string; p_request_id: string };
+        Returns: string;
+      };
       admin_assign_vehicle: {
         Args: { p_driver_id: string; p_vehicle_id: string };
         Returns: undefined;
@@ -1237,6 +1241,22 @@ export type Database = {
           status: Database['public']['Enums']['ride_request_status'];
           unit_number: number;
           waiting_seconds: number;
+        }[];
+      };
+      admin_list_assignable_drivers: {
+        Args: { p_request_id: string };
+        Returns: {
+          blocked_reason: string;
+          can_assign: boolean;
+          distance_m: number;
+          driver_id: string;
+          full_name: string;
+          is_available: boolean;
+          location_age_seconds: number;
+          max_passengers: number;
+          phone: string;
+          rating_average: number;
+          unit_number: number;
         }[];
       };
       admin_list_cargo_types: {

@@ -422,10 +422,14 @@ from resultados r
 union all
 select
   999,
-  case when bool_and(x.ok) then 'OK  ' else 'FALLA' end,
+  -- `coalesce` A PROPOSITO: una comprobacion cuyo `ok` salga NULL -pasa cuando se
+  -- compara contra un `select ... into` que no encontro fila- se veia FALLA en su
+  -- linea pero **no contaba en el total**, porque `bool_and` ignora los NULL. El
+  -- total podia decir "0 fallando" con comprobaciones en rojo. Un NULL es un fallo.
+  case when bool_and(coalesce(x.ok, false)) then 'OK  ' else 'FALLA' end,
   'TOTAL',
   count(*) || ' comprobaciones',
-  count(*) filter (where not x.ok) || ' fallando'
+  count(*) filter (where not coalesce(x.ok, false)) || ' fallando'
 from resultados x
 order by 1;
 

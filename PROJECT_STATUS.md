@@ -93,7 +93,11 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **LOS 36 DESTINOS RURALES ESTAN COMPLETOS** desde el 2026-08-28. El usuario trajo las ocho
   coordenadas que faltaban y **el esquema no tuvo que cambiar ni una linea**. Comprobado que cada
   uno cobra lo suyo y que **los 33 lugares urbanos siguen en $4.000**
-- **Trabajo siguiente:** el paso 9, la asignacion manual de conductor a una solicitud (D7)
+- **El paso 9 esta hecho y verificado**, pantalla incluida. El boton vive **dentro del tablero**,
+  en la tarjeta de las solicitudes que nadie ha tomado. Aparecio de paso que **la lista de
+  candidatos y la asignacion no aplicaban las mismas reglas** (D257), y que **el total de las
+  pruebas podia decir "0 fallando" con comprobaciones en rojo**: arreglado en los 23 archivos
+- **Trabajo siguiente:** el paso 10, reportes y calificaciones (D204)
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -697,6 +701,8 @@ aplicacion sigue sin tocar dinero.
 | D253 | **Bloquear a un pasajero con un servicio en curso exige motivo escrito, pero no se prohibe** | Diferencia deliberada con D244. Alli, a un conductor conduciendo **si** se le impide retirarle la aprobacion, porque el perjudicado es un tercero: el pasajero que va dentro del motorraton. Aqui el afectado es el propio bloqueado, y **puede haber una urgencia que justifique dejarlo fuera ahora mismo**. Se piden diez caracteres de motivo y la auditoria guarda tanto el texto como el hecho de que habia un viaje vivo. Desbloquear no pide nada: devolver el acceso no necesita justificarse igual que quitarlo |
 | D254 | **Los cuatro destinos de la zona de la mina se cargan tal cual, aunque queden a 98 metros** | Decidido con el usuario el 2026-08-28 tras medirlos. El Taparo, Los Tanques, Entrada a la Mina y La Mina caben en medio kilometro con hasta 13.000 pesos de diferencia, cuando la separacion minima entre los 28 anteriores era de 219 m. **Se cargan porque elegidos de la lista cobran exacto**, que es como se piden casi siempre; solo una coordenada suelta en esa zona se resolveria al vecino por D230. Sus precios reflejan la distancia **por carretera** y no en linea recta, asi que aplanarlos seria cobrar mal. Se descarto bajar el radio de D230, que habria afectado a los 36 destinos para arreglar una zona |
 | D255 | **El recorrido del servicio se ensena como datos, no como mapa** | `ride_locations` tiene 12 puntos en 10 viajes: uno por viaje. No es la tabla, es que **el emulador no puede producir movimiento** -medido en la Fase 14- y nadie ha conducido de verdad con la aplicacion. Un mapa con un punto no ensena nada y ademas obligaria a montar Mapbox en el panel. Se muestran los puntos, la primera y la ultima hora y la distancia que calculo `complete_ride`. **El mapa se pone cuando haya rastros de verdad**, y entonces se vera si sirve |
+| D256 | **Se puede asignar a mano a un conductor desconectado** | Es el punto entero de la anulacion manual del despachador (D7): si solo valieran los conectados, bastaria con el reparto automatico, que ya los busca. La empresa asigna a mano justamente cuando el reparto no ha dado con nadie, y ahi hace falta poder llamar a alguien que no esta con la aplicacion abierta. La lista lo ensena desconectado, que es informacion util, pero no se lo impide |
+| D257 | **Lo que la lista de candidatos ofrece, la asignacion tiene que aceptarlo** | El 2026-09-01 no coincidian: `admin_list_assignable_drivers` daba por asignable a alguien cuyo companero de doble turno (D250) estaba conectado, y `admin_assign_driver` lo rechazaba con `COMPANION_ALREADY_AVAILABLE`. El despachador elegia y no pasaba nada, **con el pasajero esperando**. Cualquier condicion nueva en `admin_assign_driver` hay que **espejarla en la lista**, y las dos quedan escritas igual a proposito. La prueba lo vigila en la comprobacion 20, que mira las dos funciones sobre el mismo escenario |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4318,7 +4324,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 6b | Tarifas urbanas, tipos de carga y parametros | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 7 | Listado de pasajeros con bloqueo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 8 | Listado e inspeccion de servicios, con linea de tiempo | **HECHO Y VERIFICADO**, pantallas incluidas |
-| 9 | Asignacion manual de conductor a una solicitud (D7) | Pendiente |
+| 9 | Asignacion manual de conductor a una solicitud (D7) | **HECHO Y VERIFICADO**, pantalla incluida |
 | 10 | Reportes y calificaciones (D204) | Pendiente |
 | 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
 
@@ -5362,6 +5368,72 @@ comprobacion salio limpia.
 
 ---
 
+### Lo que se hizo: paso 9, asignacion manual de conductor (2026-09-01)
+
+`supabase/migrations/20260828070000_admin_assign_driver.sql`,
+`supabase/migrations/20260828100000_assignable_drivers_respect_shifts.sql`,
+`supabase/dev-tools/prueba_asignacion.sql` (20 comprobaciones), el modulo
+`admin/src/features/dashboard/assign-*.tsx` y el boton dentro del tablero.
+
+**LA PANTALLA NO ES NUEVA: EL BOTON VIVE EN EL TABLERO.** La asignacion manual no se decide en
+abstracto sino mirando una solicitud concreta que lleva rato sin que nadie la coja, asi que
+**Asignar a mano** sale en la tarjeta de las que estan buscando, al lado de los dos numeros que
+hacen tomar la decision: cuanto lleva esperando y cuantos conductores tienen la oferta delante.
+
+**LA LISTA ENSENA TAMBIEN A LOS QUE NO SE PUEDEN ASIGNAR**, apagados y con el motivo escrito.
+Esconderlos dejaria al despachador mirando una lista corta sin saber por que falta alguien que
+sabe que existe. **Quien decide si se puede es el servidor**, en `can_assign`; la pantalla solo lo
+pinta, y por eso una regla nueva llega sola con su explicacion.
+
+**D256: SE PUEDE ASIGNAR A UN CONDUCTOR DESCONECTADO.** Es el punto entero de la anulacion
+manual: si solo valieran los conectados, bastaria con el reparto automatico, que ya los busca.
+
+**D257: LO QUE LA LISTA OFRECE, LA ASIGNACION TIENE QUE ACEPTARLO.** Lo encontro el usuario
+probando la pantalla: elegia a un conductor, pulsaba Asignar y no pasaba nada.
+`admin_list_assignable_drivers` lo daba por asignable y `admin_assign_driver` lo rechazaba con
+`COMPANION_ALREADY_AVAILABLE` -los dos comparten el Motorraton 96, que es el doble turno de D250,
+y el companero estaba conectado-. **El fallo no era la regla sino la incoherencia**: la
+comprobacion existia en la asignacion desde el primer dia y funcionaba; la lista era la que no la
+conocia. Una lista que ofrece a alguien que luego se rechaza **le hace perder tiempo al
+despachador con el pasajero esperando**, que es justo cuando se usa esta pantalla. La prueba no lo
+cazo porque comprobaba que la asignacion lo rechaza, **no que la lista no lo ofrezca**: esa
+comprobacion es ahora la 20.
+
+**El motivo del bloqueo dice el nombre del companero** -"Conductor de prueba esta conectado con el
+motorraton 96"-, la misma decision que el mensaje del disparador en `20260827040000`: quien lo lee
+puede resolverlo llamando a esa persona, mientras que un "no se puede" a secas lo deja parado.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las dos funciones | `prueba_asignacion.sql` | **20 de 20** |
+| Regresion completa | Los veintitres archivos | **517 comprobaciones, 0 fallando** |
+| Lo que dejo la asignacion de verdad | Consulta al servidor | Auditoria con quien y a quien, y el aviso a `juan`, a la misma hora |
+| Panel | `build`, `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **La pantalla** | **El usuario, en su navegador** | **Funciona** |
+
+**DOS ERRORES DEL ASISTENTE EN ESTE PASO, Y EL PRIMERO AFECTABA A TODAS LAS PRUEBAS.**
+
+**1. El total podia decir "0 fallando" con comprobaciones en rojo.** Una comprobacion que compara
+contra un `select ... into` que no encontro fila da **NULL**, no `false`; su linea salia FALLA
+pero `bool_and` **ignora los NULL** y el `count(*) filter (where not ok)` tampoco los contaba. Se
+descubrio porque la 15 decia FALLA y el TOTAL decia OK **en la misma ejecucion**. Arreglado en los
+**23 archivos** con `coalesce(x.ok, false)`: un NULL es un fallo. Se revisaron los 23 y solo
+`prueba_asignacion` escondia una.
+
+**2. El aviso de error de la pantalla se borraba solo.** Al fallar la asignacion se refresca la
+lista, y el refresco que sale bien limpiaba el error: el usuario veia un mensaje que aparecia y
+desaparecia sin darle tiempo a leerlo. Son dos cosas distintas -no poder consultar y no poder
+asignar- y ahora son dos estados separados.
+
+**Y una premisa heredada del mundo real, la sexta vez.** La regresion salio con nueve archivos
+rotos por `rr_one_active_per_passenger`: no era el codigo, eran **los servicios que el asistente
+sembro** con `seed_active_service.sql` para que el usuario pudiera probar. Las pruebas los
+encontraban vivos. **`remove_active_service.sql` antes de la regresion**, siempre.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
@@ -5370,7 +5442,7 @@ comprobacion salio limpia.
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
   contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
-  de la Fase 5. **Quedan los pasos 9 a 11**: asignacion manual, reportes y R10
+  de la Fase 5. **Quedan los pasos 10 y 11**: reportes y R10
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

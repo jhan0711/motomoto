@@ -1,4 +1,4 @@
-import { Box, Clock, MapPin, Phone, Search, Signal, User } from 'lucide-react';
+import { Box, Clock, MapPin, Phone, Search, Signal, User, UserPlus } from 'lucide-react';
 import type { ActiveService } from './types';
 import { ETIQUETA_ESTADO } from './types';
 import {
@@ -21,7 +21,13 @@ const ESTILO_ESPERA = {
   alerta: 'bg-danger-subtle text-on-danger-subtle',
 } as const;
 
-export function ServiceCard({ servicio }: { servicio: ActiveService }) {
+export function ServiceCard({
+  servicio,
+  onAsignar,
+}: {
+  servicio: ActiveService;
+  onAsignar: (servicio: ActiveService) => void;
+}) {
   const espera = nivelDeEspera(servicio.waiting_seconds);
   const esEncomienda = servicio.service_type === 'parcel';
 
@@ -99,11 +105,29 @@ export function ServiceCard({ servicio }: { servicio: ActiveService }) {
         {servicio.status === 'searching' ? (
           <div className="sm:col-span-2">
             <dt className="text-xs text-text-secondary">Ofertas en curso</dt>
-            <dd className="mt-0.5 flex items-center gap-1.5 text-text-primary">
-              <Search size={14} className="text-text-tertiary" />
-              {servicio.pending_offers === 0
-                ? 'Ningún conductor la tiene ahora mismo'
-                : `${servicio.pending_offers} ${servicio.pending_offers === 1 ? 'conductor la tiene' : 'conductores la tienen'}`}
+            <dd className="mt-0.5 flex flex-wrap items-center justify-between gap-2 text-text-primary">
+              <span className="flex items-center gap-1.5">
+                <Search size={14} className="text-text-tertiary" />
+                {servicio.pending_offers === 0
+                  ? 'Ningún conductor la tiene ahora mismo'
+                  : `${servicio.pending_offers} ${servicio.pending_offers === 1 ? 'conductor la tiene' : 'conductores la tienen'}`}
+              </span>
+
+              {/*
+               * EL BOTON VIVE AQUI Y NO EN UNA PANTALLA APARTE, y es a
+               * proposito: la asignacion manual no se decide en abstracto sino
+               * mirando una solicitud concreta que lleva rato sin que nadie la
+               * coja. Al lado de la espera y de las ofertas vivas, que son los
+               * dos numeros que hacen tomar la decision.
+               */}
+              <button
+                type="button"
+                onClick={() => onAsignar(servicio)}
+                className="btn btn-secundario px-3 py-1.5"
+              >
+                <UserPlus size={14} />
+                Asignar a mano
+              </button>
             </dd>
           </div>
         ) : (

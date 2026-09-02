@@ -143,8 +143,9 @@ select r.n, case when r.ok then 'OK  ' else 'FALLA' end as estado,
   r.comprobacion, r.esperado, r.obtenido
 from resultados r
 union all
-select 999, case when bool_and(x.ok) then 'OK  ' else 'FALLA' end, 'TOTAL',
-  count(*) || ' comprobaciones', count(*) filter (where not x.ok) || ' fallando'
+-- `coalesce` a proposito: un `ok` NULL es un fallo, no algo que el total ignore.
+select 999, case when bool_and(coalesce(x.ok, false)) then 'OK  ' else 'FALLA' end, 'TOTAL',
+  count(*) || ' comprobaciones', count(*) filter (where not coalesce(x.ok, false)) || ' fallando'
 from resultados x
 order by 1;
 

@@ -1,12 +1,23 @@
 'use client';
 
+import { useState } from 'react';
 import { AlertCircle, Inbox, LoaderCircle, RefreshCw } from 'lucide-react';
 import { useActiveServices } from './use-active-services';
 import { ServiceCard } from './service-card';
+import { AssignDialog } from './assign-dialog';
 import { ESTADOS_VIVOS, ETIQUETA_ESTADO } from './types';
+import type { ActiveService } from './types';
 
 export function Dashboard() {
   const { servicios, cargando, error, actualizadoEn, recargar } = useActiveServices();
+
+  /*
+   * Se guarda el servicio entero y no solo su identificador. El tablero se
+   * refresca sola cada diez segundos, y el servicio asignado **desaparece de la
+   * lista de los que buscan en cuanto se asigna**: con solo el identificador, el
+   * dialogo se quedaria sin datos que ensenar justo mientras esta abierto.
+   */
+  const [asignando, setAsignando] = useState<ActiveService | null>(null);
 
   // El recuento por estado se deriva del listado en el render. No hay un estado
   // aparte que mantener sincronizado, que es de donde salen las pantallas que
@@ -80,9 +91,22 @@ export function Dashboard() {
         )}
 
         {servicios.map((servicio) => (
-          <ServiceCard key={servicio.request_id} servicio={servicio} />
+          <ServiceCard key={servicio.request_id} servicio={servicio} onAsignar={setAsignando} />
         ))}
       </div>
+
+      {asignando !== null && (
+        <AssignDialog
+          servicio={asignando}
+          onCerrar={() => setAsignando(null)}
+          onAsignado={() => {
+            setAsignando(null);
+            // Sin esperar a los diez segundos del temporizador: quien acaba de
+            // asignar quiere ver el servicio ya con su conductor.
+            void recargar();
+          }}
+        />
+      )}
     </section>
   );
 }
