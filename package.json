@@ -58,7 +58,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:db": "node supabase/dev-tools/run-tests.mjs"
   },
   "private": true
 }

@@ -6704,7 +6704,7 @@ pruebas de cliente de logica pura **y** de componentes.
 |---|---|---|
 | 1 | **Auditoria** de los 10 scripts "perdidos", los 3 `demo_*` y los pares `seed_`/`remove_`. **HECHA el 2026-09-02** — veredicto abajo | Hecho |
 | 2 | Cerrar los huecos de la auditoria: rehacer solo los scripts que falten de verdad, anadir los `remove_` que falten, y **corregir los checklists de las secciones 15.12 y 15.14** para que apunten a archivos que existen. **HECHO el 2026-09-02** — y destapo la regresion D268 | Hecho |
-| 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla | Pendiente |
+| 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla. **HECHO el 2026-09-02** | Hecho |
 | 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno | Pendiente |
 | 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto | Pendiente |
 | 6 | **Dispositivo**: barrido a 800 dp en el emulador con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados | Pendiente |
@@ -6782,6 +6782,25 @@ que es un fixture vivo.
 listaban archivos perdidos; ahora apuntan a los tres nuevos y a
 `seed_active_service.sql` en vez de los `demo_0*.sql`.
 
+### Lo que se hizo: paso 3, el corredor de pruebas
+
+**`supabase/dev-tools/run-tests.mjs` (NUEVO)** y `npm run test:db` en `package.json`.
+Ejecuta todos los `prueba_*.sql` contra el servidor enlazado y los `prueba_*.mjs`
+con Node, en orden alfabetico. Acepta filtros (`test:db recorrido`), y `--sql` /
+`--mjs` para acotar.
+
+Lee la fila TOTAL de cada script -`n = 999`, `estado`, `obtenido = 'N fallando'`-
+porque `supabase db query` no sale con error por una comprobacion en rojo, solo
+si el SQL revienta. Un script que revienta, que no llega a la fila TOTAL, o cuyo
+`.mjs` sale con codigo != 0, cuenta como rojo. El corredor sale con 1 si algun
+script queda en rojo, 2 si el filtro no encuentra nada, 0 si todo pasa.
+
+Primera pasada completa: **36 scripts, 743 comprobaciones, 0 fallando, 130 s.**
+Comprobado tambien que un script con una comprobacion en rojo lo pone en FALLA y
+devuelve exit 1.
+
+Siguiente: paso 4, las pruebas del cliente movil.
+
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
 de `accept_ride_offer` en `20260902150000_blocked_driver_and_r10.sql` (Fase 20,
@@ -6804,9 +6823,7 @@ Verificado: `prueba_transiciones` 23/23, `prueba_recorrido` 12/12,
 `prueba_capacidad` 14/14, y en verde tambien tras la migracion D268
 `prueba_asignacion`, `prueba_bloqueo_y_senal`, `prueba_solicitud_con_valor`,
 `prueba_doble_turno`, `prueba_cancelaciones`, `prueba_servicios`, `prueba_recaudo`,
-`prueba_notificaciones`.
-
-Siguiente: paso 3, el corredor de pruebas.
+`prueba_notificaciones`. La pasada completa del corredor (paso 3) confirmo los 36.
 
 ---
 
