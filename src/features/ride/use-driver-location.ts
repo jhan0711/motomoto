@@ -8,6 +8,13 @@ import { fetchDriverLocation, type DriverLocation } from './ride-service';
 /** Cada cuanto el telefono recalcula la antiguedad de la ultima posicion. */
 const TICK_MS = 5000;
 
+/** Segundos entre una marca de tiempo ISO y ahora, contados por el telefono. */
+function edadDesde(updatedAt: string): number {
+  const at = Date.parse(updatedAt);
+  if (Number.isNaN(at)) return 0;
+  return Math.max(0, Math.round((Date.now() - at) / 1000));
+}
+
 /**
  * Donde esta el motorraton que viene a recoger al pasajero.
  *
@@ -45,18 +52,13 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
    */
   const turno = useRef(0);
 
-  /** Milisegundos de la ultima posicion conocida, para el temporizador. */
-  const ultimoAt = useRef<number | null>(null);
-
   const aplicar = useCallback(
     (lat: number, lng: number, heading: number | null, updatedAt: string, ageServidor?: number) => {
-      const at = Date.parse(updatedAt);
-      ultimoAt.current = Number.isNaN(at) ? Date.now() : at;
       setLocation({
         latitude: lat,
         longitude: lng,
         heading,
-        ageSeconds: ageServidor ?? Math.max(0, Math.round((Date.now() - ultimoAt.current) / 1000)),
+        ageSeconds: ageServidor ?? edadDesde(updatedAt),
         updatedAt,
       });
     },
@@ -92,7 +94,6 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
   if (driverId !== driverIdAnterior) {
     setDriverIdAnterior(driverId);
     setLocation(null);
-    ultimoAt.current = null;
   }
 
   useEffect(() => {
@@ -136,11 +137,12 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
 
     // El telefono cuenta la antiguedad entre eventos: sin esto, si el conductor
     // se queda sin cobertura la posicion se quedaria "fresca" para siempre y
-    // "perdimos la senal" no llegaria a encenderse.
+    // "perdimos la senal" no llegaria a encenderse. La marca de tiempo vive en
+    // el propio estado (`updatedAt`), asi que no hace falta guardarla aparte.
     const tic = setInterval(() => {
-      if (ultimoAt.current === null) return;
-      const edad = Math.max(0, Math.round((Date.now() - ultimoAt.current) / 1000));
-      setLocation((prev) => (prev === null ? prev : { ...prev, ageSeconds: edad }));
+      setLocation((prev) =>
+        prev === null ? prev : { ...prev, ageSeconds: edadDesde(prev.updatedAt) },
+      );
     }, TICK_MS);
 
     return () => {

@@ -40,11 +40,12 @@ import {
 /**
  * Roles del sistema, tal y como estan en la base de datos.
  *
- * `admin` esta incluido aunque los administradores trabajen desde el panel web
- * de la Fase 20. Si uno inicia sesion aqui, es mejor reconocerlo y explicarle
- * donde debe entrar que fingir que su cuenta no existe.
+ * `admin` y `super_admin` estan incluidos aunque trabajen desde el panel web. Si
+ * uno inicia sesion aqui, es mejor reconocerlo y explicarle donde debe entrar
+ * que fingir que su cuenta no existe. Para la aplicacion movil los dos son lo
+ * mismo: se van a la pantalla de estado de cuenta.
  */
-export type UserRole = 'passenger' | 'driver' | 'admin';
+export type UserRole = 'passenger' | 'driver' | 'admin' | 'super_admin';
 
 export type AccountStatus = 'active' | 'blocked';
 
@@ -397,5 +398,5 @@ export function homeRouteFor(role: UserRole): '/passenger' | '/driver' | '/accou
     return '/driver';
   }
 
-  return role === 'admin' ? '/account-status' : '/passenger';
+  return role === 'admin' || role === 'super_admin' ? '/account-status' : '/passenger';
 }

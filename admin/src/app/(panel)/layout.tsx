@@ -21,9 +21,11 @@ export default async function PanelLayout({ children }: LayoutProps<'/'>) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('full_name')
+    .select('full_name, role')
     .eq('id', user!.id)
     .single();
+
+  const esSuperAdmin = profile?.role === 'super_admin';
 
   return (
     <div className="mx-auto w-full max-w-5xl px-6 py-8">
@@ -37,7 +39,7 @@ export default async function PanelLayout({ children }: LayoutProps<'/'>) {
         <LogoutButton />
       </header>
 
-      <PanelNav />
+      <PanelNav esSuperAdmin={esSuperAdmin} />
 
       <main className="mt-6">{children}</main>
     </div>

@@ -7,6 +7,8 @@ interface Props {
   titulo: string;
   nombre: string;
   password: string;
+  /** Donde se genera otra si esta se pierde. Ej: "la ficha del conductor". */
+  recuperarDesde: string;
   onCerrar: () => void;
 }
 
@@ -21,7 +23,7 @@ interface Props {
  * los demas del panel: solo con el boton, que dice explicitamente que ya se
  * anoto. Un cierre accidental aqui cuesta una llamada al conductor.
  */
-export function PasswordNotice({ titulo, nombre, password, onCerrar }: Props) {
+export function PasswordNotice({ titulo, nombre, password, recuperarDesde, onCerrar }: Props) {
   const [copiada, setCopiada] = useState(false);
   const [confirmado, setConfirmado] = useState(false);
 
@@ -73,8 +75,8 @@ export function PasswordNotice({ titulo, nombre, password, onCerrar }: Props) {
         <div className="mt-4 flex items-start gap-2 rounded-lg bg-warning-subtle px-3 py-2.5 text-sm text-on-warning">
           <TriangleAlert size={18} className="mt-px shrink-0" />
           <span>
-            No se vuelve a mostrar. Si la pierdes, tendrás que generar una nueva desde la ficha del
-            conductor.
+            No se vuelve a mostrar. Si la pierdes, tendrás que generar una nueva desde{' '}
+            {recuperarDesde}.
           </span>
         </div>
 

@@ -26,7 +26,7 @@ interface Explanation {
 }
 
 function explain(user: SessionUser): Explanation {
-  if (user.role === 'admin') {
+  if (user.role === 'admin' || user.role === 'super_admin') {
     return {
       icon: Monitor,
       title: 'Esta cuenta es de administración',

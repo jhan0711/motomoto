@@ -7,6 +7,7 @@ import {
   ListOrdered,
   MapPin,
   MessageSquareWarning,
+  ShieldCheck,
   SlidersHorizontal,
   Truck,
   User,
@@ -29,12 +30,16 @@ const SECCIONES = [
   { href: '/reportes', etiqueta: 'Reportes', icono: MessageSquareWarning },
 ] as const;
 
-export function PanelNav() {
+/* Solo la ve el super admin. La ruta la bloquea `proxy.ts`; esto la esconde. */
+const SECCION_SUPER = { href: '/administradores', etiqueta: 'Administradores', icono: ShieldCheck };
+
+export function PanelNav({ esSuperAdmin }: { esSuperAdmin: boolean }) {
   const ruta = usePathname();
+  const secciones = esSuperAdmin ? [...SECCIONES, SECCION_SUPER] : SECCIONES;
 
   return (
     <nav className="mt-6 flex gap-1 border-b border-border">
-      {SECCIONES.map(({ href, etiqueta, icono: Icono }) => {
+      {secciones.map(({ href, etiqueta, icono: Icono }) => {
         const activa = ruta === href;
         return (
           <Link

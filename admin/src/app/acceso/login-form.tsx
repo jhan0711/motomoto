@@ -64,7 +64,8 @@ export function LoginForm() {
       .eq('id', data.user.id)
       .single();
 
-    if (profile?.role !== 'admin' || profile?.status !== 'active') {
+    const esAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+    if (!esAdmin || profile?.status !== 'active') {
       await supabase.auth.signOut();
       setSubmitError('Correo o contraseña incorrectos.');
       setIsSubmitting(false);

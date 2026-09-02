@@ -65,7 +65,8 @@ export async function proxy(request: NextRequest) {
     .eq('id', user.id)
     .single();
 
-  const isAdmin = profile?.role === 'admin' && profile?.status === 'active';
+  const isAdmin =
+    (profile?.role === 'admin' || profile?.role === 'super_admin') && profile?.status === 'active';
 
   if (!isAdmin) {
     // Se cierra la sesion antes de devolverlo al acceso. Si no, quedaria dando
@@ -75,6 +76,16 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = '/acceso';
     url.searchParams.set('error', 'sin_permiso');
+    return NextResponse.redirect(url);
+  }
+
+  // La pantalla de administradores es solo del super admin. Un administrador
+  // normal que la pida a mano vuelve al tablero. Las funciones del servidor lo
+  // rechazan igual -todas comprueban `is_super_admin()`-; esto evita el
+  // parpadeo de cargar una pantalla que no va a poder usar.
+  if (path.startsWith('/administradores') && profile?.role !== 'super_admin') {
+    const url = request.nextUrl.clone();
+    url.pathname = '/';
     return NextResponse.redirect(url);
   }
 

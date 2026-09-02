@@ -6,7 +6,7 @@ import { crearConductor, listarConductores } from './driver-actions';
 import { DriverRow } from './driver-row';
 import type { Driver } from './types';
 import { NewDriverDialog } from './new-driver-dialog';
-import { PasswordNotice } from './password-notice';
+import { PasswordNotice } from '@/features/shared/password-notice';
 
 export function DriversList() {
   const [conductores, setConductores] = useState<Driver[]>([]);
@@ -130,6 +130,7 @@ export function DriversList() {
           titulo="Conductor creado"
           nombre={credencial.nombre}
           password={credencial.password}
+          recuperarDesde="la ficha del conductor"
           onCerrar={() => setCredencial(null)}
         />
       )}

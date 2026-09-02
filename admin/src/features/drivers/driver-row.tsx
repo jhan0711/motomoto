@@ -23,7 +23,7 @@ import {
   restablecerContrasena,
 } from './driver-actions';
 import { EditContactDialog } from './edit-contact-dialog';
-import { PasswordNotice } from './password-notice';
+import { PasswordNotice } from '@/features/shared/password-notice';
 import { DocumentsPanel } from '@/features/documents/documents-panel';
 
 interface Props {
@@ -234,6 +234,7 @@ export function DriverRow({ conductor, onCambio }: Props) {
           titulo="Contraseña nueva"
           nombre={conductor.full_name}
           password={credencial}
+          recuperarDesde="esta misma ficha"
           onCerrar={() => setCredencial(null)}
         />
       )}

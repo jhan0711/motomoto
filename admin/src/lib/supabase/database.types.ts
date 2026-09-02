@@ -259,6 +259,8 @@ export type Database = {
           accuracy_m: number | null;
           driver_id: string;
           heading: number | null;
+          lat: number | null;
+          lng: number | null;
           location: unknown;
           speed_kmh: number | null;
           updated_at: string;
@@ -267,6 +269,8 @@ export type Database = {
           accuracy_m?: number | null;
           driver_id: string;
           heading?: number | null;
+          lat?: number | null;
+          lng?: number | null;
           location: unknown;
           speed_kmh?: number | null;
           updated_at?: string;
@@ -275,6 +279,8 @@ export type Database = {
           accuracy_m?: number | null;
           driver_id?: string;
           heading?: number | null;
+          lat?: number | null;
+          lng?: number | null;
           location?: unknown;
           speed_kmh?: number | null;
           updated_at?: string;
@@ -1088,6 +1094,13 @@ export type Database = {
         Args: { p_driver_id: string; p_vehicle_id: string };
         Returns: undefined;
       };
+      admin_create_admin: {
+        Args: { p_email: string; p_full_name: string; p_phone: string };
+        Returns: {
+          admin_id: string;
+          initial_password: string;
+        }[];
+      };
       admin_create_driver: {
         Args: {
           p_email: string;
@@ -1243,6 +1256,18 @@ export type Database = {
           status: Database['public']['Enums']['ride_request_status'];
           unit_number: number;
           waiting_seconds: number;
+        }[];
+      };
+      admin_list_admins: {
+        Args: never;
+        Returns: {
+          account_status: Database['public']['Enums']['user_status'];
+          admin_id: string;
+          created_at: string;
+          email: string;
+          full_name: string;
+          is_super_admin: boolean;
+          phone: string;
         }[];
       };
       admin_list_assignable_drivers: {
@@ -1491,6 +1516,10 @@ export type Database = {
           p_issued_at?: string;
           p_owner_id: string;
         };
+        Returns: string;
+      };
+      admin_reset_admin_password: {
+        Args: { p_admin_id: string };
         Returns: string;
       };
       admin_reset_driver_password: {
@@ -1806,6 +1835,7 @@ export type Database = {
         Returns: boolean;
       };
       is_admin: { Args: never; Returns: boolean };
+      is_super_admin: { Args: never; Returns: boolean };
       is_within_service_area: {
         Args: { p_lat: number; p_lng: number };
         Returns: boolean;
@@ -1915,6 +1945,14 @@ export type Database = {
           lat: number;
           lng: number;
           name: string;
+        }[];
+      };
+      list_request_cargo: {
+        Args: { p_request_id: string };
+        Returns: {
+          cargo_type_name: string;
+          quantity: number;
+          unit_amount: number;
         }[];
       };
       log_admin_action: {
@@ -2031,7 +2069,7 @@ export type Database = {
         | 'completed'
         | 'cancelled';
       service_type: 'passenger' | 'parcel';
-      user_role: 'passenger' | 'driver' | 'admin';
+      user_role: 'passenger' | 'driver' | 'admin' | 'super_admin';
       user_status: 'active' | 'blocked';
       vehicle_status: 'active' | 'maintenance' | 'retired';
     };
@@ -2180,7 +2218,7 @@ export const Constants = {
         'cancelled',
       ],
       service_type: ['passenger', 'parcel'],
-      user_role: ['passenger', 'driver', 'admin'],
+      user_role: ['passenger', 'driver', 'admin', 'super_admin'],
       user_status: ['active', 'blocked'],
       vehicle_status: ['active', 'maintenance', 'retired'],
     },

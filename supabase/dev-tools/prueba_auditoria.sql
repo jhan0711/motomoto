@@ -52,6 +52,7 @@ declare
   v_admin  uuid := 'aa000000-0000-4000-8000-000000000001';
   v_admin2 uuid := 'aa000000-0000-4000-8000-000000000002';
   v_vict   uuid := 'aa000000-0000-4000-8000-000000000003';
+  v_super  uuid := 'aa000000-0000-4000-8000-0000000000a0';
 begin
   -- `profiles.id` apunta a `auth.users`, asi que las cuentas tienen que existir
   -- alli primero. Aqui NO hacen falta las cuatro columnas de token de E28: estas
@@ -63,18 +64,21 @@ begin
     (v_admin2, '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
      'zz.prueba.admin2@motomoto-qa.co', now(), now()),
     (v_vict,   '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
-     'zz.prueba.pasajero@motomoto-qa.co', now(), now());
+     'zz.prueba.pasajero@motomoto-qa.co', now(), now()),
+    (v_super,  '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated',
+     'zz.prueba.super@motomoto-qa.co', now(), now());
 
   -- El disparador de alta ya creo un perfil por cada uno, con rol passenger. Se
   -- sustituyen las filas en vez de actualizarlas, que es la unica via de cambiar
   -- el rol: la misma maniobra de seed_admin.sql, y ahora con mas motivo, porque
   -- este mismo paso le quito al disparador la exencion del administrador.
-  delete from public.profiles where id in (v_admin, v_admin2, v_vict);
+  delete from public.profiles where id in (v_admin, v_admin2, v_vict, v_super);
 
   insert into public.profiles (id, full_name, phone, role, status) values
-    (v_admin,  'Zz prueba admin uno', '3000000001', 'admin',     'active'),
-    (v_admin2, 'Zz prueba admin dos', '3000000002', 'admin',     'active'),
-    (v_vict,   'Zz prueba pasajero',  '3000000003', 'passenger', 'active');
+    (v_admin,  'Zz prueba admin uno', '3000000001', 'admin',       'active'),
+    (v_admin2, 'Zz prueba admin dos', '3000000002', 'admin',       'active'),
+    (v_vict,   'Zz prueba pasajero',  '3000000003', 'passenger',   'active'),
+    (v_super,  'Zz prueba super',     '3000000900', 'super_admin',  'active');
 end
 $montaje$;
 
@@ -373,6 +377,7 @@ declare
   v_admin  constant uuid := 'aa000000-0000-4000-8000-000000000001';
   v_admin2 constant uuid := 'aa000000-0000-4000-8000-000000000002';
   v_vict   constant uuid := 'aa000000-0000-4000-8000-000000000003';
+  v_super  constant uuid := 'aa000000-0000-4000-8000-0000000000a0';
   v_estado text;
   v_h text;
 begin
@@ -389,10 +394,11 @@ begin
   execute 'reset role';
   execute 'reset request.jwt.claims';
 
-  -- El primero bloquea al segundo.
+  -- El super admin bloquea al segundo administrador. Desde D265, bloquear una
+  -- cuenta de administrador es cosa del super admin, no de otro administrador.
   execute 'set local role authenticated';
   execute format('set local request.jwt.claims to %L',
-    json_build_object('sub', v_admin, 'role', 'authenticated')::text);
+    json_build_object('sub', v_super, 'role', 'authenticated')::text);
   perform public.admin_set_account_status(v_admin2, 'blocked', 'Retirado');
   execute 'reset role';
   execute 'reset request.jwt.claims';

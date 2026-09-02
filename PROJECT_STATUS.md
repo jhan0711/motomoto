@@ -12,7 +12,9 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
   14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial,
   17 calificaciones, 18 cancelaciones y errores operativos (comprometida por el usuario el
-  2026-08-21), 19 notificaciones, 20 panel administrativo (comiteada el 2026-09-02, `c7cd03c`)
+  2026-08-21), 19 notificaciones, 20 panel administrativo (`c7cd03c`),
+  21 gestion de conductores y vehiculos (absorbida en la 20),
+  22 seguridad y auditoria (comiteada el 2026-09-02, `059cc12`)
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -110,9 +112,8 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **La Fase 20 esta TERMINADA Y COMITEADA** (`c7cd03c`, "Fase 20 terminada"), los once pasos mas
   el doble turno. **La Fase 21 del plan -gestion de conductores y vehiculos- quedo absorbida
   dentro de la Fase 20** (pasos 4a, 4b, 4c, 5 y doble turno); no tiene trabajo propio
-- **LA FASE 22 ESTA COMPLETA Y VERIFICADA, LOS OCHO PASOS.** Seguridad y auditoria.
-  **Pendiente: el commit** (lo hace el usuario). Detalle paso a paso en la seccion 15.23. En
-  resumen:
+- **LA FASE 22 ESTA COMPLETA, VERIFICADA Y COMITEADA** (`059cc12`, "fase 22 terminada"), los
+  ocho pasos. Seguridad y auditoria. Detalle paso a paso en la seccion 15.23. En resumen:
   1. `anon` ya no ejecuta **ninguna** funcion de `public` (dos migraciones).
   2. El acceso al nombre y telefono de la contraparte **caduca al terminar el servicio** -H15
      cerrado-: dos funciones de enlace estrechadas + siete a `security definer`. Se descarto el
@@ -132,9 +133,19 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **En verde:** 29 archivos de `prueba_*.sql` (mas de 630 comprobaciones), `prueba_barrido_seguridad`
   8/8, `prueba_contraste_colores` 30/30, `prueba_cambio_contrasena_sesiones` 9/9. Ciclo de login
   probado en el emulador tras el paso 8.
-- **PENDIENTE PARA PRODUCCION, NO PARA EL COMMIT:** recompilar el cliente movil **arm64** (para
-  la tablet) con `allowBackup: false` -la del emulador ya esta-, y el `location_interval_in_ride_seconds`
-  del servidor esta en 7 (dato, no codigo)
+- **PENDIENTE PARA PRODUCCION** (no es codigo, no bloquea nada hoy): recompilar el cliente movil
+  **arm64** con `allowBackup: false` antes de repartir a aparatos de verdad -la del emulador ya
+  esta-. El `location_interval_in_ride_seconds` del servidor esta en 7 (dato, no codigo)
+- **BLOQUE ESPECIAL DE SUPER ADMIN Y USUARIOS ADMINISTRADORES: TERMINADO Y VERIFICADO** (seccion
+  15.24), los cuatro pasos. Rol `super_admin`, `is_admin()` lo incluye (D264), D265 -un admin no
+  toca a otro admin-, `admin_create_admin` / `admin_reset_admin_password` / `admin_list_admins`,
+  la pantalla `/administradores` del panel -enlace y ruta solo para el super admin-, y la prueba
+  e2e en el navegador (un administrador creado desde el panel que entra de verdad). **SIN
+  COMITEAR** -lo comitea el usuario-. **La liquidacion mensual de la plataforma queda aplazada**
+  hasta que el usuario la apruebe (D267)
+- **En verde:** 32 archivos de `prueba_*.sql`, mas `prueba_super_admin` (11) y
+  `prueba_gestion_admins` (13); `typecheck`/`lint`/`format:check` en 0 en la aplicacion movil y
+  el panel
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -142,27 +153,25 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   `location_interval_in_ride_seconds` bajado de 10 a 7 en `app_settings` (7,0 s medidos). El
   arreglo de fondo -que el pasajero use la posicion del propio evento- es el paso 7 de la Fase 22.
   Detalle en la seccion 15.23
-- **Ultimo commit:** `c7cd03c`, "Fase 20 terminada". **SIN COMITEAR:** este archivo
-  (`PROJECT_STATUS.md`); las migraciones `20260902170000`, `20260902180000`, `20260902190000` y
-  `20260902200000`; `supabase/dev-tools/prueba_grants_anon.sql` y
-  `supabase/dev-tools/prueba_h15_telefono_contraparte.sql`; el cambio en
-  `supabase/dev-tools/prueba_bloqueo_y_senal.sql` (paso 2); `src/features/fare/fare-service.ts`
-  y `src/types/database.ts` regenerado; `supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs`
-  y un comentario en `src/features/auth/auth-service.ts` (paso 3); `app.config.ts` y un
-  comentario en `src/lib/supabase.ts` (paso 4); `src/theme/colors.ts`,
-  `src/components/ui/input.tsx`, `src/app/passenger/destination.tsx`,
-  `admin/src/app/globals.css` y `supabase/dev-tools/prueba_contraste_colores.mjs` (paso 5); la
-  migracion `20260902210000`, `supabase/dev-tools/prueba_configuracion.sql`,
-  `admin/src/features/config/config-actions.ts` y `admin/src/features/config/types.ts` (paso 6);
-  la migracion `20260902220000`, `supabase/dev-tools/prueba_posicion_conductor.sql`,
-  `src/features/ride/use-driver-location.ts` y `src/features/ride/ride-service.ts` (paso 7); la
-  migracion `20260902230000`, `supabase/dev-tools/prueba_barrido_seguridad.sql` y el ajuste de
-  `prueba_auditoria.sql`, `prueba_encomiendas.sql` y `prueba_tarifas.sql` (paso 8). Los tipos en
-  `src/types/database.ts` regenerados. **Son 7 migraciones nuevas
-  (`20260902170000`-`20260902230000`), 6 pruebas nuevas (4 SQL + 2 `.mjs`), 5 pruebas ajustadas
-  y ~13 archivos modificados** entre la aplicacion movil y el panel. `android/` no sube al repositorio (el `allowBackup: false` se
-  regenera desde `app.config.ts`). El `location_interval_in_ride_seconds` en 7 es un dato en el
-  servidor, no va en el commit
+- **Ultimo commit:** `059cc12`, "fase 22 terminada". Antes, `c7cd03c` la Fase 20. El commit de
+  la Fase 22 lleva **7 migraciones** (`20260902170000`-`20260902230000`), **6 pruebas nuevas** -4
+  SQL (`prueba_grants_anon`, `prueba_h15_telefono_contraparte`, `prueba_posicion_conductor`,
+  `prueba_barrido_seguridad`) y 2 `.mjs` (`prueba_cambio_contrasena_sesiones`,
+  `prueba_contraste_colores`)-, **5 pruebas ajustadas** (`prueba_bloqueo_y_senal`,
+  `prueba_auditoria`, `prueba_encomiendas`, `prueba_tarifas`, `prueba_configuracion`) y ~13
+  archivos entre la aplicacion movil y el panel (`src/theme/colors.ts`,
+  `src/features/ride/use-driver-location.ts`, `src/features/auth/auth-service.ts`, `app.config.ts`,
+  `admin/src/features/config/*`, ...). El `location_interval_in_ride_seconds` en 7 es un dato en
+  el servidor, no fue en el commit; `android/` no sube al repositorio
+- **SIN COMITEAR (bloque super admin):** 3 migraciones (`20260902233000` el enum,
+  `20260902234000` `is_super_admin` + D265, `20260902235000` la gestion de administradores);
+  `seed_super_admin.sql`, `prueba_super_admin.sql` y `prueba_gestion_admins.sql` nuevos;
+  `prueba_auditoria.sql` ajustada; en la aplicacion movil `session.tsx`, `account-status.tsx` y
+  los tipos; en el panel `login-form.tsx`, `proxy.ts`, `(panel)/layout.tsx`,
+  `(panel)/panel-nav.tsx`, el modulo nuevo `features/admins/`, la pantalla
+  `(panel)/administradores/`, `PasswordNotice` movido a `features/shared/` y los tipos. **Se
+  corrigio de paso un fallo de `lint` que `059cc12` traia de la Fase 22** (acceso a un `ref`
+  durante el render en `use-driver-location.ts`)
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -1206,7 +1215,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | — | **BLOQUE ESPECIAL: tarifas, encomiendas y carga** (seccion 15.21) | **TERMINADO Y COMITEADO** |
 | 20 | Panel administrativo | **COMPLETADA Y COMITEADA** (`c7cd03c`). Once pasos + doble turno (seccion 15.22) |
 | 21 | Gestion de conductores y vehiculos | **ABSORBIDA en la Fase 20** (pasos 4a/4b/4c/5 + doble turno). Sin trabajo propio |
-| 22 | Seguridad y auditoria | **COMPLETADA Y VERIFICADA 2026-09-02.** Los ocho pasos (seccion 15.23). Pendiente el commit |
+| 22 | Seguridad y auditoria | **COMPLETADA Y COMITEADA** (`059cc12`). Los ocho pasos (seccion 15.23) |
+| — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y VERIFICADO** (2026-09-02), los cuatro pasos. Pendiente el commit. La liquidacion mensual, aplazada (D267) |
 | 23 | Pruebas | Pendiente |
 | 24 | Optimizacion | Pendiente |
 | 25 | Preparacion para produccion | Pendiente |
@@ -6037,11 +6047,11 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
 
 ---
 
-## 15.23 FASE 22: SEGURIDAD Y AUDITORIA (COMPLETADA, PENDIENTE DE COMMIT)
+## 15.23 FASE 22: SEGURIDAD Y AUDITORIA (COMPLETADA Y COMITEADA, `059cc12`)
 
-**AUTORIZADA EL 2026-09-02.** Recoge la deuda de seguridad que las fases anteriores fueron
-aplazando aqui, mas dos hallazgos de un diagnostico previo. No empieza hasta que el usuario
-autorice el primer paso.
+**AUTORIZADA, HECHA Y COMITEADA EL 2026-09-02** (`059cc12`), los ocho pasos. Recogio la deuda de
+seguridad que las fases anteriores fueron aplazando aqui, mas dos hallazgos de un diagnostico
+previo del puntero del conductor.
 
 ### Los ocho pasos acordados
 
@@ -6474,6 +6484,188 @@ de una tabla esperando `0`. Ahora `anon` **ni tiene permiso**: el intento rebota
 | **El login sigue funcionando** | Emulador: cerrar sesion (pantalla `anon`) y volver a entrar como conductor | Entro bien, perfil y datos cargados, sin errores |
 
 **CON ESTO SE CIERRA LA FASE 22 ENTERA.** Los ocho pasos hechos y verificados.
+
+---
+
+## 15.24 BLOQUE ESPECIAL: SUPER ADMIN Y USUARIOS ADMINISTRADORES (TERMINADO, PENDIENTE DE COMMIT)
+
+**PEDIDO POR EL USUARIO EL 2026-09-02.** No es una fase del plan de 26; se trata como bloque
+especial entre la Fase 22 y la 23, igual que el de tarifas y encomiendas, para no renumerar el
+resto.
+
+**EL ALCANCE, RECORTADO POR EL USUARIO.** Al principio el bloque incluia tambien la liquidacion
+mensual de la plataforma (300 pesos por servicio terminado). **Esa parte queda APLAZADA hasta
+que el usuario la apruebe.** Por ahora, solo la gestion de administradores.
+
+### Lo que se hace ahora: usuarios administradores
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Rol `super_admin` (enum + `is_super_admin()`, `is_admin()` lo incluye), seed del primer super admin, y D265. **HECHO Y VERIFICADO el 2026-09-02** — 11 comprobaciones, y el super admin entra al panel de verdad | Hecho |
+| 2 | `admin_create_admin`, `admin_reset_admin_password`, `admin_list_admins` (todas `security definer` + `is_super_admin()`). **HECHO Y VERIFICADO el 2026-09-02** — 13 comprobaciones y una prueba e2e por RPC: el super admin crea un administrador que **entra de verdad** y no puede escalar | Hecho |
+| 3 | Panel: pantalla `/administradores` -listado, alta con la contrasena una vez, bloquear/desbloquear, restablecer contrasena-. **HECHA Y VERIFICADA en el navegador el 2026-09-02** — el enlace y la ruta solo para el super admin | Hecho |
+| 4 | Verificacion de punta a punta en el navegador. **HECHA el 2026-09-02**: se creo "Lucia Restrepo" desde el panel y entro **con la contrasena generada** (`Moto-UGYR-3456`), uso la pantalla de conductores, y `/administradores` a mano la mando al tablero | Hecho |
+
+### Lo que queda aplazado (liquidacion mensual), si el usuario lo aprueba
+
+- `platform_fee_per_service` en `app_settings` (300, acotada, editable solo por el super admin,
+  **legible por el administrador** para que sepa lo que debe pagar).
+- `platform_settlement(mes)` que cuenta los `rides` con `status = 'completed'` del mes -por
+  `completed_at` en hora de Colombia- por 300. **Un servicio es un `rides` terminado**; una
+  encomienda sola cuenta igual que un viaje; los cancelados y caducados no cuentan.
+- Tabla `settlements` que **congela** cada mes (servicios, tarifa, total, estado), con generar
+  -> emitir -> marcar pagada, auditado. Una liquidacion emitida no se recalcula.
+- Pantalla de liquidaciones en el panel (la ven todos; solo el super admin actua) con un
+  resumen imprimible o CSV para la factura.
+
+### Lo que se hizo: paso 1, el rol super admin (2026-09-02)
+
+`supabase/migrations/20260902233000_add_super_admin_enum.sql` (solo el `add value`, en su
+propia migracion porque no siempre se puede usar un valor de enum recien creado en la misma
+transaccion), `supabase/migrations/20260902234000_super_admin_functions.sql`,
+`supabase/dev-tools/seed_super_admin.sql`, `supabase/dev-tools/prueba_super_admin.sql` (11
+comprobaciones), el ajuste de `supabase/dev-tools/prueba_auditoria.sql`, los tipos regenerados
+(`src/types/database.ts` y `admin/src/lib/supabase/database.types.ts`), y en el cliente
+`UserRole` y las tres pantallas/guardias que discriminan por rol: `src/features/auth/session.tsx`,
+`src/app/account-status.tsx`, `admin/src/app/acceso/login-form.tsx`, `admin/src/proxy.ts`.
+
+**`is_admin()` INCLUYE AL SUPER ADMIN (D264).** `role in ('admin', 'super_admin')`. Con eso las
+40+ politicas y funciones que ya comprueban `is_admin()` valen para el super admin sin tocarlas:
+entra al panel y ve todo. `is_super_admin()` es la puerta extra de lo que solo hace el dueno.
+
+**D265, EL HUECO QUE SE CERRO DE PASO.** `admin_set_account_status` estaba abierta a cualquier
+`is_admin()`. Con un solo administrador daba igual; con varios, el administrador A podia bloquear
+al B o al super admin. Ahora, si el objetivo es `admin` o `super_admin`, solo el super admin
+puede. Lo cazo `prueba_auditoria`, que hacia justo eso como montaje de otra comprobacion: se
+paso ese bloqueo a hacerse desde una cuenta super admin.
+
+**EN EL CLIENTE.** Para la aplicacion movil, `super_admin` es como `admin`: si inicia sesion, va
+a la pantalla de estado de cuenta que le dice que entre por el panel. En el panel, `login-form`
+y la guardia `proxy.ts` aceptan los dos roles.
+
+**UN ERROR DEL ASISTENTE QUE VENIA DE LA FASE 22.** El `lint` fallaba en
+`src/features/ride/use-driver-location.ts` -acceso a un `ref` durante el render, del paso 7 de la
+Fase 22-, y **el commit `059cc12` se hizo con ese fallo puesto**: se comprobo con `tail -1`, que
+oculto el error entre los avisos de entorno. Se corrigio aqui sacando el `ref` y contando la
+antiguedad desde `updatedAt`, que ya vive en el estado. Regla que deja: mirar la salida entera de
+`lint`, no la ultima linea.
+
+**Cuenta de prueba:** `superadmin.prueba@motomoto-qa.co` / `SuperAdmin.2026`. La de verdad -el
+dueno de la plataforma- se crea en la Fase 25, como el `admin`.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El rol y D265 | `prueba_super_admin.sql`, 11 comprobaciones | **11 de 11** |
+| No se rompio la auditoria | `prueba_auditoria.sql`, ajustada | **23 de 23** |
+| Regresion completa | Los 30 archivos de `prueba_*.sql` | **0 fallando** |
+| Barrido de seguridad | `prueba_barrido_seguridad.sql` (con `is_super_admin()` nueva) | **8 de 8** |
+| Panel y aplicacion movil | `typecheck`, `lint`, `format:check` en los dos proyectos | Todo en 0 |
+| **El super admin entra al panel** | En el navegador, con la cuenta de prueba | Entra y ve el tablero entero |
+
+---
+
+### Lo que se hizo: paso 2, alta y gestion de administradores (2026-09-02)
+
+`supabase/migrations/20260902235000_admin_management.sql`,
+`supabase/dev-tools/prueba_gestion_admins.sql` (13 comprobaciones), y los tipos regenerados.
+
+**TRES FUNCIONES, TODAS `security definer` CON `is_super_admin()` DENTRO:**
+
+- `admin_create_admin(correo, nombre, telefono)` -> `(admin_id, initial_password)`. Mismo patron
+  que `admin_create_driver` (D250): funcion con privilegios acotada, no la clave `service_role`.
+  La contrasena la genera el sistema en el formato dictable `Moto-XXXX-9999` (D251) y **no se
+  escribe en la auditoria**. El administrador nace `admin` y `active`.
+- `admin_reset_admin_password(admin_id)` -> `text`. Solo para cuentas `admin` -no `super_admin`
+  ni pasajeros/conductores-. El super admin recupera su propia contrasena por correo, como todos.
+- `admin_list_admins()` -> la lista con el correo de cada uno. `security definer` con
+  `is_super_admin()` aunque `profiles_select_admin` ya deje a cualquier administrador ver los
+  perfiles: es una pantalla del dueno y el camino de datos va con la pantalla.
+
+**El bloqueo/desbloqueo de un administrador** ya quedo restringido al super admin en el paso 1
+(D265, dentro de `admin_set_account_status`).
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las tres funciones y sus rechazos | `prueba_gestion_admins.sql`, 13 comprobaciones | **13 de 13** |
+| **De punta a punta, por RPC** | El super admin crea un administrador; el administrador nuevo inicia sesion con la contrasena devuelta, lee el tablero, y **no puede** crear otro administrador; el super admin lo bloquea | Todo OK. Contrasena en formato `Moto-XXXX-9999` |
+| Regresion completa | Los 31 archivos de `prueba_*.sql` + el barrido | **0 fallando**, barrido 8/8 |
+| Panel y aplicacion movil | `typecheck`, `lint`, `format:check` en los dos | Todo en 0 |
+
+---
+
+### Lo que se hizo: paso 3, la pantalla de administradores (2026-09-02)
+
+`admin/src/features/admins/` (types, actions, `admins-list`, `new-admin-dialog`),
+`admin/src/app/(panel)/administradores/page.tsx`, `admin/src/app/(panel)/panel-nav.tsx` (enlace
+nuevo, con prop `esSuperAdmin`), `admin/src/app/(panel)/layout.tsx` (pasa el rol), y
+`admin/src/proxy.ts` (guardia de ruta). El `PasswordNotice` -que ya existia para conductores- se
+movio a `admin/src/features/shared/` con un texto configurable y los dos usos de conductores se
+ajustaron.
+
+**TRES CAPAS PARA QUE SOLO EL SUPER ADMIN LA VEA Y LA USE:**
+
+1. La navegacion **esconde** el enlace si no eres super admin (prop desde el `layout`, que lee el
+   rol en el servidor).
+2. La guardia `proxy.ts` **redirige** al tablero si un administrador normal pide `/administradores`
+   a mano.
+3. La pagina, en el servidor, comprueba `is_super_admin()` y redirige si no; y las tres funciones
+   RPC comprueban `is_super_admin()` dentro. Es D72: la navegacion decide que se dibuja, la
+   autorizacion de verdad es del servidor.
+
+**LA PANTALLA.** Listado con el super admin arriba -su fila sin acciones, marcada "(tu)" y "Super
+admin"- y los administradores debajo, cada uno con "Contrasena" -restablece y muestra la nueva
+una vez- y "Bloquear / Desbloquear". Boton "Nuevo administrador" con el formulario de tres
+campos; al crear, el dialogo de la contrasena (`Moto-XXXX-9999`) se abre **antes** de recargar
+la lista.
+
+**Verificado en el navegador, con `npm run build` en verde:**
+
+| Que | Resultado |
+|---|---|
+| Como super admin | Ve el enlace, la lista con los 2 de siempre, crea "Carlos Mesa" -contrasena `Moto-GVXE-5879` mostrada una vez-, lo bloquea (pasa a "Bloqueada", boton cambia a "Desbloquear") |
+| Como administrador normal | **El enlace no aparece**; `/administradores` a mano **redirige al tablero** |
+| Panel | `typecheck`, `lint`, `format:check`, `build` | Todo en 0 |
+
+El administrador de prueba creado en el navegador se borro; quedan las 2 semillas.
+
+---
+
+### Lo que se hizo: paso 4, la verificacion de punta a punta (2026-09-02)
+
+En el navegador, contra el servidor de desarrollo del panel:
+
+1. Como **super admin** (`superadmin.prueba`): se abrio `/administradores` y se creo el
+   administrador "Lucia Restrepo". El dialogo mostro la contrasena **una sola vez**:
+   `Moto-UGYR-3456`.
+2. Se cerro sesion y se inicio como **Lucia** con ese correo y esa contrasena. **Entro al
+   panel** -"Sesion iniciada como Lucia Restrepo"-, cayo en el tablero.
+3. Su navegacion tiene ocho secciones, **sin "Administradores"**. Abrio la pantalla de
+   conductores y funciono (3 conductores, con sus acciones).
+4. Pidio `/administradores` a mano: **la mando al tablero** -la guardia `proxy.ts`-.
+
+La cuenta de Lucia se borro al terminar. Quedan las 2 semillas (`admin.prueba`,
+`superadmin.prueba`).
+
+**CON ESTO EL BLOQUE DE USUARIOS ADMINISTRADORES ESTA COMPLETO, LOS CUATRO PASOS.** La
+liquidacion mensual sigue aplazada (D267).
+
+**Regresion final:** los 32 archivos de `prueba_*.sql` en verde; `typecheck`, `lint` y
+`format:check` en 0 en la aplicacion movil y en el panel.
+
+---
+
+### Decisiones ya tomadas con el usuario (2026-09-02)
+
+| # | Decision | Valor |
+|---|---|---|
+| D264 | **El super admin es un rol propio, y `is_admin()` lo incluye** | Un cuarto valor del enum `user_role`. `is_admin()` devuelve cierto para `admin` **y** `super_admin`, asi que las 40+ politicas y funciones que ya comprueban `is_admin()` funcionan sin tocarlas; `is_super_admin()` es la puerta extra para lo que solo puede hacer el dueno -gestionar administradores y, mas adelante, la tarifa y las liquidaciones-. Los dos son cuentas de oficina: un perfil no puede ser a la vez super admin y pasajero o conductor |
+| D265 | **Un administrador no puede tocar la cuenta de otro administrador** | Hoy `admin_set_account_status` esta abierta a cualquier `is_admin()` y con un solo administrador daba igual. Con varios, el administrador A podria bloquear al administrador B o al super admin. La funcion pasa a rechazar cuando el objetivo es `admin` o `super_admin` y quien llama no es `super_admin` |
+| D266 | **Las cuentas de administrador se crean con `security definer`, no con `service_role`** | Mismo criterio que D250 para los conductores: la funcion corre con privilegios pero acotada a una operacion y con `is_super_admin()` dentro. La contrasena inicial la genera el sistema en el formato dictable de D251 y se muestra una sola vez |
+| D267 | **La liquidacion mensual se aplaza** | El usuario pidio hacer primero la gestion de administradores y decidir despues si la parte de cobro se aprueba. Lo acordado sobre "que cuenta como servicio" y "el mes en hora de Colombia" queda escrito arriba para cuando se retome |
 
 ---
 
