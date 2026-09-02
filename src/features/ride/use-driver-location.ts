@@ -8,8 +8,13 @@ import { fetchDriverLocation, type DriverLocation } from './ride-service';
 /** Cada cuanto el telefono recalcula la antiguedad de la ultima posicion. */
 const TICK_MS = 5000;
 
-/** Segundos entre una marca de tiempo ISO y ahora, contados por el telefono. */
-function edadDesde(updatedAt: string): number {
+/**
+ * Segundos entre una marca de tiempo ISO y ahora, contados por el telefono.
+ *
+ * Exportada para la prueba: es la cuenta que decide si se enciende "perdimos la
+ * senal" cuando los eventos de tiempo real dejan de llegar.
+ */
+export function edadDesde(updatedAt: string): number {
   const at = Date.parse(updatedAt);
   if (Number.isNaN(at)) return 0;
   return Math.max(0, Math.round((Date.now() - at) / 1000));

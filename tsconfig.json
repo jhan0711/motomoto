@@ -6,6 +6,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "types": ["jest", "node", "react", "geojson"],
     "paths": {
       "@/*": ["./src/*"],
       "@/assets/*": ["./assets/*"]

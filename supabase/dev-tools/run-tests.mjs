@@ -112,7 +112,8 @@ for (const archivo of archivos) {
       r = { ok: false, total: 0, fallando: 0, nota: proc.error.message.slice(0, 120) };
     } else {
       r = leerSql(proc.stdout ?? '');
-      if (proc.status !== 0 && r.ok) r = { ...r, ok: false, nota: r.nota || `cli exit ${proc.status}` };
+      if (proc.status !== 0 && r.ok)
+        r = { ...r, ok: false, nota: r.nota || `cli exit ${proc.status}` };
     }
   } else {
     const proc = spawnSync('node', [rel], opciones);

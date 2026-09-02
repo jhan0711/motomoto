@@ -6705,7 +6705,7 @@ pruebas de cliente de logica pura **y** de componentes.
 | 1 | **Auditoria** de los 10 scripts "perdidos", los 3 `demo_*` y los pares `seed_`/`remove_`. **HECHA el 2026-09-02** — veredicto abajo | Hecho |
 | 2 | Cerrar los huecos de la auditoria: rehacer solo los scripts que falten de verdad, anadir los `remove_` que falten, y **corregir los checklists de las secciones 15.12 y 15.14** para que apunten a archivos que existen. **HECHO el 2026-09-02** — y destapo la regresion D268 | Hecho |
 | 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla. **HECHO el 2026-09-02** | Hecho |
-| 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno | Pendiente |
+| 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno. **HECHO el 2026-09-02** | Hecho |
 | 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto | Pendiente |
 | 6 | **Dispositivo**: barrido a 800 dp en el emulador con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados | Pendiente |
 
@@ -6799,7 +6799,44 @@ Primera pasada completa: **36 scripts, 743 comprobaciones, 0 fallando, 130 s.**
 Comprobado tambien que un script con una comprobacion en rojo lo pone en FALLA y
 devuelve exit 1.
 
-Siguiente: paso 4, las pruebas del cliente movil.
+### Lo que se hizo: paso 4, las pruebas del cliente movil
+
+**Montaje.** `jest-expo` 57.0.5, `jest` 29.7, `@testing-library/react-native` 13.3,
+`react-test-renderer` 19.2.3, `@react-native/jest-preset` 0.86.3, `@types/jest` 29.
+Config en `package.json` (`preset: jest-expo`, `roots: src`, `transformIgnorePatterns`
+con `lucide-react-native` en la lista). `npm test` corre Jest.
+
+- **`.npmrc` nuevo** con `legacy-peer-deps=true`. Sin el, npm 10 no resuelve
+  `jest-expo` -pide `@react-native/jest-preset ^0.86.3` y `react-native@0.86.0`
+  fija `0.86.0` como `peerOptional`-. Es el ajuste habitual en proyectos Expo y
+  deja el `npm ci` de CI (paso 5) reproducible.
+- **`tsconfig.json`**: `types: ["jest", "node", "react", "geojson"]`. Al aparecer
+  `@types/jest` hubo que declarar la lista explicita; sin ella `tsc` no cargaba
+  los globales de Jest y `npm run typecheck` se llenaba de "Cannot find name 'describe'".
+- **`src/features/ride/use-driver-location.ts`**: `edadDesde` pasa a exportarse
+  para poder probar la cuenta de antiguedad del puntero.
+
+**55 pruebas en 10 archivos, todas verdes** (`src/**/__tests__/`):
+
+| Archivo | Que fija |
+|---|---|
+| `features/fare/__tests__/format-amount.test.ts` | El signo, el punto de los miles, el redondeo al peso |
+| `features/ride/__tests__/errors.test.ts` | `toRideFailure` / `messageForCode`: hint conocido, recorte, cadena vacia, red por nombre y por texto, hint desconocido conservado; cada `RIDE_ERROR_CODES` traduce |
+| `features/auth/__tests__/errors.test.ts` | `toAuthFailure`: codigo conocido, red, codigo desconocido conservado |
+| `features/auth/__tests__/schemas.test.ts` | Los cinco esquemas zod: normalizacion de correo, telefono con separadores, longitudes, los dos `refine` de cambio de contrasena con su `path` |
+| `features/history/__tests__/format-when.test.ts` | Hoy / Ayer / dia y mes / otro ano; medianoche y mediodia como las 12 |
+| `features/ride/__tests__/format-countdown.test.ts` | `m:ss`, relleno a dos digitos, nunca negativo |
+| `features/ride/__tests__/edad-desde.test.ts` | La antiguedad del puntero: segundos transcurridos, formato ISO de Postgres, nunca negativo, marca ilegible -> 0 |
+| `features/auth/__tests__/home-route.test.ts` | `homeRouteFor` con las cuatro roles (mockeando expo-linking y auth-service) |
+| `components/ui/__tests__/button.test.tsx` | Etiqueta y rol boton, `onPress` activo, bloqueado con `disabled`, bloqueado y `busy` con `loading` |
+| `components/ui/__tests__/text.test.tsx` | Contenido, reenvio de props (`numberOfLines`, `testID`), color semantico resuelto del tema |
+
+`npm run typecheck`, `npm run lint` y `npm run format:check` siguen en verde.
+
+**Pendiente para el paso 5:** el panel (`admin/`) no tiene Jest. Decidir si el CI
+le monta uno propio o si sus rutas se cubren solo con `typecheck` + `lint`.
+
+Siguiente: paso 5, el CI en GitHub Actions.
 
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
