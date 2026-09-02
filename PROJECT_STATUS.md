@@ -150,16 +150,16 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **EL SUPER ADMIN DE VERDAD YA EXISTE** (2026-09-02): `jhank.45617@gmail.com` -que era el
   pasajero de prueba- pasa a `super_admin` con `supabase/dev-tools/promote_jhank_super_admin.sql`.
   La contrasena la pone el usuario. Detalle en 15.24
-- **Fase 23, Pruebas: LOS SEIS PASOS HECHOS Y VERIFICADOS** (seccion 15.25). Auditoria (1);
+- **Fase 23, Pruebas: TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Auditoria (1);
   tres scripts nuevos que absorben nueve perdidos + `remove_second_driver` + checklists (2);
   corredor unico `run-tests.mjs` / `npm run test:db` -36 scripts, 743 comprobaciones- (3);
   `jest-expo` con 55 pruebas en 10 archivos, logica pura y componentes (4); `.github/workflows/ci.yml`
   con tres trabajos -cliente movil, panel, regresion de BD- (5); barrido de la app en la tablet
   a 711 y 800 dp, claro y oscuro, mas el checklist de lo que necesita un telefono con GPS en
   movimiento -bloqueado por hardware- (6). **El paso 2 destapo la regresion D268** en
-  `accept_ride_offer`, corregida en `20260903000000`. Pasos 1-4 comiteados por el usuario.
-  **SIN COMITEAR:** `.github/workflows/ci.yml` y este documento (pasos 5 y 6). Falta decidir
-  si la fase se da por cerrada con el checklist de GPS pendiente de aparato
+  `accept_ride_offer`, corregida en `20260903000000`. **Todo comiteado.** El checklist de GPS
+  en movimiento (8 puntos, seccion 15.25) queda escrito, bloqueado por hardware. Pendiente
+  operativo: configurar los secretos de GitHub para el trabajo de regresion de BD del CI
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -1231,7 +1231,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 21 | Gestion de conductores y vehiculos | **ABSORBIDA en la Fase 20** (pasos 4a/4b/4c/5 + doble turno). Sin trabajo propio |
 | 22 | Seguridad y auditoria | **COMPLETADA Y COMITEADA** (`059cc12`). Los ocho pasos (seccion 15.23) |
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
-| 23 | Pruebas | **LOS SEIS PASOS HECHOS Y VERIFICADOS** (2026-09-02, seccion 15.25). Pasos 1-4 comiteados; 5 y 6 sin comitear. Destapo y corrigio la regresion D268. Queda el checklist de GPS en movimiento, bloqueado por hardware |
+| 23 | Pruebas | **TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Los seis pasos. Destapo y corrigio la regresion D268. El checklist de GPS en movimiento (8 puntos) queda escrito y **bloqueado por hardware**: se ejecuta cuando haya un telefono Android con datos, en Amalfi. Pendiente operativo, no de la fase: configurar los secretos de GitHub para que el CI corra la regresion de BD |
 | 24 | Optimizacion | Pendiente |
 | 25 | Preparacion para produccion | Pendiente |
 | 26 | Publicacion y despliegue | Pendiente |
@@ -6697,7 +6697,7 @@ liquidacion mensual sigue aplazada (D267).
 
 ---
 
-## 15.25 FASE 23: PRUEBAS (EN CURSO)
+## 15.25 FASE 23: PRUEBAS (TERMINADA Y COMITEADA, 2026-09-02)
 
 **EMPEZADA EL 2026-09-02.** No construye funcionalidad: consolida y formaliza la suite de
 pruebas, monta CI y anade las primeras pruebas del cliente. Lo que depende de movimiento real
@@ -6917,9 +6917,10 @@ zona de Amalfi. Procedimiento listo para cuando exista el telefono:
 | 7 | **Tarifa rural y nocturna con ubicacion real** | Pedir a un corregimiento (Portachuelo, La Gardenia...) y de noche, comprobar el valor | Necesita estar fisicamente en la zona rural |
 | 8 | **Permisos de ubicacion negados / "solo esta vez"** en un aparato limpio | Instalar, abrir, negar el permiso, ver el mensaje y la salida | La tablet ya tiene el permiso concedido |
 
-Siguiente: cerrar la Fase 23. Falta el commit del usuario de los pasos 5 y 6, y
-decidir si la fase se da por terminada con el checklist del punto anterior
-pendiente de hardware.
+**FASE 23 CERRADA el 2026-09-02.** El usuario la dio por terminada con el
+checklist de GPS de arriba pendiente de hardware -8 puntos que se ejecutan cuando
+haya un telefono Android con datos, en Amalfi-. Todo lo demas de la fase quedo
+hecho, verificado y comiteado. Sigue la Fase 24, Optimizacion.
 
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
@@ -6947,8 +6948,117 @@ Verificado: `prueba_transiciones` 23/23, `prueba_recorrido` 12/12,
 
 ---
 
+## 15.26 FASE 24: OPTIMIZACION (EN CURSO, 2026-09-02)
+
+Autorizada con seis pasos. **Se mide en la tablet** los pasos 1 y 6 (arranque y
+red reales); el resto donde sea comodo. Regla de siempre: **una correccion
+controlada por paso, medida antes y despues**, sin cambiar varias cosas a la vez.
+
+Origen: D176 dejo escrito que `driver_locations` es "la tabla que mas se
+actualiza del sistema" y "lo primero que hay que mirar si algo va lento (Fase 24)".
+
+### Los seis pasos acordados
+
+| # | Paso | Entregable | Estado |
+|---|---|---|---|
+| 1 | **Linea base.** Sin tocar nada: trafico y tamano de payload de `driver_locations` en un viaje, arranque en frio por logcat en la tablet, latencia del puntero de punta a punta | Numeros "antes" en esta seccion | **Hecho** (2026-09-02, medidas abajo) |
+| 2 | **Consultas calientes.** `explain (analyze, buffers)` sobre `find_available_drivers`, `admin_list_rides`, historial del pasajero y `list_driver_active_rides` con datos reales. Indices que falten, RLS que escanee de mas | Hallazgos abajo; la accion cae en el paso 3 y en un pendiente aparte | **Hecho** (2026-09-02) |
+| 3 | **`driver_locations` en tiempo real.** Segun el paso 1: recortar columnas de la publicacion si sobran, revisar indice `driver_id`/`updated_at`, mirar `replica identity` | Migracion acotada + medicion | Pendiente |
+| 4 | **Arranque en frio.** Diferir lo que no hace falta en el primer frame (Mapbox, lectura de settings) | Cambio en el cliente + medicion | Pendiente |
+| 5 | **Suscripciones de realtime.** Auditar cada `useEffect` con `postgres_changes`: que cierre en el cleanup, que no se duplique al re-renderizar, contar canales vivos en una sesion tipica | Correcciones si hay fugas | Pendiente |
+| 6 | **Cierre.** Repetir todas las mediciones del paso 1 y dejar el "despues" al lado del "antes" | Comparativa | Pendiente |
+
+### Lo que se midio: paso 1, la linea base (2026-09-02)
+
+**`driver_locations` — la tabla del problema (D176).** Inspeccion en el servidor:
+
+| Que | Valor | Lectura |
+|---|---|---|
+| Columnas | `driver_id`, `location` (geography), `heading`, `speed_kmh`, `accuracy_m`, `updated_at`, `lat`, `lng` — **8** | El cliente (`use-driver-location.ts`) solo lee **4**: `lat`, `lng`, `heading`, `updated_at` |
+| Publicacion | `supabase_realtime`, **sin lista de columnas** -> el evento de tiempo real lleva **las 8** | `location` es el EWKB del punto (~100 car. en texto) y es **redundante** con `lat`/`lng`, que se anadieron en la Fase 22 paso 7 justo para no necesitarlo. `speed_kmh` y `accuracy_m` no los usa la pantalla del pasajero |
+| `replica identity` | `default` (PK = `driver_id`) | Correcto: el `old` del evento solo lleva la PK, no la fila entera |
+| Indices | 3: PK `driver_id`, gist `location`, btree `updated_at DESC` | La tabla tiene **una fila por conductor** y se **actualiza cada 7 s** durante un viaje (arreglo A). Cada UPDATE reescribe los 3 indices. El de `updated_at DESC` hay que ver si lo usa alguien -paso 2- |
+| Filas / tamano | 2 filas / 88 kB / ~94 bytes por fila | Diminuta hoy (2 conductores de prueba). El coste no es el tamano, es la **frecuencia de escritura** y el **fan-out del evento** a cada pasajero suscrito |
+
+**Candidato claro para el paso 3:** acotar la publicacion a las 4 columnas que el
+cliente usa (`ALTER PUBLICATION supabase_realtime ... (lat, lng, heading, updated_at)`),
+lo que baja el payload del evento a la mitad larga, y revisar si el indice
+`updated_at DESC` sirve para algo.
+
+**Arranque en frio (tablet, dev sobre Metro).** Cronometrado con capturas cada
+~3 s desde `am force-stop` + relanzar por deep link:
+
+- ~6 s: `ReactNativeJS: Running "main"` (el bundle empieza a ejecutar)
+- ~22 s: primera pantalla propia de la app (el spinner de `SessionProvider`)
+- **~29 s: pantalla de inicio usable** (mapa con tiles, hoja inferior con lugares, punto del usuario)
+
+**Salvedad importante:** es un **build de desarrollo servido por Metro**. El
+tramo de 6 s a 22 s es sobre todo transferir y parsear el bundle desde Metro, que
+**no ocurre en un build de produccion** (el bundle va embebido). El numero de
+produccion solo se puede medir con un `assembleRelease`, que no existe. **El paso
+4 necesita ese build, o se limita a medir lo que hace la app despues de que
+arranca el JS** (restaurar sesion, leer perfil, leer `app_settings`, iniciar
+Mapbox, permiso de ubicacion).
+
+**Latencia del puntero de punta a punta.** No se re-mide en vivo aqui: ya se
+midio en el diagnostico previo a la Fase 22 y quedo en **~7,5 s de cadencia
+visible** (7 s de intervalo de escritura por el arreglo A + ~0,5 s de tiempo real
++ la posicion aplicada directamente del evento, sin la re-consulta que antes
+sumaba 2-4 s, por el arreglo B / Fase 22 paso 7). Ese es el "antes". La
+optimizacion del paso 3 se mide en **bytes de payload**, no en latencia: recortar
+columnas no cambia los 7 s de intervalo.
+
+### Lo que se midio: paso 2, las consultas calientes (2026-09-02)
+
+Base diminuta hoy -58 `ride_requests`, 28 `rides`, 58 `ride_offers`, 12
+`ride_locations`, 3 conductores, 9 perfiles-, asi que todo hace seq scan y corre
+en < 35 ms. La pregunta no era "que va lento hoy" sino **que no escala**.
+
+**El esquema esta muy bien indexado.** 20+ indices, muchos parciales, que mapean
+exactamente a los patrones de consulta: `rides_active_by_driver_idx` y
+`rides_active_by_vehicle_idx` (parciales por estado activo), `rr_passenger_history_idx`
+y `rides_driver_history_idx` (`(persona, fecha DESC)`), `rr_one_active_per_passenger`
+(parcial), `rr_searching_expiry_idx` (parcial), `ro_driver_pending_idx`, gist en
+`origin` y en `location`. **Ninguna ruta operativa caliente -ciclo del viaje,
+historial, ofertas, geo- tiene un indice que falte.**
+
+**Hallazgo 1 -> se corrige en el paso 3.** `driver_locations_updated_idx`
+(`btree updated_at DESC`) **no lo elige ningun plan**. Se creo (migracion
+`20260729004136`) para "descartar rapido las posiciones caducadas", pero
+`find_available_drivers` llega a `driver_locations` por join sobre `driver_id`
+(PK), no por rango de `updated_at`; y la tabla tiene **una fila por conductor**
+-decenas, no crece-, asi que el planificador siempre hara seq scan. Nada hace
+`ORDER BY updated_at`. Mientras tanto ese btree se reescribe **en cada UPDATE de
+posicion (cada 7 s por conductor en viaje)**, la escritura mas frecuente del
+sistema. **Coste de escritura sin beneficio de lectura: se borra en el paso 3.**
+
+**Hallazgo 2 -> pendiente aparte, lo decide el usuario.** `admin_list_rides`
+busca con `ILIKE '%termino%'` sobre **cuatro campos** (nombre del pasajero, del
+conductor, etiqueta de origen, de destino) mas un `count(*) over()` para el total
+de paginacion. Comodin a la izquierda: **no indexable**, obliga a recorrer
+`ride_requests` + joins entero **en cada busqueda del panel**. A 58 filas no se
+nota; a 10.000+ es un escaneo completo por tecla. El arreglo -indices GIN de
+`pg_trgm`- es mas grande que un retoque y toca la extension. **Recomendacion:
+agendarlo, no meterlo en la Fase 24.**
+
+**Hallazgo 3 -> se anota, no se toca.** `find_available_drivers` corre como
+`Function Scan` opaco (~160 ms la primera llamada de la sesion, ~12 ms el cuerpo
+en caliente) porque `SECURITY DEFINER` + `SET search_path` impiden el *inline*.
+Se llama en **cada `request_ride`**. No es un problema de indices; la
+micro-optimizacion es delicada y no se paga hoy. Queda anotado.
+
+**No hace falta migracion propia del paso 2:** el unico cambio -borrar el
+indice- encaja en el paso 3, que es "revisar el indice `driver_id`/`updated_at`".
+
+---
+
 ## 16. PENDIENTES CONOCIDOS
 
+- **Busqueda del panel (`admin_list_rides`) no escala.** Encontrado en la Fase 24, paso 2. El
+  buscador hace `ILIKE '%x%'` sobre cuatro columnas + `count(*) over()`: escaneo completo de
+  `ride_requests` + joins en cada busqueda. A 58 filas no se nota; a 10.000+ si. Arreglo:
+  indices GIN de `pg_trgm` sobre las etiquetas y los nombres. Es mas grande que la Fase 24 y
+  toca la extension `pg_trgm`; se agenda aparte. Detalle en la seccion 15.26
 - **Telefono Android con GPS y datos moviles. Ya no es un pendiente de la Fase 23: es el unico
   camino para cerrar cosas de la 14.** La tablet ya no esta, y Fake GPS solo entrega la
   posicion al arrancar la aplicacion, asi que **no hay forma de probar nada que dependa de un
