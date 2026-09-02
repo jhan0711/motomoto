@@ -320,6 +320,86 @@ $parametros$;
 
 
 -- -----------------------------------------------------------------------------
+-- Fase 22, paso 6: cotas de los ocho parametros de operacion
+-- -----------------------------------------------------------------------------
+
+do $cotas$
+declare
+  v_admin constant uuid := 'b3000000-0000-4000-8000-0000000000a1';
+  v_n integer := 26;
+  v_h text;
+  v_valor text;
+  r record;
+begin
+  execute 'set local role authenticated';
+  execute format('set local request.jwt.claims to %L',
+    json_build_object('sub', v_admin, 'role', 'authenticated')::text);
+
+  -- Cada fila: un valor fuera de rango -por debajo del minimo o por encima del
+  -- maximo- y el codigo con el que la funcion tiene que rechazarlo.
+  for r in
+    select * from (values
+      ('location_interval_in_ride_seconds',  '2',    'INVALID_LOCATION_INTERVAL'),
+      ('location_interval_in_ride_seconds',  '31',   'INVALID_LOCATION_INTERVAL'),
+      ('location_interval_available_seconds','9',    'INVALID_LOCATION_INTERVAL'),
+      ('location_interval_available_seconds','46',   'INVALID_LOCATION_INTERVAL'),
+      ('location_min_distance_m',            '9',    'INVALID_LOCATION_DISTANCE'),
+      ('location_min_distance_m',            '501',  'INVALID_LOCATION_DISTANCE'),
+      ('driver_location_stale_seconds',      '0',    'INVALID_STALE_WINDOW'),
+      ('driver_location_stale_seconds',      '601',  'INVALID_STALE_WINDOW'),
+      ('driver_arrival_radius_m',            '0',    'INVALID_ARRIVAL_RADIUS'),
+      ('driver_arrival_radius_m',            '1001', 'INVALID_ARRIVAL_RADIUS'),
+      ('service_area_margin_m',              '-1',   'INVALID_AREA_MARGIN'),
+      ('service_area_margin_m',              '5001', 'INVALID_AREA_MARGIN'),
+      ('free_cancellation_seconds',          '-1',   'INVALID_FREE_CANCELLATION'),
+      ('free_cancellation_seconds',          '601',  'INVALID_FREE_CANCELLATION'),
+      ('finished_summary_minutes',           '0',    'INVALID_SUMMARY_WINDOW'),
+      ('finished_summary_minutes',           '61',   'INVALID_SUMMARY_WINDOW'),
+      ('driver_signal_lost_seconds',         '59',   'INVALID_SIGNAL_WINDOW'),
+      ('driver_signal_lost_seconds',         '901',  'INVALID_SIGNAL_WINDOW')
+    ) as t(clave, valor, hint_esp)
+  loop
+    begin
+      perform public.admin_set_setting(r.clave, r.valor);
+      insert into resultados values (v_n, r.clave || ' = ' || r.valor || ' se rechaza',
+        r.hint_esp, 'lo permitio', false);
+    exception when others then
+      get stacked diagnostics v_h = pg_exception_hint;
+      insert into resultados values (v_n, r.clave || ' = ' || r.valor || ' se rechaza',
+        r.hint_esp, coalesce(nullif(v_h, ''), sqlstate), v_h = r.hint_esp);
+    end;
+    v_n := v_n + 1;
+  end loop;
+
+  -- Un decimal se rechaza: el cliente lo ignoraria en silencio y volveria al de
+  -- reserva, asi que guardarlo seria un parametro que la pantalla ensena y la
+  -- aplicacion no usa.
+  begin
+    perform public.admin_set_setting('location_interval_in_ride_seconds', '7.5');
+    insert into resultados values (v_n, 'Un intervalo decimal se rechaza',
+      'INVALID_LOCATION_INTERVAL', 'lo permitio', false);
+  exception when others then
+    get stacked diagnostics v_h = pg_exception_hint;
+    insert into resultados values (v_n, 'Un intervalo decimal se rechaza',
+      'INVALID_LOCATION_INTERVAL', coalesce(nullif(v_h, ''), sqlstate),
+      v_h = 'INVALID_LOCATION_INTERVAL');
+  end;
+  v_n := v_n + 1;
+
+  -- Y un valor dentro de rango SI pasa, vigilando a las anteriores.
+  perform public.admin_set_setting('driver_arrival_radius_m', '120');
+  select value #>> '{}' into v_valor from public.app_settings
+  where key = 'driver_arrival_radius_m';
+  insert into resultados values (v_n, 'Un radio de llegada de 120 m SI se acepta',
+    '120', coalesce(v_valor, 'nulo'), v_valor = '120');
+
+  execute 'reset role';
+  execute 'reset request.jwt.claims';
+end
+$cotas$;
+
+
+-- -----------------------------------------------------------------------------
 -- Quien no es administrador
 -- -----------------------------------------------------------------------------
 

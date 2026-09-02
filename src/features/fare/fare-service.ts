@@ -85,16 +85,14 @@ export interface RequestCargoLine {
 /**
  * La carga de una solicitud concreta, con el nombre de cada tipo.
  *
- * Select directo, con el mismo criterio que `fetchCargoTypes`: no hay geografia
- * que decodificar. La politica `ride_request_cargo_select_participants` ya deja
- * pasar al dueno de la solicitud y al conductor vinculado; no hace falta ninguna
- * funcion nueva para exponer lo mismo que la politica ya permite.
+ * Pasa por `list_request_cargo` y no por un select directo desde la Fase 22,
+ * paso 2: al estrechar `driver_linked_to_request` a los estados en curso (H15),
+ * el conductor perderia el desglose de carga de sus viajes pasados. La funcion
+ * es `security definer` y mantiene el enlace permanente solo para este dato, que
+ * no es sensible.
  */
 export async function fetchRequestCargo(requestId: string): Promise<Result<RequestCargoLine[]>> {
-  const { data, error } = await supabase
-    .from('ride_request_cargo')
-    .select('quantity, unit_amount, cargo_types(name)')
-    .eq('request_id', requestId);
+  const { data, error } = await supabase.rpc('list_request_cargo', { p_request_id: requestId });
 
   if (error) {
     return fail(toRideFailure(error));
@@ -102,11 +100,7 @@ export async function fetchRequestCargo(requestId: string): Promise<Result<Reque
 
   return ok(
     (data ?? []).map((row) => ({
-      // El generador declara la relacion embebida como un arreglo aunque solo
-      // pueda traer una fila, porque no conoce la relacion 1:1 que aqui si hay
-      // por la clave foranea. Se toma el primer elemento y, si faltara, un
-      // nombre generico en vez de romper la lista entera por una fila.
-      cargoTypeName: row.cargo_types?.name ?? 'Carga',
+      cargoTypeName: row.cargo_type_name,
       quantity: row.quantity,
       unitAmount: row.unit_amount,
     })),

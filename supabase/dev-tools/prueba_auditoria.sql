@@ -343,10 +343,17 @@ begin
       'rechaza', coalesce(nullif(v_h, ''), sqlstate), true);
   end;
 
-  -- 20. Sin sesion no se lee la auditoria.
-  select count(*) into v_n from public.admin_audit_logs;
-  insert into resultados values (20, 'Sin sesion no se ve ninguna entrada',
-    '0', v_n::text, v_n = 0);
+  -- 20. Sin sesion no se lee la auditoria. Desde la Fase 22 (paso 8) `anon` ni
+  --     siquiera tiene permiso de tabla: el intento rebota con "permission
+  --     denied", que es mas fuerte que "lee cero filas".
+  begin
+    select count(*) into v_n from public.admin_audit_logs;
+    insert into resultados values (20, 'Sin sesion no se ve ninguna entrada',
+      'permission denied', 'leyo ' || v_n || ' filas', false);
+  exception when insufficient_privilege then
+    insert into resultados values (20, 'Sin sesion no se ve ninguna entrada',
+      'permission denied', 'permission denied', true);
+  end;
 
   execute 'reset role';
 end

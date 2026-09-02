@@ -37,6 +37,14 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey, {
   auth: {
     // Sin esto la sesion se pierde al cerrar la aplicacion y el usuario tendria
     // que volver a entrar cada vez.
+    //
+    // ASYNCSTORAGE Y NO EXPO-SECURE-STORE (D93, confirmado en la Fase 22 paso 4).
+    // La sesion de Supabase medida son ~1518 bytes y crece con cada claim del
+    // JWT; secure-store en Android avisa y puede fallar por encima de ~2048, asi
+    // que cifrarla aqui cambiaria un riesgo por un cierre de sesion silencioso.
+    // El token no queda expuesto: el sandbox de Android y el cifrado de disco lo
+    // protegen en reposo, y `android.allowBackup: false` (app.config.ts) impide
+    // que salga en la copia de Google Drive del usuario.
     storage: AsyncStorage,
     persistSession: true,
     autoRefreshToken: true,

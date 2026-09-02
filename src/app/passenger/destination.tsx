@@ -253,7 +253,7 @@ export default function DestinationScreen() {
           ListHeaderComponent={
             (placesError ?? choiceError ?? searchError) != null ? (
               <View style={styles.aviso}>
-                <Text variant="caption" color="danger">
+                <Text variant="caption" color="dangerText">
                   {placesError ?? choiceError ?? searchError}
                 </Text>
               </View>

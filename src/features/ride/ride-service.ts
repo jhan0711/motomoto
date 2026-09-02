@@ -311,8 +311,18 @@ export interface DriverLocation {
   longitude: number;
   /** Rumbo en grados, si el GPS lo dio. */
   heading: number | null;
-  /** Segundos transcurridos desde el envio, contados por el servidor. */
+  /**
+   * Segundos transcurridos desde el envio.
+   *
+   * En la primera lectura y al volver de segundo plano lo cuenta el servidor
+   * (`get_driver_location`). Entre eventos de tiempo real lo cuenta el telefono
+   * a partir de `updatedAt`: solo alimenta un umbral de 120 s -"perdimos la
+   * senal"-, no una cuenta atras, asi que el desvio del reloj del telefono no
+   * cambia nada.
+   */
   ageSeconds: number;
+  /** Marca de tiempo del envio, en ISO. Para recalcular `ageSeconds`. */
+  updatedAt: string;
 }
 
 /**
@@ -386,6 +396,7 @@ export async function fetchDriverLocation(
     // El generador declara numeric como number, pero la columna admite nulo.
     heading: row.heading,
     ageSeconds: row.age_seconds,
+    updatedAt: row.updated_at,
   });
 }
 

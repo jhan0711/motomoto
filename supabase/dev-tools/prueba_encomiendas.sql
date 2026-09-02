@@ -562,9 +562,15 @@ begin
   execute 'set local role anon';
   execute format('set local request.jwt.claims to %L', '{"role":"anon"}');
 
-  select count(*) into v_n from public.ride_request_cargo;
-  insert into resultados values (28, 'Sin sesion no se ve ninguna carga',
-    '0', v_n::text, v_n = 0);
+  -- Desde la Fase 22 (paso 8) `anon` ni siquiera tiene permiso de tabla.
+  begin
+    select count(*) into v_n from public.ride_request_cargo;
+    insert into resultados values (28, 'Sin sesion no se ve ninguna carga',
+      'permission denied', 'leyo ' || v_n || ' filas', false);
+  exception when insufficient_privilege then
+    insert into resultados values (28, 'Sin sesion no se ve ninguna carga',
+      'permission denied', 'permission denied', true);
+  end;
 
   execute 'reset role';
   execute 'reset request.jwt.claims';

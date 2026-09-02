@@ -255,6 +255,10 @@ export async function completeRecoveryFromLink(url: string): Promise<Result> {
  * la pide.
  */
 export async function updatePassword(password: string): Promise<Result> {
+  // GoTrue revoca por su cuenta todas las demas sesiones al cambiar la contrasena
+  // -incluida, en el cambio desde dentro de la aplicacion, la sesion previa a la
+  // reautenticacion de `changePassword`-. Solo sobrevive la que hace la peticion.
+  // Verificado contra el servidor en `supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs`.
   const { error } = await supabase.auth.updateUser({ password });
 
   return error ? fail(error) : ok(undefined);

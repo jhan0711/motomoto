@@ -96,6 +96,12 @@ export const META: Record<string, MetaParametro> = {
     grupo: 'operacion',
     unidad: 's',
   },
+  driver_signal_lost_seconds: {
+    etiqueta: 'Cuándo se avisa de un conductor sin señal',
+    grupo: 'operacion',
+    unidad: 's',
+    aviso: 'R10: el tablero lo marca, pero no cancela el servicio. La empresa decide llamando.',
+  },
   location_interval_available_seconds: {
     etiqueta: 'Cada cuánto envía posición estando libre',
     grupo: 'operacion',

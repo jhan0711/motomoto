@@ -408,17 +408,36 @@ begin
   execute 'set local role anon';
   execute format('set local request.jwt.claims to %L', '{"role":"anon"}');
 
-  select count(*) into v_n from public.urban_fares;
-  insert into resultados values (29, 'Sin sesion no se lee la tarifa urbana',
-    '0', v_n::text, v_n = 0);
+  -- Desde la Fase 22 (paso 8) `anon` ni siquiera tiene permiso de tabla: el
+  -- intento rebota con "permission denied", mas fuerte que "lee cero filas".
+  -- La aplicacion movil lee estas tres con sesion (`authenticated`), no como
+  -- `anon`: eso lo cubren las comprobaciones de arriba.
+  begin
+    select count(*) into v_n from public.urban_fares;
+    insert into resultados values (29, 'Sin sesion no se lee la tarifa urbana',
+      'permission denied', 'leyo ' || v_n, false);
+  exception when insufficient_privilege then
+    insert into resultados values (29, 'Sin sesion no se lee la tarifa urbana',
+      'permission denied', 'permission denied', true);
+  end;
 
-  select count(*) into v_n from public.cargo_types;
-  insert into resultados values (30, 'Sin sesion no se lee el catalogo de carga',
-    '0', v_n::text, v_n = 0);
+  begin
+    select count(*) into v_n from public.cargo_types;
+    insert into resultados values (30, 'Sin sesion no se lee el catalogo de carga',
+      'permission denied', 'leyo ' || v_n, false);
+  exception when insufficient_privilege then
+    insert into resultados values (30, 'Sin sesion no se lee el catalogo de carga',
+      'permission denied', 'permission denied', true);
+  end;
 
-  select count(*) into v_n from public.rural_fares;
-  insert into resultados values (31, 'Sin sesion no se leen las tarifas rurales',
-    '0', v_n::text, v_n = 0);
+  begin
+    select count(*) into v_n from public.rural_fares;
+    insert into resultados values (31, 'Sin sesion no se leen las tarifas rurales',
+      'permission denied', 'leyo ' || v_n, false);
+  exception when insufficient_privilege then
+    insert into resultados values (31, 'Sin sesion no se leen las tarifas rurales',
+      'permission denied', 'permission denied', true);
+  end;
 
   execute 'reset role';
   execute 'reset request.jwt.claims';

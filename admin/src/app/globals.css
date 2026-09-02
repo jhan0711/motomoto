@@ -48,7 +48,10 @@
   --color-success-subtle: #d7f5e9;
   --color-on-success: #ffffff;
 
-  --color-warning: #f59e0b;
+  /* El mismo valor que la aplicacion movil tras cerrar H14 en la Fase 22: el
+     amber 500 no llega a 3:1 sobre blanco. El panel hoy solo usa `warning` como
+     fondo teñido, pero se mantiene la paleta alineada (D237). */
+  --color-warning: #be7004;
   --color-warning-subtle: #fdf0d5;
   --color-on-warning: #18181b;
 

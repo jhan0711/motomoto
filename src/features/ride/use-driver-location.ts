@@ -5,29 +5,34 @@ import { supabase } from '@/lib/supabase';
 
 import { fetchDriverLocation, type DriverLocation } from './ride-service';
 
+/** Cada cuanto el telefono recalcula la antiguedad de la ultima posicion. */
+const TICK_MS = 5000;
+
 /**
  * Donde esta el motorraton que viene a recoger al pasajero.
  *
  * POR QUE TIEMPO REAL Y NO SONDEO. El criterio de aceptacion 4 pide ver moverse
  * al conductor con menos de quince segundos de retraso. El conductor envia cada
- * diez (R9); preguntando cada diez, el peor caso son veinte y el criterio no se
- * cumple. Preguntando cada cinco serian doce consultas por minuto y por pasajero,
- * casi todas para descubrir que no ha cambiado nada.
+ * 7-10 s (R9); sondeando cada diez, el peor caso son veinte y el criterio no se
+ * cumple.
  *
- * DEL EVENTO SOLO SE USA EL AVISO, igual que en `useRequestRealtime` y en
- * `useDriverOffers`. La fila que llega por el canal trae la posicion en el
- * formato binario de PostGIS, que habria que descifrar en el telefono: es lo
- * mismo que D131 descarto para los lugares. Al recibir el aviso se pregunta por
- * la funcion, que ya devuelve latitud y longitud separadas.
+ * LA POSICION VIENE EN EL PROPIO EVENTO. Desde la Fase 22 (paso 7),
+ * `driver_locations` guarda `lat` y `lng` sueltas ademas de la geografia, y el
+ * evento de tiempo real las trae. El pasajero pinta el punto en cuanto llega el
+ * aviso, sin la consulta extra que antes anadia 2-4 s.
+ *
+ * SE SIGUE LLAMANDO A LA FUNCION en dos momentos: el primer pintado -antes de
+ * que llegue ningun evento- y al volver de segundo plano -con el telefono
+ * bloqueado el websocket puede caerse y al volver el pasajero se encontraria el
+ * motorraton donde estaba hace diez minutos, D152-. En esos dos casos la
+ * antiguedad la cuenta el servidor; entre eventos la cuenta el telefono a partir
+ * de la marca de tiempo, con un temporizador, para que "perdimos la senal" se
+ * encienda aunque los eventos dejen de llegar.
  *
  * EL FILTRO POR CONDUCTOR NO ES LA SEGURIDAD, ES EL AHORRO. Sin el, a este
  * telefono llegarian los eventos de toda la flota para descartarlos aqui. Quien
  * decide que puede ver es `driver_locations_select_active_passenger`, que se
  * aplica tambien en tiempo real.
- *
- * TAMBIEN SE RELEE AL VOLVER DE SEGUNDO PLANO, por lo mismo que D152: con el
- * telefono bloqueado el websocket puede caerse, y al volver el pasajero se
- * encontraria el motorraton donde estaba hace diez minutos.
  */
 export function useDriverLocation(driverId: string | null): DriverLocation | null {
   const [location, setLocation] = useState<DriverLocation | null>(null);
@@ -40,6 +45,24 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
    */
   const turno = useRef(0);
 
+  /** Milisegundos de la ultima posicion conocida, para el temporizador. */
+  const ultimoAt = useRef<number | null>(null);
+
+  const aplicar = useCallback(
+    (lat: number, lng: number, heading: number | null, updatedAt: string, ageServidor?: number) => {
+      const at = Date.parse(updatedAt);
+      ultimoAt.current = Number.isNaN(at) ? Date.now() : at;
+      setLocation({
+        latitude: lat,
+        longitude: lng,
+        heading,
+        ageSeconds: ageServidor ?? Math.max(0, Math.round((Date.now() - ultimoAt.current) / 1000)),
+        updatedAt,
+      });
+    },
+    [],
+  );
+
   const releer = useCallback(async () => {
     if (driverId === null) return;
 
@@ -51,10 +74,11 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
     // Un fallo de red no borra lo que ya se sabe: la posicion de hace veinte
     // segundos sigue siendo mas util que un mapa sin motorraton, y la antiguedad
     // que se pinta al lado ya avisa de que no es de ahora.
-    if (resultado.ok) {
-      setLocation(resultado.data);
+    if (resultado.ok && resultado.data !== null) {
+      const d = resultado.data;
+      aplicar(d.latitude, d.longitude, d.heading, d.updatedAt, d.ageSeconds);
     }
-  }, [driverId]);
+  }, [driverId, aplicar]);
 
   /**
    * Cambiar de conductor borra la posicion del anterior.
@@ -62,16 +86,13 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
    * Se ajusta en el render y no en un efecto, que es la forma que React
    * documenta para corregir estado cuando cambia una entrada, y la unica que no
    * deja un fotograma con el motorraton de otro servicio en el mapa.
-   *
-   * Pasa de verdad: el pasajero cancela, vuelve a pedir y le toca otro
-   * conductor. Sin esto, el marcador del primero seguiria ahi hasta que llegara
-   * la primera posicion del segundo.
    */
   const [driverIdAnterior, setDriverIdAnterior] = useState(driverId);
 
   if (driverId !== driverIdAnterior) {
     setDriverIdAnterior(driverId);
     setLocation(null);
+    ultimoAt.current = null;
   }
 
   useEffect(() => {
@@ -91,7 +112,21 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
           table: 'driver_locations',
           filter: `driver_id=eq.${driverId}`,
         },
-        () => void releer(),
+        (payload) => {
+          const fila = payload.new as {
+            lat: number | null;
+            lng: number | null;
+            heading: number | null;
+            updated_at: string;
+          };
+          // Si por lo que sea la fila no trae las coordenadas sueltas, se
+          // pregunta como antes. No deberia pasar tras la migracion del paso 7.
+          if (fila.lat === null || fila.lng === null) {
+            void releer();
+            return;
+          }
+          aplicar(fila.lat, fila.lng, fila.heading, fila.updated_at);
+        },
       )
       .subscribe();
 
@@ -99,13 +134,23 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
       if (siguiente === 'active') void releer();
     });
 
+    // El telefono cuenta la antiguedad entre eventos: sin esto, si el conductor
+    // se queda sin cobertura la posicion se quedaria "fresca" para siempre y
+    // "perdimos la senal" no llegaria a encenderse.
+    const tic = setInterval(() => {
+      if (ultimoAt.current === null) return;
+      const edad = Math.max(0, Math.round((Date.now() - ultimoAt.current) / 1000));
+      setLocation((prev) => (prev === null ? prev : { ...prev, ageSeconds: edad }));
+    }, TICK_MS);
+
     return () => {
       clearTimeout(primera);
+      clearInterval(tic);
       listener.remove();
       void supabase.removeChannel(canal);
       turno.current += 1;
     };
-  }, [driverId, releer]);
+  }, [driverId, releer, aplicar]);
 
   return location;
 }

@@ -355,14 +355,17 @@ begin
       'lo termina', 'lo rechazo: ' || coalesce(nullif(v_h, ''), sqlstate), false);
   end;
 
-  -- 15. Y el servicio del pasajero queda terminado de verdad, no a medias.
+  execute 'reset role';
+  execute 'reset request.jwt.claims';
+
+  -- 15. Y el servicio del pasajero queda terminado de verdad, no a medias. Se
+  --     comprueba sin rol de conductor: desde la Fase 22 (H15) un conductor ya
+  --     no ve la solicitud de un viaje que termino, y aqui lo que importa es el
+  --     estado, no quien lo lee.
   select status::text into v_t from public.ride_requests
   where id = 'e1000000-0000-4000-8000-000000000001';
   insert into resultados values (15, 'El pasajero llega: su servicio queda terminado',
     'completed', coalesce(v_t, 'nulo'), coalesce(v_t = 'completed', false));
-
-  execute 'reset role';
-  execute 'reset request.jwt.claims';
 
   -- 16. Apagarse siempre se puede, aunque este bloqueado. Es lo que hace la
   --     propia funcion de bloqueo, y prohibirlo la habria roto.

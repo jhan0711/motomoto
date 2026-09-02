@@ -22,6 +22,19 @@ const MENSAJES: Record<string, string> = {
   INVALID_EXPIRY: 'La caducidad debe estar entre 60 y 3600 segundos.',
   INVALID_COORDINATE: 'Esa coordenada no es válida.',
   INVALID_RADIUS: 'El radio debe estar entre 0 y 50 kilómetros.',
+  // Fase 22, paso 6: cotas de los parámetros de operación.
+  INVALID_LOCATION_INTERVAL:
+    'El intervalo debe ser un entero: entre 3 y 30 segundos en viaje, entre 10 y 45 disponible.',
+  INVALID_LOCATION_DISTANCE: 'La distancia mínima debe ser un entero entre 10 y 500 metros.',
+  INVALID_STALE_WINDOW: 'La caducidad de la posición debe ser un entero entre 90 y 600 segundos.',
+  INVALID_ARRIVAL_RADIUS: 'El radio de llegada debe ser un entero entre 20 y 1000 metros.',
+  INVALID_AREA_MARGIN: 'El margen del área debe ser un entero entre 0 y 5000 metros.',
+  INVALID_FREE_CANCELLATION:
+    'La ventana de cancelación sin penalización debe ser un entero entre 0 y 600 segundos.',
+  INVALID_SUMMARY_WINDOW: 'La ventana del resumen debe ser un entero entre 1 y 60 minutos.',
+  INVALID_SIGNAL_WINDOW: 'El umbral de señal perdida debe ser un entero entre 60 y 900 segundos.',
+  SETTING_HAS_NO_RANGE:
+    'Ese parámetro no tiene un rango definido y no se puede cambiar desde aquí.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {

@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** MotoMoto (nombre provisional)
-- **Ultima actualizacion:** 2026-08-27
+- **Ultima actualizacion:** 2026-09-02
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -12,7 +12,7 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   11 creacion de solicitud, 12 modulo del conductor, 13 asignacion en tiempo real,
   14 seguimiento del conductor, 15 ciclo completo del servicio, 16 historial,
   17 calificaciones, 18 cancelaciones y errores operativos (comprometida por el usuario el
-  2026-08-21)
+  2026-08-21), 19 notificaciones, 20 panel administrativo (comiteada el 2026-09-02, `c7cd03c`)
 - **Ademas, terminado:** **D161, recoger pasajeros en ruta**, que no es una fase del plan
   original y sustituye a la regla R7. Con el se adelanto de la Fase 14 el dibujo de la ruta
 - **Fase 15 terminada:** el servicio se mueve por sus cinco estados desde la pantalla del
@@ -107,25 +107,62 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   entera**. Midiendo antes de escribir se vio que **bloquear a un conductor casi no le impedia
   trabajar**: con la sesion abierta seguia aceptando servicios. Ahora no acepta ofertas, no se
   conecta y se le apaga la disponibilidad, **pero termina el viaje que lleva** (D262)
-- **Trabajo siguiente:** lo decide el usuario. La Fase 20 no deja nada pendiente dentro de si
-  misma; lo que sigue abierto en el proyecto es **H22** -grants de mas a `anon` en funciones
-  operativas, aplazado a la Fase 22- y el mapa del recorrido (D255), que espera a que haya rastros
-  de verdad
-- **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
-  Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
-  `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
-  `20260827190000`; `supabase/dev-tools/prueba_documentos.sql`; el modulo
-  `admin/src/features/documents/` y su enganche en las fichas de conductor y de motorraton; **las
-  correcciones de los siete sitios que elegian "el primer conductor"** en `prueba_encomiendas`,
-  `prueba_recaudo`, `prueba_solicitud_con_valor` y `prueba_tablero`; los tipos regenerados y este
-  archivo—. **El commit del paso 3 costo dos intentos**: el primero no llego a hacerse y se
-  detecto al verificarlo con `git log` antes de empezar el paso siguiente, que es justo para lo
-  que se verifica. Lo que sigue de referencia historica: la nota que hubo aqui hasta el
-  2026-08-26 decia que quedaban doce archivos del bloque especial sin comitear y **era falsa**,
-  estaba fechada el 25 y el usuario comiteo despues. Lo que quedo comiteado en `475214b`: la
-  carpeta `admin/` entera, `supabase/dev-tools/seed_admin.sql`, el aislamiento del panel en
-  `tsconfig.json`, `eslint.config.js`, `.prettierignore` y `.gitignore`, y la actualizacion de
-  este archivo**
+- **La Fase 20 esta TERMINADA Y COMITEADA** (`c7cd03c`, "Fase 20 terminada"), los once pasos mas
+  el doble turno. **La Fase 21 del plan -gestion de conductores y vehiculos- quedo absorbida
+  dentro de la Fase 20** (pasos 4a, 4b, 4c, 5 y doble turno); no tiene trabajo propio
+- **LA FASE 22 ESTA COMPLETA Y VERIFICADA, LOS OCHO PASOS.** Seguridad y auditoria.
+  **Pendiente: el commit** (lo hace el usuario). Detalle paso a paso en la seccion 15.23. En
+  resumen:
+  1. `anon` ya no ejecuta **ninguna** funcion de `public` (dos migraciones).
+  2. El acceso al nombre y telefono de la contraparte **caduca al terminar el servicio** -H15
+     cerrado-: dos funciones de enlace estrechadas + siete a `security definer`. Se descarto el
+     `revoke` de columna por chocar con D242.
+  3. **GoTrue ya revocaba** las otras sesiones al cambiar la contrasena -pendiente obsoleto-,
+     sin cambio de codigo.
+  4. **Se queda AsyncStorage** (sesion 1518 bytes, secure-store falla sobre ~2048), y se anadio
+     `android.allowBackup: false`.
+  5. **H14 cerrado**: token `dangerText`, `warning700`, `info400`. El texto de error de campo
+     sube de 3,08:1 a 7,85:1 en oscuro.
+  6. **Cota a los 9 parametros de operacion** de `admin_set_setting` -eran 9 sin rango, no 3-,
+     con sus mensajes en el panel (regla 7).
+  7. **El pasajero pinta el puntero con el propio evento de tiempo real** -`lat`/`lng` en
+     `driver_locations`-: el evento llega usable en ~0,5 s y la cadencia visible baja a ~7,5 s.
+  8. **Barrido de cierre**: `prueba_barrido_seguridad.sql`, 8 invariantes en verde; de paso se
+     le quitaron a `anon` 154 permisos de tabla que sobraban.
+- **En verde:** 29 archivos de `prueba_*.sql` (mas de 630 comprobaciones), `prueba_barrido_seguridad`
+  8/8, `prueba_contraste_colores` 30/30, `prueba_cambio_contrasena_sesiones` 9/9. Ciclo de login
+  probado en el emulador tras el paso 8.
+- **PENDIENTE PARA PRODUCCION, NO PARA EL COMMIT:** recompilar el cliente movil **arm64** (para
+  la tablet) con `allowBackup: false` -la del emulador ya esta-, y el `location_interval_in_ride_seconds`
+  del servidor esta en 7 (dato, no codigo)
+- **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
+  usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
+  aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
+  en la re-consulta del pasajero-. **Arreglo A aplicado y verificado en el emulador**:
+  `location_interval_in_ride_seconds` bajado de 10 a 7 en `app_settings` (7,0 s medidos). El
+  arreglo de fondo -que el pasajero use la posicion del propio evento- es el paso 7 de la Fase 22.
+  Detalle en la seccion 15.23
+- **Ultimo commit:** `c7cd03c`, "Fase 20 terminada". **SIN COMITEAR:** este archivo
+  (`PROJECT_STATUS.md`); las migraciones `20260902170000`, `20260902180000`, `20260902190000` y
+  `20260902200000`; `supabase/dev-tools/prueba_grants_anon.sql` y
+  `supabase/dev-tools/prueba_h15_telefono_contraparte.sql`; el cambio en
+  `supabase/dev-tools/prueba_bloqueo_y_senal.sql` (paso 2); `src/features/fare/fare-service.ts`
+  y `src/types/database.ts` regenerado; `supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs`
+  y un comentario en `src/features/auth/auth-service.ts` (paso 3); `app.config.ts` y un
+  comentario en `src/lib/supabase.ts` (paso 4); `src/theme/colors.ts`,
+  `src/components/ui/input.tsx`, `src/app/passenger/destination.tsx`,
+  `admin/src/app/globals.css` y `supabase/dev-tools/prueba_contraste_colores.mjs` (paso 5); la
+  migracion `20260902210000`, `supabase/dev-tools/prueba_configuracion.sql`,
+  `admin/src/features/config/config-actions.ts` y `admin/src/features/config/types.ts` (paso 6);
+  la migracion `20260902220000`, `supabase/dev-tools/prueba_posicion_conductor.sql`,
+  `src/features/ride/use-driver-location.ts` y `src/features/ride/ride-service.ts` (paso 7); la
+  migracion `20260902230000`, `supabase/dev-tools/prueba_barrido_seguridad.sql` y el ajuste de
+  `prueba_auditoria.sql`, `prueba_encomiendas.sql` y `prueba_tarifas.sql` (paso 8). Los tipos en
+  `src/types/database.ts` regenerados. **Son 7 migraciones nuevas
+  (`20260902170000`-`20260902230000`), 6 pruebas nuevas (4 SQL + 2 `.mjs`), 5 pruebas ajustadas
+  y ~13 archivos modificados** entre la aplicacion movil y el panel. `android/` no sube al repositorio (el `allowBackup: false` se
+  regenera desde `app.config.ts`). El `location_interval_in_ride_seconds` en 7 es un dato en el
+  servidor, no va en el commit
 - **Carpeta del proyecto:** C:\dev\motomoto
 - **Repositorio:** https://github.com/jhan0711/motomoto (privado)
 
@@ -141,7 +178,7 @@ puede negociar.
 web y QA. Trabaja en Windows y desarrolla solo. **Prefiere respuestas cortas**: los mensajes
 largos con muchas tablas y alternativas le confunden. Una cosa por mensaje.
 
-**Como se trabaja aqui, en cinco reglas:**
+**Como se trabaja aqui, en ocho reglas:**
 
 1. **Estrictamente por fases.** No se empieza una fase sin que el la autorice de forma
    expresa, ni aunque parezca obvio. Cada fase termina en un checklist de validacion, nunca
@@ -155,7 +192,20 @@ largos con muchas tablas y alternativas le confunden. Una cosa por mensaje.
 4. **Ante un error, parar.** Se diagnostica la causa real, se aplica **una sola** correccion
    controlada y se verifica. No se cambian varias cosas a la vez, y no se deja puesto un
    cambio hecho sobre una hipotesis que resulto falsa.
-5. **Reconocer los propios errores sin adornos.** Treinta errores registrados; la mayoria
+5. **Limpiar las semillas antes de pasar la regresion.** Las herramientas `seed_*.sql`
+   dejan filas de verdad para poder mirar las pantallas, y las pruebas se montan su propio
+   mundo: si se cruzan, revientan por restricciones como `rr_one_active_per_passenger`. Cada
+   `seed_` tiene su `remove_`. Y **una prueba no debe suponer una base vacia**: si cuenta
+   filas, que filtre por lo suyo.
+6. **Recrear una funcion se hace copiando su definicion, no recordandola.** `create or
+   replace` no puede cambiar el tipo de retorno, asi que anadir una columna obliga a
+   `drop function`. Escribirla de memoria costo ocho columnas perdidas en el paso 11; lo cazo
+   la regresion.
+7. **Cambiar una regla del servidor obliga a revisar que pantallas la llaman.** El paso 11
+   hizo que bloquear a un conductor pidiera motivo, y la pantalla de conductores -del paso
+   4a- seguia mandando `null`: el usuario vio un "no pudimos completar la operacion" que no
+   explicaba nada.
+8. **Reconocer los propios errores sin adornos.** Treinta errores registrados; la mayoria
    fueron del asistente. Estan escritos con su causa y su leccion, y varios los encontro el
    usuario, no las pruebas. Eso se dice tal cual.
 
@@ -168,6 +218,13 @@ Desktop; el asistente no ejecuta git salvo para consultar.
 - En PowerShell, **siempre `npx.cmd` y `npm.cmd`**. Sin el sufijo fallan.
 - **Ya no se usa Expo Go.** Hay un cliente de desarrollo propio, instalado en el emulador.
   Solo hay que recompilar si se toca codigo nativo o se anade una libreria.
+- **HAY UNA TABLET FISICA CONECTADA POR USB** (`adb devices` la ensena), con la aplicacion
+  instalada y con sesion iniciada. Sirve para verificar de verdad: se lanza con
+  `adb shell monkey -p com.motomoto.app -c android.intent.category.LAUNCHER 1`, se toca con
+  `adb shell input tap X Y` y se mira con `adb exec-out screencap -p > archivo.png`.
+  **Tarda entre 20 y 40 segundos en montar** -Mapbox y la sesion-: una pantalla gris casi
+  siempre es que aun esta cargando, no que este rota. Antes de darla por rota, mirar
+  `adb logcat` buscando `ReactNativeJS`; sin errores ahi, es que falta esperar.
 - Los comandos de `adb` con rutas del dispositivo van por **PowerShell**, no por Git Bash.
 - Nada de emojis en la interfaz. Iconos de `lucide-react-native`.
 - Los textos que ve el usuario van en **espanol correcto, con tildes**. Los comentarios del
@@ -528,7 +585,7 @@ aplicacion sigue sin tocar dinero.
 |---|---|---|
 | D91 | Confirmacion de correo | Desactivada en el MVP. El correo integrado de Supabase tiene limites demasiado bajos para que cada registro dependa de el. Se reactiva en la Fase 25 con servidor de correo propio, que es un interruptor del panel, no una reescritura |
 | D92 | Telefono | Obligatorio desde el registro. El backend lo exige para solicitar servicio, y pedirlo despues dejaria cuentas que existen pero no pueden usar la aplicacion. Movil colombiano de 10 digitos que empieza por 3, normalizado antes de guardar |
-| D93 | Almacenamiento de la sesion | AsyncStorage, confirmando lo que ya implementaba el cliente. expo-secure-store tiene limite por entrada y la sesion de Supabase puede rozarlo: cambiaria un cifrado por un fallo silencioso de persistencia. Se revisa en la Fase 22 |
+| D93 | Almacenamiento de la sesion | AsyncStorage, confirmando lo que ya implementaba el cliente. expo-secure-store tiene limite por entrada y la sesion de Supabase puede rozarlo: cambiaria un cifrado por un fallo silencioso de persistencia. **REVISADO Y CONFIRMADO en la Fase 22, paso 4** (2026-09-02): la sesion medida son ~1518 bytes y crece con el JWT, secure-store avisa/falla por encima de ~2048. Se queda AsyncStorage; la proteccion en reposo la dan el sandbox y el cifrado de disco, y se anadio `android.allowBackup: false` para que el token no salga en la copia de Google Drive. Detalle en 15.23 |
 | D94 | Recuperacion de contrasena | Enlace profundo a la aplicacion. La direccion se genera con `createURL`, que produce `exp://` en Expo Go y `motomoto://` en la app instalada |
 | D95 | Entrega del enlace de recuperacion | Se acepta el enlace profundo tal cual para el MVP. El navegador de Android no completa la redireccion de `https` a esquema propio (H7), y la solucion solida son los enlaces de aplicacion de Android, que exigen dominio propio. Se resuelve en la Fase 25 junto con el dominio y el correo propio |
 | D96 | Mensajes de error de autenticacion | Codigo estable para comparar en el codigo y en las pruebas, mensaje en espanol solo para mostrar. Mismo criterio que D88. El codigo es lo que se compara, nunca el texto |
@@ -1147,9 +1204,9 @@ Nunca confiar unicamente en validaciones del frontend.
 | 18 | Cancelaciones y errores operativos | COMPLETADA Y APROBADA |
 | 19 | Notificaciones | COMPLETADA Y APROBADA |
 | — | **BLOQUE ESPECIAL: tarifas, encomiendas y carga** (seccion 15.21) | **TERMINADO Y COMITEADO** |
-| 20 | Panel administrativo | **EN CURSO.** Paso 1 de 11 hecho y verificado (seccion 15.22) |
-| 21 | Gestion de conductores y vehiculos | Pendiente |
-| 22 | Seguridad y auditoria | Pendiente |
+| 20 | Panel administrativo | **COMPLETADA Y COMITEADA** (`c7cd03c`). Once pasos + doble turno (seccion 15.22) |
+| 21 | Gestion de conductores y vehiculos | **ABSORBIDA en la Fase 20** (pasos 4a/4b/4c/5 + doble turno). Sin trabajo propio |
+| 22 | Seguridad y auditoria | **COMPLETADA Y VERIFICADA 2026-09-02.** Los ocho pasos (seccion 15.23). Pendiente el commit |
 | 23 | Pruebas | Pendiente |
 | 24 | Optimizacion | Pendiente |
 | 25 | Preparacion para produccion | Pendiente |
@@ -3006,7 +3063,8 @@ src/types/database.ts             regenerado
 
 ### Lo que queda comprometido para despues
 
-- **H15 en la Fase 22**, con su plan escrito (D203)
+- **H15 en la Fase 22**, con su plan escrito (D203). **CERRADO el 2026-09-02** en el paso 2 de
+  la Fase 22 (seccion 15.23)
 - **H16 se ve ahora en pantalla.** El historial del conductor ensena "A 86,8 km de la
   recogida" en una oferta real de la Fase 13. No lo causa esta fase, pero ya no es un
   hallazgo teorico: un conductor lo lee
@@ -5828,16 +5886,13 @@ podia ver. Lo que hay que comprobar es que no ve las ajenas, y eso es lo que com
   de hoy. H10 el indice unico de `places` normaliza mayusculas y espacios de
   los extremos pero no los del medio, asi que "El  parque" con dos espacios entraria como un
   lugar distinto; importara cuando el administrador pueda crearlos desde el panel (Fase 20).
-  **H15 DECIDIDO, se cierra en la Fase 22.** `shares_ride_with` no filtra por estado, asi que
-  **una vez que un conductor lleva a alguien puede leer su nombre y su telefono para siempre**,
-  y `driver_linked_to_request` deja igual de expuesto `contact_phone` de cualquier solicitud
-  que se le llegara a ofrecer. En la Fase 16 se decidio no tocarlo todavia (D203): arreglarlo
-  bien obliga a que el telefono deje de ser una columna legible y pase a viajar solo por
-  funciones que comprueban el estado, y eso toca los caminos vivos de las fases 12 a 14, que
-  no se pueden volver a verificar con un solo emulador y sin movimiento. **Lo que si esta
-  hecho:** los comentarios de las dos funciones y de la politica ya dicen la verdad, y ninguna
-  pantalla del historial ensena el telefono ni el nombre de quien no llevo. El plan de cierre,
-  en cuatro pasos, esta escrito en `20260819223000_h15_comment_tells_the_truth.sql`.
+  **H15 CERRADO en la Fase 22, paso 2** (2026-09-02). `shares_ride_with` y
+  `driver_linked_to_request` se estrecharon a los estados en curso: al terminar el servicio, el
+  conductor y el pasajero dejan de verse el perfil y el telefono por consulta directa. El
+  historial sigue dando el NOMBRE porque sus seis funciones -mas `list_driver_earnings`- pasaron
+  a `security definer` con su propio filtro por `auth.uid()`. Se descarto el `revoke` de columna
+  del plan original: obligaba a pasar `admin_list_active_services` a definer y revertir D242.
+  Detalle en la seccion 15.23.
   **H20 RESUELTO** en la Fase 17, y lo encontro la tablet: **la aplicacion se quedaba en
   "Cargando" para siempre al arrancar** si la peticion del perfil no respondia ni fallaba, que
   es lo que hace una red que va y viene. Sin error, sin reintentar y sin salida. La pantalla de
@@ -5871,10 +5926,12 @@ podia ver. Lo que hay que comprobar es que no ve las ajenas, y eso es lo que com
   todavia no hay ubicacion, asi que no rompe nada, pero la justificacion escrita de D122 —"el
   parque dice donde opera el servicio"— hoy no se sostiene. Decidir cual de las dos
   coordenadas es la buena, que es cosa de quien conoce Amalfi.
-  **H14** los pares de color de estado del sistema de diseno no llegan al contraste minimo de
-  4,5:1. El de error quedo corregido en la Fase 11 con el token `onDangerSubtle`, pero siguen
-  bajo minimos exito, aviso e informacion, y el error **dentro de un campo**, que usa `danger`
-  sobre la superficie y en oscuro da 3,08:1: por debajo del estandar aunque legible.
+  **H14 CERRADO en la Fase 22, paso 5** (2026-09-02). El texto de error dentro de un campo pasa
+  al token nuevo `dangerText` (danger600 en claro, danger300 en oscuro): sube de 3,08:1 a
+  7,85:1. La estrella de calificacion en claro usa `warning700` (2,15:1 -> 3,81:1) y el icono
+  de informacion en oscuro `info400`. Los iconos de estado se miden contra 3:1 -WCAG 1.4.11,
+  que es lo que aplica a un grafico- y el texto contra 4,5:1. Guardado en
+  `supabase/dev-tools/prueba_contraste_colores.mjs`. Detalle en 15.23.
   H7 el navegador de Android no entrega el enlace de recuperacion a
   la app, aceptado por D95 y a resolver en la Fase 25. H8 los 21 mensajes de las funciones de
   la base de datos estan escritos sin tildes, contra D56
@@ -5980,6 +6037,446 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
 
 ---
 
+## 15.23 FASE 22: SEGURIDAD Y AUDITORIA (COMPLETADA, PENDIENTE DE COMMIT)
+
+**AUTORIZADA EL 2026-09-02.** Recoge la deuda de seguridad que las fases anteriores fueron
+aplazando aqui, mas dos hallazgos de un diagnostico previo. No empieza hasta que el usuario
+autorice el primer paso.
+
+### Los ocho pasos acordados
+
+| # | Paso | De donde viene |
+|---|---|---|
+| 1 | Revocar `anon` donde sobra en las funciones operativas y **verificar el ciclo completo** de las fases 11 a 18 despues. **HECHO Y VERIFICADO el 2026-09-02** — resulto ser todo el esquema, no solo las operativas | H22, D211, seccion 16 |
+| 2 | Cerrar H15: el acceso al telefono y al nombre de la contraparte no caduca. **HECHO Y VERIFICADO el 2026-09-02** — sin el `revoke` de columna del plan (chocaba con D242) | H15, D203 |
+| 3 | Cambiar la contrasena expulsa las demas sesiones. **HECHO Y VERIFICADO el 2026-09-02** — GoTrue ya lo hacia; el pendiente estaba obsoleto. Sin cambio de codigo | Seccion 16 |
+| 4 | Decidir el almacenamiento de la sesion: AsyncStorage frente a `expo-secure-store`. **HECHO Y VERIFICADO el 2026-09-02** — se queda AsyncStorage (medido); de paso se anadio `allowBackup: false` | D93 |
+| 5 | Terminar H14: contraste de los colores de estado y el error dentro de campo. **HECHO Y VERIFICADO el 2026-09-02** — token `dangerText` nuevo, `warning700`, `info400`; 30 comprobaciones de contraste; visto en el emulador en claro y oscuro | H14 |
+| 6 | Poner cota minima y maxima a los parametros de operacion en `admin_set_setting`. **HECHO Y VERIFICADO el 2026-09-02** — resultaron ser **9** parametros en el `else` sin rango, no 3; todos acotados, el `else` pasa a rechazar. Visto en el panel | Hallazgo del diagnostico del puntero, 2026-09-02 |
+| 7 | Arreglo B del puntero: el pasajero pinta la posicion con el propio evento de tiempo real. **HECHO Y VERIFICADO el 2026-09-02** — `lat`/`lng` en `driver_locations` por disparador; el evento llega usable en ~0,5 s, sin la re-consulta de 2-4 s | Diagnostico del puntero, 2026-09-02 |
+| 8 | Barrido de cierre: `prueba_barrido_seguridad.sql`, 8 invariantes de toda la superficie. **HECHO Y VERIFICADO el 2026-09-02** — todo en verde; de paso se le quitaron a `anon` los 154 permisos de tabla que tenia de mas. Ciclo de login probado en el emulador | Metodo del proyecto |
+
+**Fuera de esta fase**, por no ser de seguridad: H16 (radio de corte de `find_available_drivers`),
+H10 (espacios en `places`), H17 (coordenada del parque, necesita a quien conozca Amalfi).
+
+### El diagnostico previo: el puntero del conductor (2026-09-02)
+
+El usuario, probando en el emulador con Fake GPS moviendo la ubicacion, vio que el pasajero
+veia moverse al conductor con **casi 15 segundos** de retraso, y pregunto si era normal. El
+criterio de aceptacion 4 pone el tope en 15 s, asi que estaba **en el borde**.
+
+**Medido con datos reales**, conductor de prueba en servicio aceptado (`driver_on_the_way`),
+`riding = true`:
+
+| Medida | Resultado |
+|---|---|
+| Escritura del conductor en `driver_locations` | cada **~10,0 s** (8 muestras, 9,6-10,1 s) — correcto, R9/D175 |
+| Llegada del evento de tiempo real a un cliente | cada ~10 s, espaciado limpio, sin rafagas |
+| `location_interval_in_ride_seconds` en servidor | `10` |
+| Contenido del evento de tiempo real | ya trae `updated_at` **y** `location` |
+
+**Conclusion:** el emisor esta bien; escribe cada 10 s tenga o no movimiento (el temporizador
+dispara siempre; el acelerador de 50 m solo anade envios). El retraso son los 10 s entre
+escrituras **mas** la re-consulta que hace el pasajero al recibir el aviso: no usa la posicion
+del evento porque el `location` viene en binario PostGIS, asi que pide una funcion aparte para
+traer lat/lon. Eso suma ~2-4 s. Total visible ~12-15 s.
+
+**Arreglo A, aplicado y verificado el 2026-09-02.** `location_interval_in_ride_seconds` bajado
+de **10 a 7** con `update app_settings ... where key = 'location_interval_in_ride_seconds'`
+(cambio directo en el servidor: es un valor de operacion, no de negocio, y no lleva linea de
+auditoria a proposito). App reiniciada en el emulador para que lo tome -el parametro se cachea
+por sesion, `src/features/ride/settings.ts`-. **Medicion nueva: 13 escrituras consecutivas a
+7,0 s exactos** (gaps 6,98-7,04). Cadencia visible estimada para el pasajero ~9-11 s, con 4-6 s
+de margen bajo el criterio. Coste: de 6 a ~8,6 escrituras por minuto y conductor en viaje,
+insignificante para la flota de Amalfi.
+
+**Por que se queda a mano y no se cambia desde el panel** (decidido por el usuario el
+2026-09-02): dejar que el administrador lo baje mas desde el panel abre justo el agujero de
+coste que el paso 6 viene a cerrar. El valor 7 es ahora el de referencia.
+
+**Arreglo B:** es el paso 7 de esta fase.
+
+### Lo que se hizo: paso 1, cerrarle `public` a `anon` (2026-09-02)
+
+`supabase/migrations/20260902170000_revoke_anon_execute_all_public_functions.sql`,
+`supabase/migrations/20260902180000_revoke_public_execute_on_public_functions.sql`,
+`supabase/dev-tools/prueba_grants_anon.sql` (6 comprobaciones).
+
+**LA CAUSA RAIZ, MEDIDA Y NO SUPUESTA.** Supabase deja puesto un `alter default privileges
+for role postgres in schema public grant execute on functions to anon, authenticated,
+service_role`. Es un grant explicito por rol, asi que los `revoke ... from public` de todas las
+migraciones anteriores **nunca lo tocaron**. `has_function_privilege('anon', ...)` decia `true`
+para casi todo el esquema: las ~35 `admin_*`, `log_admin_action`, `is_admin`, `get_setting`,
+las cuatro operativas vivas y ~18 de disparador. `request_ride` y `rate_ride` ya estaban
+cerradas desde la Fase 15; el plan las listaba de mas.
+
+**POR QUE NO ROMPE NADA, COMPROBADO.** La aplicacion no llama ninguna funcion como `anon` -los
+19 RPC del cliente salen de pantallas con sesion-. Ninguna politica RLS de `public` nombra a
+`anon` ni a `public`, asi que una sesion `anon` no evalua una sola expresion de politica. Los
+disparadores corren con la identidad de su dueno. `authenticated` y `service_role` conservan su
+grant explicito.
+
+**HIZO FALTA UNA SEGUNDA MIGRACION, Y LA CAZO LA PRUEBA.** La primera revoco el grant explicito
+a `anon` y con eso cayeron las `admin_*`. Pero 19 funciones -las cuatro operativas, `is_admin`,
+`get_setting`, `is_within_service_area` y 12 de disparador- seguian abiertas: tenian la entrada
+`=X/postgres` en su `proacl`, que es el grant a **`PUBLIC`** que PostgreSQL pone solo al hacer
+`create function` y que las migraciones de las Fases 5 y 13 nunca revocaron. `anon` es miembro
+de `PUBLIC`. La segunda migracion revoca `execute` a `PUBLIC` -sin tocar los grants explicitos
+de `authenticated` y `service_role`- y corta tambien el grant por defecto a `PUBLIC` para las
+funciones futuras. **Una sola correccion por vez: la primera se aplico, la prueba dijo "19
+fallando", se diagnostico la causa real -el grant a PUBLIC- y la segunda la cerro.**
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El barrido | `prueba_grants_anon.sql`, 6 comprobaciones | **6 de 6**. Cero funciones de `public` ejecutables por `anon` |
+| Lo que la app y el panel necesitan | Las 19 RPC del cliente y una muestra del panel | `authenticated` y `service_role` intactos |
+| Las operativas se defienden solas | `cancel_ride` y `accept_ride_offer` llamadas por quien no es el dueno | "Ese viaje no es tuyo" / "Esa oferta no es tuya" |
+| El grant por defecto | `pg_default_acl` del rol `postgres` | sin `anon`, sin `PUBLIC` |
+| Regresion completa | Los 26 archivos de `prueba_*.sql` | **584 comprobaciones, 0 fallando** |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| El panel del conductor tras la migracion | Emulador, `conductor.prueba` | Carga, se pone disponible y espera solicitudes; sin errores de JS |
+
+**Un tropiezo de la regresion que no era un fallo.** Tres scripts -`prueba_calificaciones`,
+`prueba_notificaciones`, `prueba_recaudo`- fallaron la primera vez con "Ya tienes un servicio
+en curso" y una colision de `rr_one_active_per_passenger`: reutilizan el conductor
+`d0000000-...0001` y al pasajero real, que tenian abierto el servicio de prueba del puntero.
+Se cancelo ese servicio -desde el emulador, el usuario- y los tres pasaron. Es la regla 5:
+limpiar las semillas antes de la regresion.
+
+### Lo que se hizo: paso 2, el acceso a la contraparte caduca (2026-09-02)
+
+`supabase/migrations/20260902190000_h15_counterpart_access_expires.sql`,
+`supabase/migrations/20260902200000_h15_driver_earnings_definer.sql`,
+`supabase/dev-tools/prueba_h15_telefono_contraparte.sql` (13 comprobaciones),
+`src/features/fare/fare-service.ts`, `src/types/database.ts`,
+y `supabase/dev-tools/prueba_bloqueo_y_senal.sql` (una comprobacion movida fuera del rol de
+conductor, ver abajo).
+
+**EL HALLAZGO (Fase 5, dicho de verdad en `20260819223000`).** `shares_ride_with` y
+`driver_linked_to_request` -las dos funciones en las que se apoyan las politicas del perfil y
+del telefono- devolvian `true` para siempre: un conductor que llevo a alguien una vez, o al que
+solo se le ofrecio un servicio, podia leer su `full_name`, su `phone` y el `contact_phone` de
+la solicitud mientras existiera la fila.
+
+**LA VIA, DECIDIDA CON EL USUARIO (opcion A).** Estrechar las dos funciones a los estados en
+curso (`assigned`, `driver_on_the_way`, `driver_arrived`, `in_progress`) mas la oferta viva
+pendiente, y pasar a `security definer` las funciones de historial que leen el NOMBRE de la
+contraparte para un servicio ya terminado. El nombre sigue viniendo -por funcion, con su filtro
+por `auth.uid()`-; por consulta directa a la tabla, al terminar el servicio, no sale nada.
+
+**SE DESCARTO EL `revoke` DE COLUMNA del plan original (opcion B).** Obligaba a pasar
+`admin_get_ride_detail` y `admin_list_active_services` -el tablero, que se consulta cada diez
+segundos- a `security definer` con `is_admin()` dentro, y eso revierte D242, que las dejo
+`invoker` a proposito. El nombre permanente de la contraparte -no el telefono- se acepta: ya se
+ve en el propio historial y no es dato sensible.
+
+**LAS FUNCIONES QUE PASARON A DEFINER**, todas con `where ... = (select auth.uid())` como su
+propia puerta: `get_passenger_trip`, `get_driver_job`, `list_driver_history`,
+`list_passenger_history`, `get_finished_request`, `get_driver_cancelled_notice` y
+-en la migracion `20260902200000`- `list_driver_earnings`. Se uso `alter function ... security
+definer`, no `create or replace`, para no reescribir el cuerpo (regla 6).
+
+**`get_active_request` Y `list_driver_active_rides` SE QUEDARON `invoker`**: solo leen el
+telefono con un viaje en curso, y ahi las funciones estrechadas siguen devolviendo `true`.
+
+**LA CARGA PASA POR FUNCION.** `fetchRequestCargo` leia `ride_request_cargo` directo, apoyandose
+en `driver_linked_to_request`. Al estrecharla, el conductor perdia el desglose de carga de sus
+viajes pasados. Se creo `list_request_cargo(uuid)` `security definer`, que mantiene el enlace
+permanente solo para ese dato -los nombres de los tipos de carga no son sensibles-.
+
+**UN FALLO DEL ASISTENTE, CAZADO POR LA REGRESION.** La primera migracion dejo fuera
+`list_driver_earnings`, que tambien es `invoker` y lee `ride_requests` de viajes COMPLETADOS:
+al estrecharse la politica devolvia cero filas. Lo cazo `prueba_recaudo.sql` (checks 3, 5, 6,
+11). Una sola correccion: `20260902200000` la pasa a definer.
+
+**UNA COMPROBACION DE PRUEBA QUE YA NO VALIA.** `prueba_bloqueo_y_senal` check 15 leia
+`ride_requests.status` **como el conductor** despues de `complete_ride`. Desde H15 un conductor
+ya no ve la solicitud de un viaje terminado -que es el punto-, asi que la comprobacion se movio
+fuera del rol de conductor: lo que importa es el estado, no quien lo lee.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El acceso caduca | `prueba_h15_telefono_contraparte.sql`, 13 comprobaciones | **13 de 13**. En curso las dos partes se ven; al terminar, por consulta directa no sale nada; el historial da el nombre |
+| Regresion completa | Los 27 archivos de `prueba_*.sql` | **597 comprobaciones, 0 fallando** |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+| Arranque de la app | Emulador, `conductor.prueba` | `fetchProfile` carga el perfil propio sin cambios |
+| Historial del conductor | Emulador, lista y detalle | Muestran **"Jhan Roldan"** -el pasajero del servicio de prueba que el usuario cancelo-, por funcion `definer`, con el enlace de la tabla ya cortado |
+| Recaudo del conductor | Emulador | Carga sin error (`list_driver_earnings` definer) |
+
+### Lo que se hizo: paso 3, el cambio de contrasena y las otras sesiones (2026-09-02)
+
+`supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs` (9 comprobaciones), y una linea de
+comentario en `src/features/auth/auth-service.ts` (`updatePassword`).
+
+**NO HIZO FALTA CAMBIAR CODIGO.** El pendiente -"Supabase no expulsa a quien ya estuviera
+dentro en otro telefono al cambiar la contrasena"- venia de la Fase 6 y **quedo obsoleto**:
+GoTrue anadio ese comportamiento en algun momento y hoy **revoca por su cuenta todas las demas
+sesiones** al cambiar la contrasena. Solo sobrevive la que hace la peticion.
+
+**COMO SE COMPROBO, CONTRA EL SERVIDOR DE VERDAD.** El script abre dos "dispositivos" con la
+misma cuenta y prueba los dos caminos:
+
+- **Camino del enlace de correo** (`updatePassword` a secas): tras el cambio, el refresh token
+  del otro dispositivo deja de valer; el de este sigue.
+- **Camino de dentro de la aplicacion** (`changePassword`, que reautentica antes): la sesion
+  previa a la reautenticacion -la vieja de este mismo aparato- **tambien** se revoca, ademas de
+  la del otro dispositivo. La sesion nueva de este aparato sigue.
+
+**Un cambio del asistente que se retiro.** La primera version anadio un
+`supabase.auth.signOut({ scope: 'others' })` explicito despues de `updateUser`. Al medir se vio
+que GoTrue ya lo hacia, asi que el `signOut` sobraba: se quito (regla 4, no dejar un cambio
+puesto sobre una hipotesis que resulto falsa). Queda el script como vigilante, por si una
+version futura de GoTrue rompe ese comportamiento.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las dos vias de cambio de contrasena | `prueba_cambio_contrasena_sesiones.mjs`, 9 comprobaciones | **9 de 9** |
+| La regresion de la base de datos | Sin migracion en este paso; los 27 archivos siguen igual | 597, 0 fallando |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+
+**La contrasena del pasajero de prueba** (`pasajero.prueba@motomoto-qa.co` / `Pasajero.2026`) la
+deja el script como estaba. Si el script se corta a la mitad, puede quedar en `Pasajero.2026-temp`.
+
+### Lo que se hizo: paso 4, el almacenamiento de la sesion (2026-09-02)
+
+`app.config.ts` (`android.allowBackup: false`), `src/lib/supabase.ts` (comentario),
+`android/app/src/main/AndroidManifest.xml` (aplicado tambien a mano; la carpeta `android/` no
+sube al repositorio).
+
+**LA DECISION: SE QUEDA ASYNCSTORAGE.** Medido -no supuesto- con una sesion real del pasajero
+de prueba: **1518 bytes** (`access_token` 843, mas el `refresh_token` y el objeto `user`), y
+**crece con cada claim que se anada al JWT**. `expo-secure-store` en Android tiene un tope
+practico de **~2048 bytes por entrada**: avisa y puede fallar por encima. Cifrar la sesion ahi
+cambiaria un riesgo por un **cierre de sesion silencioso** -usuarios expulsados sin motivo
+aparente-. Ademas es una libreria nativa nueva: recompilar el cliente para las dos
+arquitecturas, una por una. El razonamiento de D93 se sostiene y ahora esta cuantificado.
+
+**LO QUE PROTEGE EL TOKEN EN REPOSO SIN CIFRARLO AQUI.** El sandbox de Android -solo la propia
+aplicacion y root leen `/data/data/com.motomoto.app/`- y el cifrado de disco del sistema (FBE).
+En un telefono bloqueado y sin root, que es el caso comun, el token no es accesible.
+
+**LO QUE SE ENCONTRO MIRANDO: `android:allowBackup="true"`** en el manifest -el valor por
+defecto de Android, que Expo no cambia-. Con eso, Android sube los datos de la aplicacion
+-AsyncStorage incluido- a la **copia de seguridad de Google Drive** del usuario, de forma
+automatica y periodica. Un ataque a esa cuenta de Google podria restaurar la copia en otro
+aparato y quedarse con una sesion abierta. Se puso **`android.allowBackup: false`** en
+`app.config.ts`. La sesion no es un dato que deba sobrevivir a un restore: todo esta en el
+servidor.
+
+**TOMA EFECTO EN LA PROXIMA COMPILACION NATIVA.** `allowBackup` es un atributo del
+`AndroidManifest`, asi que el cambio no llega al cliente que hay hoy en el emulador hasta que se
+recompile. Verificado que `npx.cmd expo config` ya resuelve `android.allowBackup = false` y que
+el plugin `AllowBackup` de `@expo/config-plugins` lo escribe en el manifest al hacer `prebuild`.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Tamano real de la sesion | `signInWithPassword` + `JSON.stringify` | 1518 bytes, con margen escaso frente al tope de secure-store |
+| La config resuelve el flag | `npx.cmd expo config --type public` | `android.allowBackup = false` |
+| El manifest y el `.apk` | Recompilado x86_64 e instalado en el emulador; `adb shell dumpsys package` | **`ALLOW_BACKUP` ya no aparece en los flags de la aplicacion** |
+| La sesion sigue viva tras reinstalar | La aplicacion arranca directa a "Disponible", sin pedir login | AsyncStorage intacto |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+
+### Lo que se hizo: paso 5, el contraste de los colores de estado (2026-09-02)
+
+`src/theme/colors.ts` (token nuevo `dangerText`, palette `warning700` e `info400`),
+`src/components/ui/input.tsx` y `src/app/passenger/destination.tsx` (el texto de error pasa a
+`dangerText`), `admin/src/app/globals.css` (`--color-warning` alineado, D237),
+`supabase/dev-tools/prueba_contraste_colores.mjs` (30 comprobaciones).
+
+**LO QUE H14 DECIA, Y LO QUE DE VERDAD FALLABA.** El hallazgo pedia 4,5:1 para todos los pares
+de estado. Pero desde D202 el color del estado **vive en el icono, nunca en el texto**, y a un
+grafico con significado lo que le exige WCAG (1.4.11) es **3:1**, no 4,5:1. Medido token a token:
+
+| Combinacion | Antes | Ahora | Umbral |
+|---|---|---|---|
+| Texto de error de campo, tema oscuro (`danger` sobre `surface`) | **3,08:1** | `dangerText` = **7,85:1** | 4,5 (texto) |
+| Estrella de calificacion, tema claro (`warning` sobre blanco) | **2,15:1** | `warning700` = **3,81:1** | 3,0 (grafico) |
+| Icono de informacion, tema oscuro (`info` sobre `surface`) | **2,88:1** | `info400` = **5,86:1** | 3,0 (grafico) |
+| Aviso de error (`onDangerSubtle` sobre `dangerSubtle`) | ya corregido en la Fase 11 | 5,46 / 8,77 | 4,5 (texto) |
+| Icono de exito, los dos temas | 3,24-5,23 | sin cambio | 3,0 (grafico) — ya pasaba |
+
+**EL TOKEN NUEVO: `dangerText`.** Rojo mas oscuro que `danger` en claro (`danger600`), mas claro
+en oscuro (`danger300`), mismo patron que `dangerSubtle`. Es para el texto que cuelga de un
+campo -`input.tsx`- y para el aviso de la lista de destinos -`destination.tsx`-, los dos unicos
+sitios donde el color de estado se usaba como texto. El icono de cada uno sigue en `danger`
+solido (3:1, que un icono si alcanza).
+
+**`warning` PASA A SER POR TEMA**, como `brand`: `warning700` (un oro oscuro) en claro para que
+la estrella se lea sobre blanco; `warning500` en oscuro, donde ya daba 6,94:1. `onWarning` no
+cambia -sigue siendo `neutral900`- y sobre el nuevo `warning700` da 4,65:1.
+
+**`info` e `infoSubtle` no los usa ninguna pantalla todavia**, pero se dejan coherentes: en
+oscuro `info` pasa a `info400` y `onInfo` a `neutral900` (mismo criterio que `onWarning`).
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Todos los pares de estado | `prueba_contraste_colores.mjs`, lee los tokens reales | **30 de 30** |
+| Texto de error de campo | Emulador, pantalla de cambio de contrasena, claro **y oscuro** | Legible en los dos; en oscuro era el caso de 3,08:1 |
+| Estrella de calificacion | Emulador, perfil del conductor, claro y oscuro | Oro oscuro en claro, ambar en oscuro; se lee |
+| Aplicacion movil y panel | `typecheck`, `lint`, `format:check` en los dos proyectos | Todo en 0 |
+
+### Lo que se hizo: paso 6, cota a los parametros de operacion (2026-09-02)
+
+`supabase/migrations/20260902210000_bound_operational_settings.sql`,
+`supabase/dev-tools/prueba_configuracion.sql` (de 25 a 45 comprobaciones),
+`admin/src/features/config/config-actions.ts` (ocho mensajes nuevos),
+`admin/src/features/config/types.ts` (etiqueta que faltaba).
+
+**EL HALLAZGO, MEDIDO CONTRA EL SERVIDOR.** `admin_set_setting` validaba cada parametro por
+clave, pero **nueve** caian en el `else` generico -no tres, como decia el plan-, cuya unica
+regla era `v_number >= 0`:
+
+| Parametro | En 0 | Muy grande |
+|---|---|---|
+| `location_interval_in_ride_seconds` | `setInterval` casi en bucle, tormenta de escrituras en `driver_locations` | el pasajero pierde al conductor |
+| `location_interval_available_seconds` | igual | el conductor no aparece en las busquedas |
+| `location_min_distance_m` | cada lectura de GPS dispara un envio | el acelerador no salta nunca |
+| `driver_location_stale_seconds` | **nadie esta "disponible" nunca, el reparto entero deja de funcionar** | un conductor que cerro la app sigue como disponible |
+| `driver_arrival_radius_m` | **el conductor no puede confirmar "he llegado" jamas** | confirma desde cualquier sitio |
+| `driver_signal_lost_seconds` | todo servicio en curso marca "sin senal" (R10) | nunca avisa |
+| `service_area_margin_m` | zona mas estricta | se aceptan viajes fuera de Amalfi |
+| `free_cancellation_seconds` | toda cancelacion penalizada al instante | nunca se penaliza |
+| `finished_summary_minutes` | el resumen no se muestra | se ensena dias |
+
+**CADA RANGO CON SU MOTIVO** (escrito en la migracion), todos exigen entero -el cliente
+descarta en silencio los decimales-. Los dos intervalos de posicion se acotan mirandose entre
+si: `location_interval_available_seconds` (10-45) queda por debajo de `driver_location_stale_seconds`
+(90-600) con margen, o un conductor caducaria entre un envio y el siguiente.
+
+**EL `else` PASA A RECHAZAR.** Con los 19 parametros de `app_settings` acotados uno por uno, el
+`else` ya no es "y los demas que no sean negativos" sino un error `SETTING_HAS_NO_RANGE`: si se
+anade una clave y se olvida su cota, el administrador recibe un rechazo claro.
+
+**REGLA 7: SE REVISO QUE PANTALLA LLAMA A LA FUNCION.** El panel traduce el `hint` a un mensaje
+en espanol y, sin el, ensena "No pudimos completar la operacion". Se anadieron los ocho mensajes
+nuevos a `config-actions.ts`. Y `driver_signal_lost_seconds` **se veia con la clave cruda**
+porque le faltaba la etiqueta en `types.ts` -ahora dice "Cuando se avisa de un conductor sin
+senal"-.
+
+**UN AJUSTE SOBRE LA MARCHA.** La primera version de la migracion acotaba ocho parametros. Al
+verificar en el panel se vio que `driver_signal_lost_seconds` -que R10/D263 dejo editable a
+proposito- tambien caia en el `else` y quedaba bloqueado por el nuevo `SETTING_HAS_NO_RANGE`. Se
+anadio como noveno, y la migracion -aun sin comitear- se volvio a aplicar.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las cotas de los 9 | `prueba_configuracion.sql`, ahora con 45 | **45 de 45** |
+| Regresion completa | Los 27 archivos de `prueba_*.sql` | **615 comprobaciones, 0 fallando** |
+| Panel y aplicacion movil | `typecheck`, `lint`, `format:check`, `build` del panel | Todo en 0 |
+| **El panel muestra el mensaje bueno** | En el navegador, guardar `driver_signal_lost_seconds = 0` | **"El umbral de senal perdida debe ser un entero entre 60 y 900 segundos"**, no el generico |
+| El valor no cambia | El radio de llegada, tras intentar ponerlo en 0 | Sigue en 150 |
+
+### Lo que se hizo: paso 7, el pasajero pinta con el propio evento (2026-09-02)
+
+`supabase/migrations/20260902220000_driver_locations_lat_lng.sql`,
+`supabase/dev-tools/prueba_posicion_conductor.sql` (6 comprobaciones),
+`src/features/ride/use-driver-location.ts`, `src/features/ride/ride-service.ts`,
+`src/types/database.ts`.
+
+**EL PROBLEMA, DEL DIAGNOSTICO DEL PUNTERO.** El pasajero se suscribia a
+`driver_locations` por tiempo real, pero **del evento solo usaba el aviso**: la fila llega con
+la posicion en el binario de PostGIS y descifrarlo en el telefono se descarto en su dia (D131).
+Al recibir el aviso llamaba a `get_driver_location` -otra vuelta de red de 2 a 4 s-, y con el
+envio cada 7 s del conductor el motorraton se movia con ~10-12 s de retraso.
+
+**LA SOLUCION.** Dos columnas `lat` y `lng` en `driver_locations` que un disparador
+-`driver_location_split_coords`- mantiene en sincronia con `location` en cada escritura.
+`postgres_changes` manda la fila entera, asi que el evento las lleva. `location` sigue siendo
+la fuente -es `geography` y lo usan `find_available_drivers`, `get_driver_location` y el resto
+para medir distancias-; `lat`/`lng` son una copia para el canal. **`reportLocation` en el
+cliente no cambia**: sigue escribiendo solo `location`.
+
+**EL HOOK, `use-driver-location.ts`.** Al recibir el evento lee `lat`/`lng`/`updated_at` y pinta
+el punto directo. Sigue llamando a `get_driver_location` en dos momentos -el primer pintado y al
+volver de segundo plano (D152)-, donde la antiguedad la cuenta el servidor. **Entre eventos la
+antiguedad la cuenta el telefono** con un temporizador de 5 s: sin eso, si el conductor se queda
+sin cobertura la posicion se quedaria "fresca" para siempre y "perdimos la senal" no se
+encenderia -un fallo latente que el codigo viejo tenia, porque solo refrescaba la antiguedad en
+cada re-consulta-. Como solo alimenta un umbral de 120 s y no una cuenta atras, el desvio del
+reloj del telefono no cambia nada (D154 no aplica aqui).
+
+**UN FALLO, EL MISMO DEL PASO 1.** `db push` concedio EXECUTE a **PUBLIC** en
+`driver_location_split_coords` pese al `alter default privileges for role postgres` del paso 2.
+Lo cazo `prueba_grants_anon.sql`. La migracion revoca el permiso a mano -una funcion de
+disparador no la llama nadie-. **Queda anotado para el paso 8**: el `alter default privileges`
+del paso 2 no cubre el camino de `db push`.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| El disparador sincroniza lat/lng | `prueba_posicion_conductor.sql`, 6 comprobaciones | **6 de 6** (al insertar y al mover) |
+| El evento llega usable | Suscripcion como el pasajero de prueba, con servicio activo | `lat`/`lng` numeros en el evento, **db->recv 0,51-0,56 s**, sin re-consulta |
+| `get_driver_location` sigue igual + `updated_at` | La RPC del primer pintado | Trae latitud, longitud, rumbo, antiguedad del servidor y ahora `updated_at` |
+| La RLS no cambia | El pasajero del servicio ve la fila; un extrano no | 1 / 0 |
+| Regresion completa | Los 28 archivos de `prueba_*.sql` | **621 comprobaciones, 0 fallando** |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Los tres en 0 |
+
+**Cadencia visible resultante**, sumando el arreglo A (7 s) y el B: el pasajero ve el motorraton
+moverse cada **~7,5 s** -7 s de envio + 0,5 s de tiempo real-, frente a los ~12-15 s que
+abrieron esta investigacion. **La aplicacion pintando el punto no se puede ver aqui**: el
+emulador no produce movimiento y no hay un segundo aparato de pasajero, lo mismo que ya bloquea
+D255.
+
+### Lo que se hizo: paso 8, el barrido de cierre (2026-09-02)
+
+`supabase/dev-tools/prueba_barrido_seguridad.sql` (8 comprobaciones),
+`supabase/migrations/20260902230000_revoke_anon_object_grants.sql`, y un ajuste en cuatro
+pruebas (`prueba_auditoria`, `prueba_encomiendas`, `prueba_tarifas` y la que ya se toco en el
+paso 3).
+
+**EL BARRIDO.** Un script que recorre los catalogos y comprueba las ocho invariantes de
+seguridad que el proyecto ha ido fijando fase a fase:
+
+| # | Invariante | De donde viene |
+|---|---|---|
+| 1 | Toda tabla de `public` tiene RLS activada | Fase 5 |
+| 2 | Ninguna politica nombra a `anon` ni a `public` | Fase 5 |
+| 3 | Cero politicas `FOR ALL` | Fase 20, paso 4c |
+| 4 | Toda funcion `security definer` fija su `search_path` | Fase 5 |
+| 5 | Cero funciones de `public` ejecutables por `anon` | Fase 22, pasos 1-2 |
+| 6 | `anon` no tiene ningun privilegio de tabla en `public` | Fase 22, paso 8 |
+| 7 | `anon` no tiene ningun privilegio de secuencia | Fase 22, paso 8 |
+| 8 | `authenticated` conserva sus grants (el revoke no se paso) | — |
+
+**LO QUE ENCONTRO.** Las siete primeras ya se cumplian -los pasos 1 a 6 y las fases anteriores
+las habian dejado bien-. La sexta no: **`anon` tenia
+`select/insert/update/delete/truncate/references/trigger` sobre las 22 tablas** (154 permisos),
+el mismo patron de Supabase que ya se vio con las funciones. No era un agujero -RLS activada y
+cero politicas a `anon`-, pero es superficie que sobra.
+
+**LA CORRECCION.** `20260902230000` revoca todos los permisos de tabla y de secuencia a `anon`
+y corta el grant por defecto para las tablas futuras del rol `postgres`.
+
+**CUATRO PRUEBAS AJUSTADAS.** Comprobaciones que ponian rol `anon` y hacian `select count(*)`
+de una tabla esperando `0`. Ahora `anon` **ni tiene permiso**: el intento rebota con
+`permission denied`, que es una garantia mas fuerte. Se cambiaron para esperar la excepcion.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| Las ocho invariantes | `prueba_barrido_seguridad.sql` | **8 de 8** |
+| `anon` ya no tiene permisos de tabla | Consulta a `information_schema` | 0 (antes 154); `authenticated` sigue con 154 |
+| Regresion completa | Los 29 archivos de `prueba_*.sql` + los 2 `.mjs` | **todo en verde** |
+| **El login sigue funcionando** | Emulador: cerrar sesion (pantalla `anon`) y volver a entrar como conductor | Entro bien, perfil y datos cargados, sin errores |
+
+**CON ESTO SE CIERRA LA FASE 22 ENTERA.** Los ocho pasos hechos y verificados.
+
+---
+
 ## 16. PENDIENTES CONOCIDOS
 
 - **Telefono Android con GPS y datos moviles. Ya no es un pendiente de la Fase 23: es el unico
@@ -5996,9 +6493,8 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
   `prueba_paradas.sql` y `prueba_ciclo_completo.sql` viven en carpetas temporales, pero los checklists de regresion de las
   secciones 15.12 y 15.14 los nombran como si estuvieran a mano. **Hoy esa lista apunta a
   archivos que nadie tiene.** Recogerlos en `supabase/dev-tools/` antes de la Fase 23
-- **Revocar `anon` en las funciones que faltan** (Fase 22). En la Fase 15 se cerro para las
-  cuatro transiciones; quedan `accept_ride_offer`, `reject_ride_offer`, `cancel_request` y
-  `rate_ride`, ademas de varias funciones de disparador que no deberia poder llamar nadie
+- **RESUELTO en la Fase 22, paso 1** (2026-09-02). `anon` ya no puede ejecutar ninguna funcion
+  de `public`: dos migraciones, `20260902170000` y `20260902180000`. Detalle en la seccion 15.23
 - **Decidir la coordenada del parque (H17).** `AMALFI_CENTER` esta a 353 m del parque que dice
   la tabla de lugares, y D122 la documenta como el parque
 - Conectividad de datos durante las pruebas de campo en Amalfi. Sin ella el dispositivo
@@ -6043,16 +6539,18 @@ Para no rehacer trabajo ya hecho al retomar en otra conversacion:
   de afectar al pasajero: los 21 mensajes sin tildes ya no llegan a ninguna pantalla. Los
   codigos del conductor, que son otros doce, se anaden a `src/features/ride/errors.ts` en las
   fases 12 y 13, cuando existan las pantallas que los provocan
-- Terminar H14: los pares de exito, aviso e informacion siguen sin contraste suficiente, y el
-  error dentro de un campo se queda en 3,08:1 en el tema oscuro. Solo se corrigio el aviso de
-  error, que era el unico ilegible
-- Quitar al rol `anon` el permiso de ejecutar `request_ride`. Hoy puede llamarla y la funcion
-  la rechaza desde dentro; revocarlo seria una capa mas (Fase 22)
-- Revisar el almacenamiento de la sesion, AsyncStorage frente a expo-secure-store (D93,
-  Fase 22)
-- Cerrar la sesion en los demas dispositivos al cambiar la contrasena. Supabase no lo hace por
-  defecto, asi que hoy un cambio de contrasena no expulsa a quien ya estuviera dentro en otro
-  telefono (Fase 22)
+- **RESUELTO en la Fase 22, paso 5** (2026-09-02). El texto de error de campo (`dangerText`),
+  la estrella de calificacion en claro (`warning700`) y el icono de informacion en oscuro
+  (`info400`). Guardado en `supabase/dev-tools/prueba_contraste_colores.mjs` (seccion 15.23)
+- **RESUELTO en la Fase 22, paso 1.** `request_ride` ya estaba cerrada a `anon` desde la
+  Fase 15; el resto del esquema se cerro el 2026-09-02 (seccion 15.23)
+- **RESUELTO en la Fase 22, paso 4** (2026-09-02). Se confirma AsyncStorage -medido y
+  documentado en D93- y se anadio `android.allowBackup: false`, que toma efecto en la proxima
+  compilacion nativa (seccion 15.23)
+- **RESUELTO en la Fase 22, paso 3** (2026-09-02). Resulto que **GoTrue ya revoca** todas las
+  demas sesiones al cambiar la contrasena; el pendiente venia de la Fase 6 y quedo obsoleto.
+  Verificado con `supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs`. Sin cambio de codigo
+  (seccion 15.23)
 - Habilitar el cambio de correo cuando exista verificacion (D101, Fase 25)
 - Reactivar la confirmacion de correo cuando exista servidor propio (D91, Fase 25)
 - Textos legales: terminos de uso y politica de privacidad (antes de la Fase 25)

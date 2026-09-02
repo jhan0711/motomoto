@@ -68,6 +68,14 @@ const config: ExpoConfig = {
     // Necesario desde la Fase 8: identifica la aplicación ante Google Maps.
     // La clave de la API está restringida a este nombre exacto.
     package: 'com.motomoto.app',
+
+    // Fase 22, paso 4 (D93). Sin esto, Android sube los datos de la aplicación
+    // —incluida la sesión de Supabase, que vive en AsyncStorage sin cifrar— a la
+    // copia de seguridad de Google Drive del usuario, de forma automática. La
+    // sesión no es un dato que deba sobrevivir a un restore en otro aparato: no
+    // hay nada aquí que valga la pena respaldar, todo está en el servidor.
+    // TOMA EFECTO EN LA PRÓXIMA COMPILACIÓN NATIVA (cambia el AndroidManifest).
+    allowBackup: false,
     // Fase 19. Expo Push entrega por FCM en Android, y FCM exige este archivo:
     // sin el, `getExpoPushTokenAsync` falla con "Default FirebaseApp is not
     // initialized" y el token nunca llega al servidor.

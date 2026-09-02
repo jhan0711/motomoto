@@ -46,6 +46,10 @@ const palette = {
 
   warning500: '#F59E0B',
   warning600: '#C77C05',
+  // El 700 es el que hace legible el icono de aviso -las estrellas- sobre fondo
+  // claro: el 500 se queda en 2,15:1 sobre blanco, por debajo del 3:1 que exige
+  // un grafico con significado (hallazgo H14, cerrado en la Fase 22).
+  warning700: '#BE7004',
   warning100: '#FDF0D5',
 
   // El rojo tiene mas escalones que sus hermanos porque es el unico que se usa
@@ -58,6 +62,10 @@ const palette = {
   danger900: '#3A1010',
   danger100: '#FBDDDD',
 
+  // El 400 es el escalon claro para el tema oscuro, mismo criterio que `brand400`:
+  // el 500 sobre la superficie oscura da 2,88:1, por debajo del 3:1 de un icono
+  // con significado (hallazgo H14, cerrado en la Fase 22).
+  info400: '#60A5FA',
   info500: '#2563EB',
   info600: '#1D4FD1',
   info100: '#DBE6FD',
@@ -123,6 +131,15 @@ export interface ThemeColors {
 
   danger: string;
   dangerSubtle: string;
+  /**
+   * Texto de error sobre una superficie normal, no sobre el fondo teñido: el
+   * mensaje que cuelga de un campo de formulario.
+   *
+   * Separado de `danger` porque ese, sobre `surface` en el tema oscuro, da
+   * 3,08:1 —por debajo del 4,5:1 que exige un texto (hallazgo H14)—. En claro
+   * es un rojo mas oscuro que `danger`; en oscuro, uno mas claro.
+   */
+  dangerText: string;
   /** Contenido sobre `danger` en solido: el texto de un boton destructivo. */
   onDanger: string;
   /**
@@ -175,12 +192,13 @@ export const lightColors: ThemeColors = {
   successSubtle: palette.success100,
   onSuccess: palette.white,
 
-  warning: palette.warning500,
+  warning: palette.warning700,
   warningSubtle: palette.warning100,
   onWarning: palette.neutral900,
 
   danger: palette.danger500,
   dangerSubtle: palette.danger100,
+  dangerText: palette.danger600,
   onDanger: palette.white,
   // Un escalon mas oscuro que `danger` a proposito: sobre el rosa palido, el 500
   // se queda en 3,79:1 y el 600 sube a 5,46:1.
@@ -236,12 +254,15 @@ export const darkColors: ThemeColors = {
   // en la Fase 3: en un tema oscuro el fondo teñido tiene que ser el escalon
   // hondo, no uno intermedio. Con el 600 el aviso quedaba en 1,44:1.
   dangerSubtle: palette.danger900,
+  dangerText: palette.danger300,
   onDanger: palette.white,
   onDangerSubtle: palette.danger300,
 
-  info: palette.info500,
+  info: palette.info400,
   infoSubtle: palette.info600,
-  onInfo: palette.white,
+  // Mismo criterio que `onWarning`: con `info` claro en el tema oscuro, el
+  // contenido encima tiene que ser oscuro. Blanco sobre `info400` da 2,54:1.
+  onInfo: palette.neutral900,
 
   overlay: palette.overlayDark,
   skeleton: palette.neutral700,

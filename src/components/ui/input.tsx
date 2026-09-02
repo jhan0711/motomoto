@@ -137,7 +137,7 @@ export function Input({
       {hasError ? (
         <View style={styles.message}>
           <CircleAlert size={iconSize.sm} color={colors.danger} strokeWidth={iconStrokeWidth} />
-          <Text variant="caption" color="danger" style={styles.messageText}>
+          <Text variant="caption" color="dangerText" style={styles.messageText}>
             {errorText}
           </Text>
         </View>
