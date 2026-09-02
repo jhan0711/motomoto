@@ -150,9 +150,14 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **EL SUPER ADMIN DE VERDAD YA EXISTE** (2026-09-02): `jhank.45617@gmail.com` -que era el
   pasajero de prueba- pasa a `super_admin` con `supabase/dev-tools/promote_jhank_super_admin.sql`.
   La contrasena la pone el usuario. Detalle en 15.24
-- **AHORA EN CURSO: la Fase 23, Pruebas.** Seis pasos (seccion 15.25): auditoria de los scripts
-  perdidos, corredor unico, pruebas de cliente con `jest`, CI en GitHub Actions -checks mas la
-  regresion de BD-, y el checklist de pruebas en dispositivo. **SIN COMITEAR** lo de la Fase 23
+- **AHORA EN CURSO: la Fase 23, Pruebas.** Seis pasos (seccion 15.25). **Pasos 1-5 hechos y
+  verificados**, cada uno comiteado por el usuario: auditoria (1), tres scripts nuevos que
+  absorben nueve perdidos + `remove_second_driver` + checklists (2), corredor unico
+  `run-tests.mjs` / `npm run test:db` -36 scripts, 743 comprobaciones- (3), `jest-expo` con 55
+  pruebas en 10 archivos -logica pura y componentes- (4), y `.github/workflows/ci.yml` con tres
+  trabajos: cliente movil, panel y regresion de BD (5). **El paso 2 destapo la regresion D268**
+  en `accept_ride_offer`, corregida en `20260903000000`. Falta el paso 6, el barrido en
+  dispositivo. **SIN COMITEAR:** solo `.github/workflows/ci.yml` y este documento (paso 5)
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -160,8 +165,9 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   `location_interval_in_ride_seconds` bajado de 10 a 7 en `app_settings` (7,0 s medidos). El
   arreglo de fondo -que el pasajero use la posicion del propio evento- es el paso 7 de la Fase 22.
   Detalle en la seccion 15.23
-- **Ultimo commit:** `563f2d0`, "Panel super admin". Antes, `059cc12` la Fase 22 y `c7cd03c` la
-  Fase 20. El commit de la Fase 22 lleva **7 migraciones** (`20260902170000`-`20260902230000`), **6 pruebas nuevas** -4
+- **Ultimo commit:** `f5b1025` (Fase 23 paso 4). Antes, en la Fase 23: `a52482d` (paso 2,
+  con la migracion D268), luego el paso 3, luego el paso 4. Antes de la fase, `563f2d0`
+  "Panel super admin", `059cc12` la Fase 22 y `c7cd03c` la Fase 20. El commit de la Fase 22 lleva **7 migraciones** (`20260902170000`-`20260902230000`), **6 pruebas nuevas** -4
   SQL (`prueba_grants_anon`, `prueba_h15_telefono_contraparte`, `prueba_posicion_conductor`,
   `prueba_barrido_seguridad`) y 2 `.mjs` (`prueba_cambio_contrasena_sesiones`,
   `prueba_contraste_colores`)-, **5 pruebas ajustadas** (`prueba_bloqueo_y_senal`,
@@ -6685,6 +6691,7 @@ liquidacion mensual sigue aplazada (D267).
 | D266 | **Las cuentas de administrador se crean con `security definer`, no con `service_role`** | Mismo criterio que D250 para los conductores: la funcion corre con privilegios pero acotada a una operacion y con `is_super_admin()` dentro. La contrasena inicial la genera el sistema en el formato dictable de D251 y se muestra una sola vez |
 | D267 | **La liquidacion mensual se aplaza** | El usuario pidio hacer primero la gestion de administradores y decidir despues si la parte de cobro se aprueba. Lo acordado sobre "que cuenta como servicio" y "el mes en hora de Colombia" queda escrito arriba para cuando se retome |
 | D268 | **`accept_ride_offer` recupera las tres guardias que perdio en la Fase 20 paso 11** | La reescritura de `20260902150000` partio de una version vieja (patron E30) y borro el `and is_available` (D164), el `exception when unique_violation` de la carrera y el cierre de las demas ofertas `pending`. Migracion `20260903000000` las devuelve sin tocar el corte al bloqueado. Lo destapo `prueba_transiciones.sql` en la Fase 23 |
+| D269 | **El panel (`admin/`) no lleva Jest** | En el CI se cubre con `typecheck` + `lint` + `format:check` + `build` de Next, que atrapa los errores de tipos, de rutas y de compilacion. Montar `jest` + testing-library para React Server Components de Next 16 es fragil y caro, y el valor esta sobre todo en la logica de servidor, que ya la prueban los `prueba_*.sql` a nivel de base de datos. Si el panel crece en logica de cliente, se reabre |
 
 ---
 
@@ -6706,7 +6713,7 @@ pruebas de cliente de logica pura **y** de componentes.
 | 2 | Cerrar los huecos de la auditoria: rehacer solo los scripts que falten de verdad, anadir los `remove_` que falten, y **corregir los checklists de las secciones 15.12 y 15.14** para que apunten a archivos que existen. **HECHO el 2026-09-02** — y destapo la regresion D268 | Hecho |
 | 3 | **Corredor de pruebas**: un comando que ejecuta todos los `prueba_*.sql` mas los `.mjs`, imprime el total y sale con codigo distinto de 0 si algo falla. **HECHO el 2026-09-02** | Hecho |
 | 4 | **Pruebas del cliente movil**: montar `jest-expo` + testing-library. Logica pura (mapeo de errores, `homeRouteFor`, `conLimite`, formato de tarifa y telefono, esquemas zod, la antiguedad del puntero) y unos cuantos componentes clave del sistema de diseno. **HECHO el 2026-09-02** | Hecho |
-| 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto | Pendiente |
+| 5 | **CI en GitHub Actions**: en cada push, `typecheck` + `lint` + `format:check` + `jest` de los dos proyectos, y la regresion de base de datos con el token de Supabase como secreto. **HECHO el 2026-09-02** | Hecho |
 | 6 | **Dispositivo**: barrido a 800 dp en el emulador con capturas, y un **checklist escrito** de lo que necesita un telefono con GPS real -como procedimiento listo-, con esos items marcados como bloqueados | Pendiente |
 
 ### Lo que se hizo: paso 1, la auditoria de los scripts perdidos (2026-09-02)
@@ -6836,7 +6843,35 @@ con `lucide-react-native` en la lista). `npm test` corre Jest.
 **Pendiente para el paso 5:** el panel (`admin/`) no tiene Jest. Decidir si el CI
 le monta uno propio o si sus rutas se cubren solo con `typecheck` + `lint`.
 
-Siguiente: paso 5, el CI en GitHub Actions.
+### Lo que se hizo: paso 5, el CI en GitHub Actions
+
+**`.github/workflows/ci.yml` (NUEVO).** Se dispara en cada `push` y cada
+`pull_request`, con `concurrency` que cancela la corrida anterior de la misma
+rama. Node 24 en los tres trabajos, para igualar el entorno de desarrollo (el
+`.mjs` de contraste importa un `.ts` y necesita el stripping de tipos nativo).
+
+| Trabajo | Que corre |
+|---|---|
+| **Cliente movil** | `npm ci` -> recrea `expo-env.d.ts` (una linea fija, esta en .gitignore por orden de Expo) -> `lint` + `typecheck` + `format:check` + `test` (Jest). Sin secretos |
+| **Panel administrativo** | En `admin/`: `npm ci` -> `lint` + `typecheck` + `format:check` + `build`. **Decidido: el panel no lleva Jest**; la compilacion de Next atrapa lo que importa y montar Jest ahi es trabajo que no se paga hoy. El `build` usa marcadores si los secretos no estan: los valores reales solo importan en ejecucion |
+| **Regresion de base de datos** | `npx supabase link --project-ref bosodjcehvqmmegxdmlu` -> `npm run test:db` (los 34 SQL + 2 `.mjs`). **Si falta el secreto `SUPABASE_ACCESS_TOKEN`, el trabajo pasa en verde con un aviso** en vez de bloquear el CI; se activa solo cuando el secreto exista |
+
+**Secretos de repositorio que hay que configurar** (Settings -> Secrets and
+variables -> Actions) para que corra la regresion de base de datos:
+
+- `SUPABASE_ACCESS_TOKEN` — token personal de Supabase (obligatorio; sin el, ese
+  trabajo se omite).
+- `EXPO_PUBLIC_SUPABASE_URL` y `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` — los usa el
+  `.mjs` de cambio de contrasena, que va contra GoTrue. La clave publicable no es
+  secreta (viaja en el paquete de la app), se guarda ahi por uniformidad.
+- `SUPABASE_DB_PASSWORD` — opcional; `db query --linked` va por la Management API
+  y no lo necesita, pero `link` lo acepta si algun dia hace falta.
+
+Verificado en local: `npm ci` con el lock en sincronia, los cuatro comandos del
+cliente movil en verde, los cuatro del panel en verde (incluida la compilacion
+con marcadores), `npm run test:db` 743/0 y `supabase link` idempotente.
+
+Siguiente: paso 6, el barrido en dispositivo.
 
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
