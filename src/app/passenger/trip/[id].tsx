@@ -229,6 +229,31 @@ function Contenido({ trip }: { trip: PassengerTripDetail }) {
           )}
         </Card>
       )}
+
+      {/*
+        REPORTAR VA AL FINAL DEL TODO, DESPUES DE LA CALIFICACION. Son dos cosas
+        distintas y el orden lo dice: calificar es lo normal al terminar un
+        viaje; reportar es lo que se hace cuando algo salio mal. Ponerlo arriba
+        sugeriria que se espera una queja.
+
+        Se manda el `rideId` para que el reporte quede colgado de este servicio,
+        y el recorrido como texto para que en el formulario se vea de cual se
+        esta hablando.
+      */}
+      <Button
+        label="Reportar un problema"
+        variant="ghost"
+        fullWidth
+        onPress={() =>
+          router.push({
+            pathname: '/passenger/report',
+            params: {
+              ...(trip.rideId !== null ? { rideId: trip.rideId } : {}),
+              rideLabel: `${trip.originLabel} → ${trip.destinationLabel}`,
+            },
+          })
+        }
+      />
     </View>
   );
 }

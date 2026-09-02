@@ -3,6 +3,7 @@ import {
   ChevronRight,
   LogOut,
   Mail,
+  MessageSquareWarning,
   Pencil,
   Phone,
   ShieldCheck,
@@ -94,6 +95,20 @@ export default function PassengerProfile() {
           onPress={() => router.push('/passenger/edit-profile')}
         />
       </View>
+
+      {/*
+        EL ACCESO SUELTO, SIN VIAJE. Desde el detalle de un servicio se reporta
+        ese servicio; aqui se reporta lo que no cuelga de ninguno -"la
+        aplicacion se cerro sola", "no me llegan los avisos"-. Sin esta puerta,
+        esos problemas no tendrian por donde entrar.
+      */}
+      <Button
+        label="Reportar un problema"
+        variant="ghost"
+        icon={MessageSquareWarning}
+        fullWidth
+        onPress={() => router.push('/passenger/report')}
+      />
 
       <Button
         label="Cerrar sesión"

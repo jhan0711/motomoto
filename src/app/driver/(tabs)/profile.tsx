@@ -1,5 +1,14 @@
 import { useRouter } from 'expo-router';
-import { Bike, ChevronRight, LogOut, Mail, Phone, ShieldCheck, Star } from 'lucide-react-native';
+import {
+  Bike,
+  ChevronRight,
+  LogOut,
+  Mail,
+  MessageSquareWarning,
+  Phone,
+  ShieldCheck,
+  Star,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -165,6 +174,20 @@ export default function DriverProfile() {
         Tu vehículo y tu número de unidad los gestiona la empresa. Si algún dato no es correcto,
         comunícalo a la administración.
       </Text>
+
+      {/*
+        EL ACCESO SUELTO, SIN VIAJE. Lo mismo que en el perfil del pasajero: aqui
+        entra lo que no cuelga de ningun servicio concreto. Y para el conductor
+        pesa mas, porque **su detalle de servicio no tiene todavia esta puerta**:
+        el historial del conductor lleva al trabajo, no a una ficha con acciones.
+      */}
+      <Button
+        label="Reportar un problema"
+        variant="ghost"
+        icon={MessageSquareWarning}
+        fullWidth
+        onPress={() => router.push('/driver/report')}
+      />
 
       <Button
         label="Cerrar sesión"

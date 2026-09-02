@@ -100,9 +100,11 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
 - **El paso 10a esta hecho y verificado**, pantalla incluida: la bandeja de reportes y las
   calificaciones vistas en conjunto. Cerro de paso **un hueco que venia de la Fase 1** (D258): el
   administrador podia reescribir la descripcion de un reporte, o sea la queja de alguien
-- **Trabajo siguiente:** el paso 10b, el boton de "reportar un problema" en la aplicacion movil.
-  **Hasta que exista, la bandeja seguira vacia en produccion**, que es lo esperado. Con el se
-  deciden las categorias, que son del negocio del usuario y no del programa
+- **El paso 10b esta hecho y verificado en la tablet**, con un reporte de verdad mandado desde la
+  aplicacion que **aparecio en la bandeja del panel**. Con esto **D204 queda cerrado entero**: la
+  queja se puede poner, se lee, se gestiona y se le avisa a quien la puso
+- **Trabajo siguiente:** el paso 11, R10 (conductor sin senal) y el bloqueo del conductor a mitad
+  de operacion (D215, D216). **Es el ultimo paso de la Fase 20**
 - **Ultimo commit:** `2824b65`, "Fase 20 paso 5: motorratones, doble turno y estados de botones".
   Antes, `d6be25a` el paso 4a, `1690efb` el paso 3, `12bb3c2` el paso 2, `475214b` el paso 1 y
   `611e0e8` todo el bloque especial. **SIN COMITEAR: el paso 4c entero** —la migracion
@@ -711,6 +713,7 @@ aplicacion sigue sin tocar dinero.
 | D258 | **Un reporte no se modifica, solo se gestiona** | `reports_update_admin` dejaba al administrador reescribir cualquier columna, **la descripcion incluida**. Un reporte es lo que alguien dijo que le paso: si se puede editar deja de ser evidencia, y quien lo escribio no se entera. La politica se quito el 2026-09-01; la gestion pasa por `admin_set_report_status`, que deja rastro en la auditoria, y `protect_report_columns` vigila las columnas del reportante **venga de donde venga la escritura**. Mismo criterio que las `_all_admin` del paso 4c, pero aqui lo que se protege no es un catalogo sino una queja |
 | D259 | **Cerrar un reporte exige escribir que se hizo, y avisa a quien lo puso** | Un reporte resuelto sin una linea explicando por que no le sirve a nadie: ni a quien se quejo, que no se entera, ni a la empresa dentro de tres meses. Al cerrarlo se le manda un aviso al reportante -`report_resolved`-, que es la mitad que faltaba de D204: **la queja se atiende y quien la puso lo sabe**. Marcar "en revision" no pide nota ni manda aviso: que alguien lo este mirando todavia no es noticia |
 | D260 | **La contraparte de un reporte solo si quien reporta estuvo en ese viaje** | La regla era un `case` de dos ramas y el "si no" se tragaba al que no era ni el pasajero ni el conductor, **senalando al pasajero del viaje como si fuera la otra parte**. Puede pasar de verdad: `reports_insert_own` solo comprueba que el reportante sea uno mismo, nada obliga a que el viaje sea suyo. Se deja asi -alguien puede senalar un servicio que vio- pero entonces **no se inventa contraparte**, porque sobre ese nombre se decide a quien se llama a pedir explicaciones. La pantalla lo dice en vez de callarlo |
+| D261 | **Las categorias de reporte son distintas para el pasajero y para el conductor, y se guardan como texto en espanol** | Decidido con el usuario el 2026-09-02. Siete motivos para el pasajero y seis para el conductor: "no me pago" no le sirve al pasajero y "me cobraron de mas" no le sirve al conductor, y una lista comun obligaria a cada uno a saltarse la mitad. **Se guarda la etiqueta, no un codigo**: `reports.category` es texto libre y el panel la ensena tal cual, asi se evita la misma traduccion en dos sitios, y **los reportes viejos conservan el texto que se les enseno** si manana se cambia el de la lista. Son categorias del negocio, no del programa: cambiarlas es editar `src/features/report/categories.ts` |
 | D239 | **El acceso no distingue "contrasena mala" de "cuenta sin permiso"** | Un pasajero que escriba bien sus credenciales lee exactamente el mismo mensaje que quien se equivoca de contrasena. Decir "esa cuenta no tiene acceso al panel" confirmaria que el correo existe y en que consiste, que es el mismo criterio de D74 en la recuperacion de contrasena. El unico caso que si se explica es el del usuario devuelto por la guardia con sesion ya abierta, porque ahi el correo ya se conoce |
 
 ### Decisiones de la Fase 16
@@ -4334,7 +4337,7 @@ gestionar (tarifas, destinos, tipos de carga, recaudo).
 | 8 | Listado e inspeccion de servicios, con linea de tiempo | **HECHO Y VERIFICADO**, pantallas incluidas |
 | 9 | Asignacion manual de conductor a una solicitud (D7) | **HECHO Y VERIFICADO**, pantalla incluida |
 | 10a | La bandeja de reportes y las calificaciones en conjunto (D204) | **HECHO Y VERIFICADO**, pantalla incluida |
-| 10b | El boton de "reportar un problema" en la aplicacion movil (D204) | Pendiente |
+| 10b | El boton de "reportar un problema" en la aplicacion movil (D204) | **HECHO Y VERIFICADO EN LA TABLET**, circuito completo |
 | 11 | R10 y bloqueo del conductor a mitad de operacion (D215, D216) | Pendiente |
 
 ### Lo que se hizo: paso 1, el proyecto y el acceso (2026-08-26)
@@ -5525,6 +5528,65 @@ servidor razon. Se mira el efecto, no la excepcion.
 
 ---
 
+### Lo que se hizo: paso 10b, reportar un problema desde la aplicacion (2026-09-02)
+
+`src/features/report/` -categorias, servicio y formulario-, las rutas
+`src/app/passenger/report.tsx` y `src/app/driver/report.tsx`, y los accesos en el detalle del viaje
+del pasajero y en los dos perfiles. La prueba `prueba_reportes.sql` crece a 38 comprobaciones.
+
+**CON ESTO SE CIERRA D204 ENTERO.** El boton llevaba sin existir desde la Fase 12, y a proposito:
+mandar una queja que nadie puede leer **promete una atencion que no existe**. Primero la bandeja
+(10a), despues el boton. Ahora el circuito esta completo y se probo entero.
+
+**LAS CATEGORIAS SON DEL NEGOCIO, Y LAS DECIDIO EL USUARIO (D261).** Siete para el pasajero y seis
+para el conductor, **distintas a proposito**: "no me pago" no le sirve al pasajero y "me cobraron de
+mas" no le sirve al conductor. Una lista comun obligaria a cada persona a saltarse la mitad de las
+opciones, en un celular y con un problema encima.
+
+**SE GUARDA LA ETIQUETA EN ESPANOL, NO UN CODIGO.** `reports.category` es texto libre y el panel la
+ensena tal cual, asi que guardar el texto evita la misma traduccion en dos sitios que con el tiempo
+se separan. Tiene una consecuencia buscada: **si manana se cambia el texto de un motivo, los
+reportes viejos conservan el que se les enseno**, que es lo que aquella persona eligio de verdad.
+
+**LA APLICACION ESCRIBE DIRECTO EN LA TABLA**, respetando lo que se decidio al crear
+`reports_insert_own` en la Fase 1: reportar no cambia ningun estado de la operacion y conviene que
+sea lo mas facil posible. La politica limita lo unico que importa, **que el reporte salga a nombre
+de quien lo escribe**, y eso se comprueba en la 34.
+
+**DOS PUERTAS, Y LAS DOS HACEN FALTA.** Desde el detalle de un viaje se reporta **ese** servicio -va
+el `ride_id` y el recorrido se ensena en el formulario-; desde el perfil se reporta lo que no cuelga
+de ninguno: "la aplicacion se cerro sola". Sin la segunda, esos problemas no tendrian por donde
+entrar. Y para el conductor pesa mas, porque **su historial lleva al trabajo, no a una ficha con
+acciones**: hoy su unica puerta es el perfil.
+
+**EL FORMULARIO DICE CUANTO FALTA, NO CUAL ES EL MINIMO.** La columna exige entre 10 y 2000
+caracteres desde la Fase 1. Un "minimo 10" obliga a contar lo escrito; "escribe 4 letras mas" se lee
+de un vistazo y desaparece solo al llegar. Y **se confirma en la misma pantalla** en vez de volver
+atras sin mas: quien acaba de contar un problema necesita ver que llego, o lo volveria a escribir.
+
+**Verificado:**
+
+| Que | Como | Resultado |
+|---|---|---|
+| La tabla y la bandeja | `prueba_reportes.sql`, ahora con 38 | **38 de 38** |
+| Regresion completa | Los veinticuatro archivos | **555 comprobaciones, 0 fallando** |
+| Aplicacion movil | `typecheck`, `lint`, `format:check` | Todo en 0 |
+| **El circuito entero, en la tablet** | **Reporte enviado de verdad desde la aplicacion** | **Llego a la bandeja del panel** |
+| Las dos puertas | Perfil y detalle del viaje, en el dispositivo | Las dos abren el formulario, y la del viaje ensena el recorrido |
+
+**LO QUE SE PROBO EN LA TABLET, PASO A PASO.** Se mando un reporte real desde la sesion de Jhan
+-"Problema con la aplicacion"-, se vio la confirmacion en pantalla, y despues **se pregunto al
+servidor con el rol del administrador**: aparecio en la bandeja, sin atender, con su categoria y sin
+contraparte inventada -no colgaba de ningun servicio-. Es el circuito completo de D204 recorrido de
+punta a punta, no dos mitades probadas por separado.
+
+**Un tropiezo del asistente que no era un fallo:** tras reiniciar la aplicacion en la tablet, la
+pantalla quedaba gris y parecia rota. **Estaba tardando en montar** -Mapbox y la sesion- y las
+capturas se tomaron antes de tiempo. Los registros no tenian ningun error de JavaScript, que es lo
+que lo aclaro. Conviene esperar de verdad antes de dar por rota una pantalla en el dispositivo.
+
+---
+
 ## 15.3 ESTADO ACTUAL
 
 - **Fase actual:** Fases 0 a 19 completadas, aprobadas y comiteadas, **mas D161, el cambio del
@@ -5533,7 +5595,7 @@ servidor razon. Se mira el efecto, no la excepcion.
 - **Paso actual:** Fase 20. Los pasos 1, 2, 3, 4a, 4b, 5, 6a y 6b estan **hechos y verificados**
   con sus pantallas probadas, **y el 4c tambien, con la subida de un archivo real comprobada
   contra Storage**. Ademas, el doble turno (D246), que no estaba en el plan y modifica una regla
-  de la Fase 5. **Quedan el paso 10b y el 11**: el boton de reportar y R10
+  de la Fase 5. **Queda solo el paso 11**: R10 y el bloqueo a mitad de operacion
 - **Los dos aparatos tienen el cliente de desarrollo al dia**, compilado con Firebase dentro.
   Solo hay que recompilar si se toca codigo nativo otra vez, y entonces **una arquitectura por
   vez**: el `.apk` con las dos juntas no cabe en el emulador (seccion 15.20)

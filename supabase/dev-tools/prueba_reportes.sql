@@ -550,6 +550,98 @@ end
 $calificaciones$;
 
 
+-- -----------------------------------------------------------------------------
+-- Reportar desde la aplicacion (paso 10b)
+-- -----------------------------------------------------------------------------
+--
+-- **LA APLICACION ESCRIBE DIRECTO EN LA TABLA**, no por una funcion, respetando
+-- lo que se decidio al crear `reports_insert_own` en la Fase 1: reportar no
+-- cambia ningun estado de la operacion y conviene que sea lo mas facil posible.
+-- Lo que se comprueba aqui es que esa puerta **solo deja pasar lo que debe**.
+
+do $desde_la_app$
+declare
+  v_admin constant uuid := 'c1000000-0000-4000-8000-0000000000a1';
+  v_pas   constant uuid := 'c1000000-0000-4000-8000-0000000000b1';
+  v_otro  constant uuid := 'c1000000-0000-4000-8000-0000000000b2';
+  v_ride  constant uuid := 'c1000000-0000-4000-8000-00000000c001';
+  v_nuevo uuid;
+  v_n integer;
+  v_t text;
+begin
+  execute 'set local role authenticated';
+  execute format('set local request.jwt.claims to %L',
+    json_build_object('sub', v_pas, 'role', 'authenticated')::text);
+
+  -- 33. Un pasajero puede mandar su reporte, que es el punto entero del paso.
+  begin
+    insert into public.reports (reporter_id, ride_id, category, description)
+    values (v_pas, v_ride, 'Me cobraron distinto a lo acordado',
+            'Me cobraron 8.000 y la aplicacion decia 6.200 cuando lo pedi')
+    returning id into v_nuevo;
+    insert into resultados values (33, 'Un pasajero puede mandar un reporte',
+      'lo dejo', 'lo dejo', v_nuevo is not null);
+  exception when others then
+    insert into resultados values (33, 'Un pasajero puede mandar un reporte',
+      'lo dejo', sqlstate, false);
+  end;
+
+  -- 34. **PERO NO A NOMBRE DE OTRO.** Es lo unico que `reports_insert_own`
+  --     protege, y es lo que importa: un reporte vale por quien lo firma.
+  begin
+    insert into public.reports (reporter_id, category, description)
+    values (v_otro, 'Otro', 'Esto lo escribio otra persona distinta a la que firma');
+    insert into resultados values (34, 'NO se puede reportar a nombre de otro',
+      'rechazado', 'lo permitio', false);
+  exception when others then
+    insert into resultados values (34, 'NO se puede reportar a nombre de otro',
+      'rechazado', 'rechazado', true);
+  end;
+
+  -- 35. **UNA DESCRIPCION DE DOS PALABRAS NO SIRVE PARA RESOLVER NADA**, y la
+  --     tabla lo exige desde la Fase 1: entre 10 y 2000. La aplicacion lo dice
+  --     antes de enviar -"escribe 4 letras mas"- para que nadie se choque con
+  --     este error, pero el que manda es el servidor.
+  begin
+    insert into public.reports (reporter_id, category, description)
+    values (v_pas, 'Otro', 'malo');
+    insert into resultados values (35, 'NO se manda un reporte de dos palabras',
+      'rechazado', 'lo permitio', false);
+  exception when others then
+    insert into resultados values (35, 'NO se manda un reporte de dos palabras',
+      'rechazado', 'rechazado', true);
+  end;
+
+  -- 36. Y el reporte nace sin atender: nadie lo ha mirado todavia.
+  select status into v_t from public.reports where id = v_nuevo;
+  insert into resultados values (36, 'Un reporte nuevo nace sin atender',
+    'open', coalesce(v_t, 'nulo'), coalesce(v_t = 'open', false));
+
+  execute 'reset role';
+  execute 'reset request.jwt.claims';
+
+  -- 37. **Y LLEGA A LA BANDEJA DE LA EMPRESA**, que es lo que D204 prometia y
+  --     lo que hace que el boton no sea una promesa vacia. Se mira con el admin.
+  execute 'set local role authenticated';
+  execute format('set local request.jwt.claims to %L',
+    json_build_object('sub', v_admin, 'role', 'authenticated')::text);
+  select count(*) into v_n from public.admin_list_reports()
+  where report_id = v_nuevo;
+  insert into resultados values (37, 'El reporte de la aplicacion llega a la bandeja',
+    '1', v_n::text, v_n = 1);
+
+  -- 38. Con la contraparte bien puesta: el pasajero se quejo, sale el conductor.
+  select counterpart_name into v_t from public.admin_list_reports()
+  where report_id = v_nuevo;
+  insert into resultados values (38, 'Y con el conductor de ese servicio al lado',
+    'Zz rep conductor', coalesce(v_t, 'nulo'), coalesce(v_t = 'Zz rep conductor', false));
+
+  execute 'reset role';
+  execute 'reset request.jwt.claims';
+end
+$desde_la_app$;
+
+
 select
   r.n,
   case when r.ok then 'OK  ' else 'FALLA' end as estado,
