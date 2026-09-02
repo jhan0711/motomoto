@@ -371,11 +371,17 @@ export default function DriverHome() {
    * Se releen las tres cosas porque una cancelacion las toca todas: la oferta
    * desaparece, el viaje desaparece y la disponibilidad vuelve.
    */
+  // Se depende de `ofertas.refresh` -un useCallback estable- y no del objeto
+  // `ofertas`, que `useDriverOffers` reconstruye en cada render: con el objeto
+  // entero en las dependencias, esta funcion cambiaba de identidad en cada
+  // render y `useRequestRealtime` se volvia a suscribir al canal cada vez
+  // (Fase 24 paso 5).
+  const refrescarOfertas = ofertas.refresh;
   const alCambiarUnaSolicitud = useCallback(() => {
     void cargar();
     void cargarViajes();
-    ofertas.refresh();
-  }, [cargar, cargarViajes, ofertas]);
+    refrescarOfertas();
+  }, [cargar, cargarViajes, refrescarOfertas]);
 
   useRequestRealtime(driverId !== null, alCambiarUnaSolicitud, 'conductor-sus-solicitudes');
 

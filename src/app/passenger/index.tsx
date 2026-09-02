@@ -142,7 +142,6 @@ export default function PassengerHome() {
   // si pintan la pantalla (Fase 24 paso 4).
   const { cargoTypes } = useCargoTypes(serviceType === 'parcel');
 
-
   /** Cuantos van de verdad. En una encomienda son cero, sin importar lo que
    * quedara guardado en el borrador de la ultima vez que fue un viaje de
    * pasajeros (D220). */

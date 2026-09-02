@@ -6965,7 +6965,7 @@ actualiza del sistema" y "lo primero que hay que mirar si algo va lento (Fase 24
 | 2 | **Consultas calientes.** `explain (analyze, buffers)` sobre `find_available_drivers`, `admin_list_rides`, historial del pasajero y `list_driver_active_rides` con datos reales. Indices que falten, RLS que escanee de mas | Hallazgos abajo; la accion cae en el paso 3 y en un pendiente aparte | **Hecho** (2026-09-02) |
 | 3 | **`driver_locations` en tiempo real.** Segun el paso 1: recortar columnas de la publicacion si sobran, revisar indice `driver_id`/`updated_at`, mirar `replica identity` | Indice muerto borrado; el recorte del payload NO es posible (wal2json); test nuevo de tiempo real | **Hecho** (2026-09-02) |
 | 4 | **Arranque en frio** (acotado a lo que hace la app tras arrancar el JS). Diferir lo que no hace falta en el primer pintado | Medicion + dos llamadas menos en el primer pintado | **Hecho** (2026-09-02) |
-| 5 | **Suscripciones de realtime.** Auditar cada `useEffect` con `postgres_changes`: que cierre en el cleanup, que no se duplique al re-renderizar, contar canales vivos en una sesion tipica | Correcciones si hay fugas | Pendiente |
+| 5 | **Suscripciones de realtime.** Auditar cada `useEffect` con `postgres_changes`: que cierre en el cleanup, que no se duplique al re-renderizar, contar canales vivos en una sesion tipica | Auditoria + una correccion (churn en el lado del conductor) | **Hecho** (2026-09-02) |
 | 6 | **Cierre.** Repetir todas las mediciones del paso 1 y dejar el "despues" al lado del "antes" | Comparativa | Pendiente |
 
 ### Lo que se midio: paso 1, la linea base (2026-09-02)
@@ -7132,6 +7132,53 @@ carga aparece al cambiar a "Encomienda" y la app arranca bien.
 **Anotado para la Fase 25:** con el build de release ya hecho, tomar la medida
 de arranque de produccion de una vez y ver si vale la pena partir
 `passenger/index.tsx` o cargar Mapbox de forma diferida.
+
+### Lo que se auditó e hizo: paso 5, las suscripciones de realtime (2026-09-02)
+
+**Cuatro hooks abren un canal de `postgres_changes`:**
+
+| Hook | Canal | Guarda | Cleanup |
+|---|---|---|---|
+| `use-driver-location` (pasajero ve al conductor) | `pasajero-posicion-<driverId>` | `if (driverId === null) return` | `removeChannel` + timers + `turno` |
+| `use-ride-realtime` (pasajero, viaje) | `pasajero-viaje-<rideId>` | `if (rideId === null) return` | `removeChannel` |
+| `use-request-realtime` (pasajero Y conductor, solicitud) | nombre que pasa quien llama | `if (!active) return` | `removeChannel` |
+| `use-driver-offers` (conductor, ofertas) | `ofertas-del-conductor` | `if (!active) return` | `removeChannel` + timer |
+
+**Todos cierran bien y todos se guardan de suscribirse cuando no hay nada que
+mirar.** Los nombres de canal llevan la clave dentro donde hace falta; los dos
+con nombre fijo (`use-driver-offers`, `use-request-realtime` del pasajero) son
+pantallas de instancia unica, no colisionan.
+
+**Canales vivos por sesion, contados:**
+
+- Pasajero sin solicitud: **0**
+- Pasajero con solicitud buscando: **1**
+- Pasajero con conductor asignado y en camino: **3** (posicion + viaje + solicitud)
+- Conductor disponible esperando: **2** (ofertas + solicitudes)
+
+Acotado y sin fugas.
+
+**Una corrección — churn en el lado del conductor.** En `driver/(tabs)/index.tsx`,
+`alCambiarUnaSolicitud` -el `onChange` de `use-request-realtime`- dependia del
+objeto `ofertas` entero, que `useDriverOffers` **reconstruye en cada render**. Con
+eso, la funcion cambiaba de identidad en cada render y el efecto de
+`use-request-realtime` se **volvia a suscribir al canal `conductor-sus-solicitudes`
+en cada render** del inicio del conductor: `removeChannel` + `subscribe()` una y
+otra vez, trafico de websocket inutil y una ventana en cada resuscripcion en la
+que un evento podia perderse. Se cambio la dependencia a `ofertas.refresh` -un
+`useCallback` estable cuya unica dependencia, `cargar`, tambien lo es-. El lado
+del pasajero ya estaba bien: `sincronizarSolicitud` depende solo de
+`limpiarBorrador`, que es estable, asi que la cuenta atras de un segundo no
+resuscribe nada.
+
+De paso, `prettier --check` cazó una linea en blanco doble que el paso 4 dejo en
+`passenger/index.tsx` -ya committeada-; se corrige en este paso.
+
+Verificado: `tsc`, `lint`, `format:check` limpios, Jest 55/55. El lado del
+conductor no se ejercio en dispositivo esta pasada -la tablet estaba en cuenta de
+pasajero-; el arreglo es una correccion de dependencias con comportamiento
+identico, y `refresh` es demostrablemente estable. Queda para el barrido del lado
+del conductor que dejo pendiente la Fase 23.
 
 ---
 
