@@ -160,6 +160,16 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   `accept_ride_offer`, corregida en `20260903000000`. **Todo comiteado.** El checklist de GPS
   en movimiento (8 puntos, seccion 15.25) queda escrito, bloqueado por hardware. Pendiente
   operativo: configurar los secretos de GitHub para el trabajo de regresion de BD del CI
+- **Fase 24, Optimizacion: TERMINADA** (2026-09-02, seccion 15.26). Seis pasos: linea base (1),
+  `explain analyze` de las consultas calientes (2), `driver_locations` en tiempo real (3),
+  arranque en frio (4), suscripciones de realtime (5), cierre con antes/despues (6).
+  **Cambios:** migraciones `20260903120000` (borra el indice muerto `driver_locations_updated_idx`)
+  y `20260903130000`; `prueba_posicion_realtime.mjs` (primer test e2e del canal de posicion,
+  propagacion medida 236-523 ms); `useCargoTypes` y `useNumericSetting` con `enabled` para
+  diferir 2 llamadas del arranque del pasajero; y el arreglo del churn de suscripcion en el
+  inicio del conductor. **Dos hallazgos agendados aparte:** la busqueda del panel no escala
+  (indices `pg_trgm`), y la posicion del conductor podria ir a Broadcast. La medida de arranque
+  de produccion, a la Fase 25. Todo comiteado
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -1232,7 +1242,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | 22 | Seguridad y auditoria | **COMPLETADA Y COMITEADA** (`059cc12`). Los ocho pasos (seccion 15.23) |
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
 | 23 | Pruebas | **TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Los seis pasos. Destapo y corrigio la regresion D268. El checklist de GPS en movimiento (8 puntos) queda escrito y **bloqueado por hardware**: se ejecuta cuando haya un telefono Android con datos, en Amalfi. Pendiente operativo, no de la fase: configurar los secretos de GitHub para que el CI corra la regresion de BD |
-| 24 | Optimizacion | Pendiente |
+| 24 | Optimizacion | **TERMINADA** (2026-09-02, seccion 15.26). Seis pasos. Borro un indice muerto de `driver_locations`, primer test e2e del canal de posicion, y difirio 2 llamadas del arranque del pasajero. Dos hallazgos agendados aparte (busqueda del panel, posicion por Broadcast). La medida de arranque de produccion, a la Fase 25 |
 | 25 | Preparacion para produccion | Pendiente |
 | 26 | Publicacion y despliegue | Pendiente |
 
@@ -6920,7 +6930,8 @@ zona de Amalfi. Procedimiento listo para cuando exista el telefono:
 **FASE 23 CERRADA el 2026-09-02.** El usuario la dio por terminada con el
 checklist de GPS de arriba pendiente de hardware -8 puntos que se ejecutan cuando
 haya un telefono Android con datos, en Amalfi-. Todo lo demas de la fase quedo
-hecho, verificado y comiteado. Sigue la Fase 24, Optimizacion.
+hecho, verificado y comiteado. La Fase 24, Optimizacion, tambien esta terminada
+(seccion 15.26). Sigue la Fase 25, Preparacion para produccion.
 
 **HALLAZGO — corregido. `accept_ride_offer` habia perdido tres cosas.** La
 comprobacion 18 (E32/D164) salio roja contra el servidor. Causa: la reescritura
@@ -6948,7 +6959,7 @@ Verificado: `prueba_transiciones` 23/23, `prueba_recorrido` 12/12,
 
 ---
 
-## 15.26 FASE 24: OPTIMIZACION (EN CURSO, 2026-09-02)
+## 15.26 FASE 24: OPTIMIZACION (TERMINADA, 2026-09-02)
 
 Autorizada con seis pasos. **Se mide en la tablet** los pasos 1 y 6 (arranque y
 red reales); el resto donde sea comodo. Regla de siempre: **una correccion
@@ -6966,7 +6977,7 @@ actualiza del sistema" y "lo primero que hay que mirar si algo va lento (Fase 24
 | 3 | **`driver_locations` en tiempo real.** Segun el paso 1: recortar columnas de la publicacion si sobran, revisar indice `driver_id`/`updated_at`, mirar `replica identity` | Indice muerto borrado; el recorte del payload NO es posible (wal2json); test nuevo de tiempo real | **Hecho** (2026-09-02) |
 | 4 | **Arranque en frio** (acotado a lo que hace la app tras arrancar el JS). Diferir lo que no hace falta en el primer pintado | Medicion + dos llamadas menos en el primer pintado | **Hecho** (2026-09-02) |
 | 5 | **Suscripciones de realtime.** Auditar cada `useEffect` con `postgres_changes`: que cierre en el cleanup, que no se duplique al re-renderizar, contar canales vivos en una sesion tipica | Auditoria + una correccion (churn en el lado del conductor) | **Hecho** (2026-09-02) |
-| 6 | **Cierre.** Repetir todas las mediciones del paso 1 y dejar el "despues" al lado del "antes" | Comparativa | Pendiente |
+| 6 | **Cierre.** Repetir todas las mediciones del paso 1 y dejar el "despues" al lado del "antes" | Comparativa abajo | **Hecho** (2026-09-02) |
 
 ### Lo que se midio: paso 1, la linea base (2026-09-02)
 
@@ -7179,6 +7190,29 @@ conductor no se ejercio en dispositivo esta pasada -la tablet estaba en cuenta d
 pasajero-; el arreglo es una correccion de dependencias con comportamiento
 identico, y `refresh` es demostrablemente estable. Queda para el barrido del lado
 del conductor que dejo pendiente la Fase 23.
+
+### Lo que se midio: paso 6, el cierre (2026-09-02) — antes / despues
+
+| Metrica | Antes (paso 1) | Despues (paso 6) | Lectura |
+|---|---|---|---|
+| Indices en `driver_locations` | 3: `pkey`, gist `location`, btree `updated_at DESC` | **2**: `pkey`, gist `location` | Un btree menos que reescribir en cada UPDATE de posicion -la escritura mas frecuente del sistema-. El que sobraba no lo elegia ningun plan |
+| Payload del evento de tiempo real de `driver_locations` | 8 columnas | 8 columnas | **Sin cambio.** `wal2json` -que usa Supabase Realtime- ignora la lista de columnas de la publicacion. Adelgazarlo obliga a pasar a Broadcast, fuera de la Fase 24 (pendiente conocido) |
+| Propagacion por tiempo real (UPDATE -> evento en el cliente) | ~0,5 s, estimado en el diagnostico de la Fase 22 | **236-523 ms**, medido; 346 ms en la ultima corrida | Ahora hay un numero y un test e2e (`prueba_posicion_realtime.mjs`) que lo protege |
+| Cadencia visible del puntero | ~7,5 s | ~7,5 s | Sin cambio: el intervalo de escritura son 7 s (arreglo A) y no se toco. La Fase 24 no era para eso |
+| Arranque en frio a inicio usable (tablet, build de desarrollo sobre Metro) | ~29,5 s | **~28,6 s** | Dentro del ruido. Dominado por Hermes compilando modulos en dev; **no existe en un build de release**. La medida de produccion queda para la Fase 25 |
+| Llamadas de red en el primer pintado del pasajero | perfil + lugares + catalogo de carga + 2 lecturas de `app_settings` + solicitud activa (mas GPS y Mapbox) | perfil + lugares + 1 lectura de `app_settings` + solicitud activa | **2 menos.** El catalogo de carga y `driver_location_stale_seconds` se difieren a cuando hacen falta. Invisible en wifi; util en datos moviles en Amalfi |
+| Consultas calientes | Esquema bien indexado | Igual | Sin indice que falte en las rutas operativas. Un hallazgo agendado: la busqueda del panel no escala (pendiente conocido) |
+
+**Balance de la fase.** Ganancias concretas: un indice muerto fuera de la tabla
+mas caliente, el primer test de punta a punta del canal de posicion mas un numero
+de propagacion medido, y dos llamadas menos en el arranque del pasajero. Dos
+cosas mas grandes quedan agendadas aparte -indices `pg_trgm` para la busqueda del
+panel, y la posicion del conductor por Broadcast-. El numero grande del arranque
+en frio resulto ser un coste del modo desarrollo; medirlo en produccion es de la
+Fase 25.
+
+**FASE 24 TERMINADA el 2026-09-02.** Los seis pasos. Sin migracion pendiente
+-`20260903120000` y `20260903130000` ya aplicadas y comiteadas-.
 
 ---
 
