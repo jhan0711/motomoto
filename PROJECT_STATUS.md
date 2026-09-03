@@ -7249,10 +7249,10 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | **Hecho y verificado** (2026-09-02) |
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | **Hecho** (2026-09-02) |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | **Hecho** (2026-09-02) — sitio en vivo en `amalfigo.app` |
-| 6 | Enlaces de aplicacion de Android + verificar la recuperacion de contrasena con `motomoto://` en un build real (D95, H7) | paso 5 | Pendiente |
-| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | Pendiente |
-| 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | Pendiente |
-| 9 | Crear el super admin de produccion + procedimiento para los secretos del CI | nada | Pendiente |
+| 6 | Enlaces de aplicacion de Android (`https://amalfigo.app/auth`, `autoVerify`) + migrar el enlace de recuperacion de `motomoto://` a `https://` (D95, H7) | paso 5 | **Codigo hecho** (2026-09-02, commit `29ed38f`), **verificado en el paso 8**. En cola en el panel de Supabase: anadir `https://amalfigo.app/**` a Redirect URLs |
+| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | **7b y 7c: codigo hecho** (2026-09-02, commits `0d61576`, `be85f06`). **7a (SMTP) y las tareas de panel pendientes** (dashboard caido): activar "Confirm email", SMTP de Resend, traducir plantillas |
+| 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | **Hecho y medido** (2026-09-02) — arranque **~2,5–3,6 s** (era ~28,6 s en dev); App Links verificados en el dispositivo |
+| 9 | Crear el super admin de produccion + procedimiento para los secretos del CI | nada | **Hecho** (2026-09-02) — `jhank.45617@gmail.com` es el super admin de prod (mismo proyecto). Script de purga de cuentas QA listo (sin ejecutar). Runbook de secretos en `docs/operaciones/secretos-ci.md` |
 
 ### Lo que se hizo: paso 1, la coordenada del parque (2026-09-02)
 
@@ -7435,6 +7435,131 @@ definitivos.
 se había comiteado sin pasar por Prettier en la Fase 24 paso 3. Corregido aquí.
 Se añadió `supabase/.temp/` a `.prettierignore`.
 
+### Lo que se midió e hizo: paso 8, el build de release y el arranque real (2026-09-02)
+
+**No hubo cambios de código: es un paso de medición y verificación.** El build
+salió de `npx expo prebuild --platform android` + `gradlew assembleRelease
+-PreactNativeArchitectures=arm64-v8a` (solo arm64: es la tablet, y un APK con las
+dos arquitecturas puede no caber —lección de la Fase 19—). Va firmado con el
+**keystore de depuración** (el de producción es de la Fase 26); su huella SHA-256
+ya está en `assetlinks.json`, así que los App Links verifican igual.
+
+**El APK de release, comprobado con `aapt`:**
+
+| Qué | Valor |
+|---|---|
+| Tamaño | 74,7 MB (el de debug pesaba ~125 MB) |
+| Arquitectura | solo `arm64-v8a` |
+| Etiqueta | "AmalfiGoApp" |
+| `allowBackup` | `false` (D93) — verificado en el manifest **empaquetado**, no solo en la config |
+| App Link | `https://amalfigo.app/auth` con `autoVerify="true"` |
+| `RECORD_AUDIO` / `SYSTEM_ALERT_WINDOW` | ninguno (confirma el paso 2) |
+
+**Arranque en frío, medido en la tablet** con marcas temporales (`console.log` en
+cinco puntos, quitadas al terminar) y `am start -W`, con **sesión válida** —el
+caso real de quien usó la app hace poco—, tres corridas:
+
+| Tramo | Run 1 | Run 2 | Run 3 |
+|---|---|---|---|
+| Lanzamiento → primer fotograma (`am start`) | 1,88 s | 1,71 s | 1,69 s |
+| JS: bundle evaluado → árbol de React montado | ~0,28 s | ~0,25 s | ~0,24 s |
+| → perfil cargado (`fetchProfile`) | +1,0 s | +10,4 s | +2,1 s |
+| **Total lanzamiento → inicio usable** | **~2,5 s** | ~12 s | **~3,6 s** |
+
+**Conclusión.** En desarrollo eran **~28,6 s** (Fase 24 paso 4). En release,
+**~2,5–3,6 s** con red buena. Los ~26 s de diferencia eran Hermes compilando
+módulos en la primera evaluación, y **no existen en release**, exactamente como
+predijo la Fase 24. **No hace falta partir `passenger/index.tsx` ni cargar Mapbox
+de forma diferida** —era la duda que quedaba abierta—. El único coste variable es
+el `fetchProfile`: en la corrida 2 la red lo estiró a 10 s (el guardia de 15 s de
+`conLimite` lo cubre). Los ~1,7 s de `am start` son init nativo de
+RN/Hermes/Mapbox y no se optimizan desde el JS.
+
+**App Links, verificado en el dispositivo:**
+
+- `adb shell pm get-app-links com.motomoto.app` → `amalfigo.app: verified`. La
+  huella del APK instalado coincide con la de `assetlinks.json`.
+- El enlace `https://amalfigo.app/auth#...` **se entrega a la app, no al
+  navegador** —lo que D95/H7 necesitaba—.
+- Recuperación de principio a fin: enlace → la app abre, `session.tsx` lee la URL
+  **con su fragment**, entra en modo recuperación y enruta a `/reset-password`.
+  Con tokens de prueba falsos la pantalla muestra el estado de error ("El enlace
+  ya no sirve" + "Pedir un enlace nuevo"); con un enlace real de Supabase,
+  `setSession` tendría éxito y dejaría al usuario cambiando la contraseña.
+- Los tres tipos de enlace de la Fase 25 (`recovery`, `signup`, `email_change`)
+  enrutan sin caer al inicio del pasajero.
+
+**Un tropiezo que no era de la app.** Las primeras pruebas del App Link parecían
+fallar —la app abría en el inicio del pasajero, no en recuperación—. La causa era
+el comando de prueba: `adb shell am start -d "url"` deja que el shell **del
+dispositivo** vuelva a partir la URL por los `&` sin escapar, así que
+`type=recovery` se perdía antes de llegar a la app. Con los `&` escapados para el
+shell de Android (`adb shell "am start ... -d '<url>'"`), todo enruta bien.
+Anotado para la próxima vez que se prueben enlaces por `adb`.
+
+**Instalar en la tablet: MIUI.** `INSTALL_FAILED_USER_RESTRICTED`. "Instalar apps
+por USB" de MIUI se vuelve a bloquear tras cada instalación; hay que reactivarlo
+en Opciones de desarrollador antes de cada `adb install`. Ni `adb install` ni
+`pm install` por shell lo saltan.
+
+**Lo que queda (Fase 26, con el keystore de producción):**
+
+- Rebuild limpio (las marcas de medición ya se quitaron del código) firmado con
+  el keystore real. La tablet tiene ahora un build instrumentado.
+- Añadir la huella SHA-256 de ese keystore a `assetlinks.json` (**añadir**, no
+  reemplazar) y volver a desplegar el sitio.
+- Renombrar `android.package` a `co.amalfigo.app` si se decide (cascada a Google
+  Maps, Firebase, EAS).
+
+### Lo que se hizo: paso 9, el super admin de producción y los secretos del CI (2026-09-02)
+
+**Decisión del usuario:** el proyecto Supabase vinculado (`bosodjcehvqmmegxdmlu`)
+**es el de producción** —mismo proyecto, no uno nuevo—, y el super admin de
+producción es **`jhank.45617@gmail.com`**, que ya era `super_admin` y `active`
+(promovido en el bloque "usuarios administradores", `promote_jhank_super_admin.sql`).
+
+**Estado de las cuentas el 2026-09-02:** 9 perfiles, de los cuales **8 son de
+prueba** (`@motomoto-qa.co`: 1 super admin, 1 admin, 3 conductores, 3 pasajeros)
+y solo `jhank.45617@gmail.com` es real.
+
+**`supabase/dev-tools/purge_qa_accounts.sql` (NUEVO).** Borra las 8 cuentas QA y
+todo lo que cuelga de ellas. **No se ejecuta todavía** —se sigue probando en el
+dispositivo con `pasajero.prueba@…` y compañía—: se corre **una vez, justo antes
+de abrir la app al público**. Diseño:
+
+- Casi todo cae por cascada de FK al borrar `auth.users` (verificado el mapa de
+  `ON DELETE` contra el servidor). El script solo se adelanta a mano en las tres
+  FK `ON DELETE RESTRICT`: `rides.driver_id`, `rides.request_id` (vía
+  `ride_requests`) y `ride_requests.passenger_id`.
+- Config intacta: `app_settings`, tarifas, tipos de carga, lugares, tipos de
+  documento. Los `updated_by` que apuntaran a un admin QA son `ON DELETE SET
+  NULL` (y de todas formas se comprobó: 0 ajustes y 0 tarifas editados por una
+  cuenta QA).
+- Borra también los 29 registros de `admin_audit_logs` de un actor QA (para que
+  la auditoría de producción empiece vacía) y el único objeto de `storage`
+  (`documents`, un PDF de `juan@motomoto-qa.co`).
+- Salvaguarda: aborta si alguna id del lote no es `@motomoto-qa.co`. Idempotente.
+  Imprime conteos ANTES/DESPUÉS. Cada `DELETE` validado con `EXPLAIN` contra el
+  servidor sin ejecutar.
+- **Footprint QA hoy:** 27 solicitudes, 36 viajes, 68 ofertas, 7 calificaciones.
+
+**Falta que el usuario:** confirme que `jhank.45617@gmail.com` tiene una
+**contraseña fuerte propia** (Authentication → Users cuando vuelva el panel, o
+por recuperación una vez esté el SMTP del paso 7a). La `SuperAdmin.2026` es de la
+cuenta de prueba `superadmin.prueba@…`, no de la suya.
+
+**`docs/operaciones/secretos-ci.md` (NUEVO).** Runbook de los secretos del CI.
+Los trabajos `movil` y `panel` (lint, tipos, formato, test, build) **no necesitan
+secretos** y ya corren en cada `push`. El trabajo `regresion-bd` se deja
+**omitiéndose solo**: corre `npm run test:db` —que escribe en la base— y esa base
+ahora es producción; no merece la pena en cada `push`. Si algún día se quiere en
+CI, la vía es un proyecto Supabase aparte solo para pruebas. La regresión se
+sigue corriendo a mano con `npm run test:db`. El doc lista igualmente los 4
+secretos (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` y las dos
+`EXPO_PUBLIC_*`), de dónde sale cada uno, cómo añadirlos y cómo rotarlos.
+Confirmado de paso: la clave `service_role` **no se usa en ningún sitio** del
+proyecto (todo va por funciones `security definer` acotadas).
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7475,8 +7600,8 @@ Se añadió `supabase/.temp/` a `.prettierignore`.
   o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)
 - Nombre comercial definitivo e identidad de marca (antes de la Fase 25)
 - **RESUELTO en la Fase 25, paso 3** (2026-09-02). `name: 'AmalfiGoApp'` en `app.config.ts`;
-  el icono, el splash y el eslogan salen del SVG de la marca. Falta verlo en pantalla (Metro
-  se colgo) y falta el build de release (paso 8). Detalle en 15.27
+  el icono, el splash y el eslogan salen del SVG de la marca. Verificado en pantalla y, en el
+  paso 8, en un build de release en la tablet. Detalle en 15.27
 - **Renombrar el `android.package`** de `com.motomoto.app` a uno con la marca nueva (ej.
   `co.amalfigo.app`), antes de publicar y mientras nadie lo haya instalado. Cascadea a la clave
   de Google Maps (restringida por paquete), a `google-services.json` de Firebase y a EAS. Lo
@@ -7504,13 +7629,25 @@ Se añadió `supabase/.temp/` a `.prettierignore`.
 - Configuracion de un servidor de correo propio para la recuperacion de contrasena en
   produccion. El correo integrado de Supabase tiene limites bajos y no sirve para usuarios
   reales (antes de la Fase 25)
-- **Enlaces de aplicacion de Android** para el correo de recuperacion, con dominio propio y
-  archivo de verificacion publicado en el. Es la unica forma fiable de que el enlace abra la
-  app sin pasar por el navegador (H7). Va junto al dominio, al nombre comercial y al servidor
-  de correo: son la misma conversacion (Fase 25)
-- Verificar la recuperacion de contrasena con esquema `motomoto://` en la primera compilacion
-  real. Hoy solo se pudo probar `exp://` dentro de Expo Go, donde el navegador no entrega el
-  enlace (Fase 26)
+- **RESUELTO en la Fase 25, pasos 6 y 8** (2026-09-02). Enlaces de aplicacion de Android
+  (`https://amalfigo.app/auth`, `autoVerify`) con `assetlinks.json` publicado en el dominio
+  propio. En el paso 8 se verifico en la tablet con un build de release: `pm get-app-links` da
+  `amalfigo.app: verified`, el enlace se entrega a la app y no al navegador (H7), y la
+  recuperacion enruta a `/reset-password` con el fragment de tokens intacto. Detalle en 15.27
+- **RESUELTO en la Fase 25, paso 8** (2026-09-02). La recuperacion de contrasena se verifico
+  de punta a punta en un build de release en la tablet. El esquema propio se cambio por un
+  enlace de aplicacion `https://` (D95/H7): el navegador no entrega un `https` a un esquema
+  propio, y el enlace de aplicacion verificado si. Detalle en 15.27
+- **ANTES DE ABRIR AL PUBLICO: correr `supabase/dev-tools/purge_qa_accounts.sql`.** Borra las
+  8 cuentas `@motomoto-qa.co` y sus datos del proyecto de produccion (mismo proyecto, Fase 25
+  paso 9). No antes: se sigue probando en el dispositivo con esas cuentas. Detalle en 15.27
+- **ANTES DE ABRIR AL PUBLICO: confirmar la contrasena de `jhank.45617@gmail.com`** (super
+  admin de produccion). Que sea una contrasena fuerte propia, no una de prueba. Panel ->
+  Authentication -> Users, o por recuperacion una vez este el SMTP (paso 7a). Fase 25 paso 9
+- **Secretos del CI: documentados en `docs/operaciones/secretos-ci.md`** (Fase 25 paso 9). El
+  trabajo `regresion-bd` se deja omitiendose (correria contra la base de produccion); la
+  regresion se corre a mano con `npm run test:db`. Si se quiere en CI, hace falta un proyecto
+  Supabase aparte solo para pruebas
 - **RESUELTO en la Fase 11.** Se decidio traducir desde el codigo del `hint` (D155). H8 deja
   de afectar al pasajero: los 21 mensajes sin tildes ya no llegan a ninguna pantalla. Los
   codigos del conductor, que son otros doce, se anaden a `src/features/ride/errors.ts` en las
