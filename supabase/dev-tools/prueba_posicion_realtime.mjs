@@ -119,7 +119,9 @@ async function main() {
   const oferta = (ofertas ?? []).find((o) => o.request_id === reqId);
   if (!oferta) throw new Error('al conductor no le llego la oferta del servicio de prueba');
 
-  const { error: eAcc } = await conductorCli.rpc('accept_ride_offer', { p_offer_id: oferta.offer_id });
+  const { error: eAcc } = await conductorCli.rpc('accept_ride_offer', {
+    p_offer_id: oferta.offer_id,
+  });
   if (eAcc) throw new Error(`accept_ride_offer: ${eAcc.message} (${eAcc.hint ?? ''})`);
 
   comprobar(1, 'Montaje: el pasajero tiene un viaje activo con el conductor', true);
@@ -157,31 +159,47 @@ async function main() {
   for (let i = 0; i < 60 && recibidos.length === antes; i++) await espera(100);
   const llego = recibidos.length > antes;
   const ms = llego ? recibidos[recibidos.length - 1].t - t0 : null;
-  comprobar(3, 'Mover la posicion dispara un evento en el pasajero', llego,
-    llego ? `${ms} ms` : 'no llego en 6 s');
+  comprobar(
+    3,
+    'Mover la posicion dispara un evento en el pasajero',
+    llego,
+    llego ? `${ms} ms` : 'no llego en 6 s',
+  );
 
   if (llego) {
     const fila = recibidos[recibidos.length - 1].payload.new;
 
-    comprobar(4, 'El evento trae lat y lng utiles',
+    comprobar(
+      4,
+      'El evento trae lat y lng utiles',
       typeof fila.lat === 'number' && typeof fila.lng === 'number',
-      `lat=${fila.lat}, lng=${fila.lng}`);
+      `lat=${fila.lat}, lng=${fila.lng}`,
+    );
 
-    comprobar(5, 'lat/lng coinciden con la posicion recien enviada',
+    comprobar(
+      5,
+      'lat/lng coinciden con la posicion recien enviada',
       Math.abs(fila.lat - (PARQUE.lat + 0.001)) < 1e-4 &&
         Math.abs(fila.lng - (PARQUE.lng + 0.001)) < 1e-4,
-      `${fila.lat}, ${fila.lng}`);
+      `${fila.lat}, ${fila.lng}`,
+    );
 
-    comprobar(6, 'El evento trae heading y updated_at',
+    comprobar(
+      6,
+      'El evento trae heading y updated_at',
       fila.heading === 135 && typeof fila.updated_at === 'string',
-      `heading=${fila.heading}, updated_at=${fila.updated_at}`);
+      `heading=${fila.heading}, updated_at=${fila.updated_at}`,
+    );
 
     // El pasajero pinta directo del evento (arreglo B): `updated_at` tiene que
     // ser una marca reciente y parseable, que es lo que `edadDesde` necesita.
     const edad = (Date.now() - Date.parse(fila.updated_at)) / 1000;
-    comprobar(7, 'updated_at es una marca fresca y parseable',
+    comprobar(
+      7,
+      'updated_at es una marca fresca y parseable',
       Number.isFinite(edad) && edad >= 0 && edad < 30,
-      `${edad.toFixed(1)} s de antiguedad`);
+      `${edad.toFixed(1)} s de antiguedad`,
+    );
   } else {
     for (let n = 4; n <= 7; n++) comprobar(n, 'omitida: no llego el evento', false);
   }
@@ -218,6 +236,8 @@ main()
   })
   .catch((e) => {
     console.error('ERROR:', e.message);
-    console.error('Puede que haya quedado un servicio de prueba a medias; revisar las cuentas @motomoto-qa.co.');
+    console.error(
+      'Puede que haya quedado un servicio de prueba a medias; revisar las cuentas @motomoto-qa.co.',
+    );
     process.exit(1);
   });

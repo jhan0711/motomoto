@@ -17,7 +17,7 @@ demás normas colombianas sobre protección de datos personales.
 **[REVISAR: confirmar quién es el responsable — persona natural o empresa.]**
 
 - **Responsable:** Jhan Carlo Roldán Sepúlveda (persona natural).
-- **Correo de contacto:** [definir con el dominio, p. ej. `privacidad@amalfigo.app`]
+- **Correo de contacto:** privacidad@amalfigo.app (por crear con enrutamiento de correo de Cloudflare)
 - **Dirección:** [definir si la ley lo exige]
 - **Ciudad:** Amalfi, Antioquia, Colombia.
 
@@ -162,4 +162,4 @@ datos en el RNBD de la SIC, hacerlo antes de operar a escala.]**
 
 Esta política rige desde su publicación. Los cambios se informarán dentro de la
 aplicación y, si son sustanciales, se solicitará una nueva autorización. La
-versión vigente siempre estará disponible en [URL del dominio].
+versión vigente siempre estará disponible en https://amalfigo.app/privacidad.

@@ -63,3 +63,6 @@ example
 # aplicacion. Se sube a Expo desde su panel y no hace falta en el repositorio.
 fcm-service-account.json
 *-firebase-adminsdk-*.json
+
+# Salida del sitio estatico (Fase 25)
+site/dist/

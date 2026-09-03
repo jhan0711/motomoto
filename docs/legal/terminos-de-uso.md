@@ -115,8 +115,8 @@ En la medida en que la ley lo permita, AmalfiGoApp y su titular:
 ## 9. Datos personales
 
 El tratamiento de los datos personales se rige por la **Política de Tratamiento
-de Datos Personales**, disponible en [URL del dominio], que la persona declara
-haber leído y aceptado al registrarse.
+de Datos Personales**, disponible en https://amalfigo.app/privacidad, que la
+persona declara haber leído y aceptado al registrarse.
 
 ## 10. Propiedad intelectual
 
@@ -129,7 +129,7 @@ previa y por escrito.
 
 Estos términos pueden cambiar. Los cambios se informarán dentro de la aplicación.
 El uso continuado después de un cambio implica su aceptación. La versión vigente
-siempre estará disponible en [URL del dominio].
+siempre estará disponible en https://amalfigo.app/terminos.
 
 ## 12. Ley aplicable y jurisdicción
 
@@ -139,5 +139,4 @@ municipio o circuito judicial concreto.]**
 
 ## 13. Contacto
 
-Para cualquier asunto relacionado con estos términos: [correo de contacto, va con
-el dominio].
+Para cualquier asunto relacionado con estos términos: **soporte@amalfigo.app**.

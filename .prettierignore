@@ -22,3 +22,7 @@ expo-env.d.ts
 
 # Documentacion con formato deliberado
 PROJECT_STATUS.md
+
+# Salida generada del sitio
+site/dist/
+supabase/.temp/

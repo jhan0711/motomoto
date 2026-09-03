@@ -7248,7 +7248,7 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | **Hecho** (2026-09-02) |
 | 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | **Hecho y verificado** (2026-09-02) |
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | **Hecho** (2026-09-02) |
-| 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | Pendiente |
+| 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | **Dominio comprado, sitio listo; falta desplegar (Cloudflare Pages) y la huella de release** |
 | 6 | Enlaces de aplicacion de Android + verificar la recuperacion de contrasena con `motomoto://` en un build real (D95, H7) | paso 5 | Pendiente |
 | 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | Pendiente |
 | 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | Pendiente |
@@ -7385,6 +7385,44 @@ el dominio). El usuario organiza la revisión legal después.
 **Pendiente derivado:** la pantalla de registro no tiene una casilla de "acepto
 los términos y la política de privacidad" con enlaces. Hay que añadirla cuando
 existan las URL públicas (paso 5).
+
+### Lo que se hizo: paso 5, el sitio estático (2026-09-02)
+
+**`site/`** — sitio estático mínimo que sirve tres cosas:
+
+- `site/build.mjs` (usa `marked`) genera `site/dist/`: `index.html` (presentación
+  breve con el eslogan), `privacidad(.html)` y `terminos(.html)` -los borradores
+  de `docs/legal/` envueltos en una plantilla con la marca, con un aviso de
+  "borrador" arriba-, `.well-known/assetlinks.json` y `icon.png`.
+- `site/.well-known/assetlinks.json` — plantilla. `package_name: com.motomoto.app`
+  y la huella SHA-256 como **placeholder** (`REEMPLAZAR_CON_LA_HUELLA...`).
+- `site/README.md` — cómo desplegar en Cloudflare Pages (o Netlify/Vercel).
+- `site/dist/` en `.gitignore` y `.prettierignore`.
+
+**Estado (2026-09-02):**
+
+- **`amalfigo.app` comprado** en Cloudflare Registrar (activo, expira 2027-09-02,
+  auto-renovación).
+- El sitio ya usa el dominio real. Los `docs/legal/*.md` tienen las URL
+  (`https://amalfigo.app/privacidad`, `/terminos`) y los correos
+  (`soporte@amalfigo.app`, `privacidad@amalfigo.app`), y siguen con `[REVISAR]` y
+  `[fecha de publicación]` pendientes de abogado.
+- `assetlinks.json` lleva la huella SHA-256 de la **clave de depuración**
+  (`android/app/debug.keystore`), para probar los App Links en desarrollo. **La
+  huella de producción hay que AÑADIRLA** (no reemplazar) antes de publicar, desde
+  Play Console → Firma de la app.
+- Las páginas legales salen con `<meta robots noindex>` mientras sean borrador.
+
+**Falta que el usuario:** cree el proyecto de Cloudflare Pages (repo + build
+`node site/build.mjs` + salida `site/dist`), conecte `amalfigo.app`, y active el
+**enrutamiento de correo** de Cloudflare para `soporte@` y `privacidad@` (reenvío
+gratis a su Gmail). Luego se verifica que
+`https://amalfigo.app/.well-known/assetlinks.json` responde en JSON sin
+redirección, y con eso se puede empezar el paso 6.
+
+**Aparte, encontrado formateando:** `supabase/dev-tools/prueba_posicion_realtime.mjs`
+se había comiteado sin pasar por Prettier en la Fase 24 paso 3. Corregido aquí.
+Se añadió `supabase/.temp/` a `.prettierignore`.
 
 ---
 

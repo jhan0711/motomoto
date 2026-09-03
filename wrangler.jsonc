@@ -1,0 +1,14 @@
+{
+  // Despliegue del sitio estático de AmalfiGoApp en Cloudflare. Fase 25, paso 5.
+  //
+  // No hay Worker: solo assets estáticos. Cloudflare sirve `site/dist/` tal cual.
+  // El build (`node site/build.mjs`) lo corre Cloudflare antes de `wrangler deploy`,
+  // según la configuración del proyecto en el panel.
+  "name": "amalfigoapp-site",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./site/dist",
+    // `html_handling` por defecto ("auto-trailing-slash") sirve `privacidad.html`
+    // en `/privacidad`, así que no hacen falta copias sin extensión.
+  },
+}
