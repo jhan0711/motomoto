@@ -7245,7 +7245,7 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | # | Paso | Depende de | Estado |
 |---|---|---|---|
 | 1 | Alinear la coordenada del parque (H17): `AMALFI_CENTER` esta a 353 m del parque de la tabla `places` | nada | **Hecho** (2026-09-02) |
-| 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | Pendiente |
+| 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | **Hecho** (2026-09-02) |
 | 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | Pendiente |
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | Pendiente |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | Pendiente |
@@ -7272,6 +7272,38 @@ verificacion tambien median la distancia contra el punto equivocado.
 
 Verificado: `tsc`, `lint`, `format:check` limpios, Jest 55/55, y los dos seeds
 corren y devuelven distancias sensatas.
+
+### Lo que se hizo: paso 2, los permisos del manifest (2026-09-02)
+
+**Se auditó el manifest fusionado de un build de release de verdad** (no el de
+desarrollo): `npx expo prebuild --platform android` + `gradlew :app:processReleaseMainManifest`.
+
+- **`RECORD_AUDIO`** lo añadía `expo-image-picker` para grabar vídeo. Se quita en
+  origen con `microphonePermission: false` en el plugin y se bloquea también con
+  `android.blockedPermissions`. **Fuera del manifest de release** (verificado: 0
+  ocurrencias).
+- **`SYSTEM_ALERT_WINDOW`** resultó vivir **solo en la variante `debug`** —
+  `android/app/src/debug/AndroidManifest.xml`, que genera `expo-dev-client` para
+  la burbuja de su menú, junto con `usesCleartextTraffic="true"`. **El build de
+  release nunca lo llevó** (verificado: 0 ocurrencias). El `blockedPermissions`
+  para él queda como defensa por si una librería lo mete en release algún día; en
+  debug no lo toca -y ahí la burbuja se quiere-.
+
+**El manifest de release queda con 16 permisos `android.permission.*`, todos
+justificados:** ubicación (función central), `CAMERA` (foto de perfil), `INTERNET`,
+los de `expo-notifications`/FCM (`POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`,
+`WAKE_LOCK`, `FOREGROUND_SERVICE`, `BIND_JOB_SERVICE`, badge de OEM),
+`READ/WRITE_EXTERNAL_STORAGE` acotados a `maxSdkVersion=32` (image-picker en
+Android viejo), `VIBRATE`, `ACCESS_NETWORK_STATE`/`ACCESS_WIFI_STATE`.
+
+**Anotado, no bloquea:** aparece `android.permission.DUMP` (lo declara la capa de
+React Native para systrace). Es de nivel *signature*: nunca se le concede a una
+app que no sea del sistema, así que es cosmético. Si Play Console lo señala al
+subir, se quita con otra entrada en `blockedPermissions`.
+
+Verificado: `tsc` y `format:check` limpios, `expo config` resuelve
+`blockedPermissions` y `microphonePermission: false`, y el manifest de release
+compilado no tiene ninguno de los dos permisos.
 
 ---
 
@@ -7315,9 +7347,10 @@ corren y devuelven distancias sensatas.
 - **Nombre visible de la aplicacion.** Android muestra "motomoto" en minusculas en el dialogo
   de permisos y bajo el icono, porque es el nombre tecnico del proyecto. Se corrige junto al
   nombre comercial (D1, Fase 25)
-- **Permisos heredados de las herramientas:** `RECORD_AUDIO` y `SYSTEM_ALERT_WINDOW` entran
-  en el manifest por el cliente de desarrollo y el selector de fotos. Hay que revisarlos
-  antes de publicar, porque Google Play pregunta por ellos (Fase 25)
+- **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
+  (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
+  solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`
+  de verdad. Queda anotado `android.permission.DUMP` (nivel signature, cosmetico). Detalle en 15.27
 - **Vigilar el consumo del buscador.** Search Box trae 500 sesiones gratis al mes y no hay
   alternativa: la API barata no conoce Amalfi (D126). Con las tres medidas puestas (testigo
   por busqueda, pausa de 400 ms y la lista de lugares primero) deberia sobrar para el piloto,

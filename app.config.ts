@@ -95,6 +95,24 @@ const config: ExpoConfig = {
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
+
+    // Fase 25, paso 2. Permisos que meten las herramientas y que la aplicación
+    // no usa. Google Play pregunta por los dos.
+    //
+    // RECORD_AUDIO lo añade `expo-image-picker` para grabar vídeo, que aquí no
+    // se hace. Se quita en origen con `microphonePermission: false` (más abajo) y
+    // se bloquea aquí también, por si otra herramienta lo reintrodujera.
+    //
+    // SYSTEM_ALERT_WINDOW vive solo en la variante `debug` -lo pone
+    // `android/app/src/debug/AndroidManifest.xml`, que genera `expo-dev-client`
+    // para la burbuja flotante de su menú-. El build de release NO lo lleva, así
+    // que en producción esto es defensivo: no lo quita del debug (esa variante
+    // tiene prioridad de fusión y ahí la burbuja se quiere), y en release no hay
+    // nada que quitar. Verificado con `processReleaseMainManifest`.
+    blockedPermissions: [
+      'android.permission.SYSTEM_ALERT_WINDOW',
+      'android.permission.RECORD_AUDIO',
+    ],
     config: {
       googleMaps: {
         apiKey: googleMapsApiKey,
@@ -120,6 +138,9 @@ const config: ExpoConfig = {
           'MotoMoto necesita acceso a tus fotos para que puedas elegir tu foto de perfil.',
         cameraPermission:
           'MotoMoto necesita acceso a la cámara para que puedas tomarte una foto de perfil.',
+        // No se graba vídeo: sin esto el plugin añade RECORD_AUDIO al manifest
+        // (Fase 25 paso 2). Los textos se ajustan al nombre nuevo en el paso 3.
+        microphonePermission: false,
       },
     ],
     [
