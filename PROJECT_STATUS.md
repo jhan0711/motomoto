@@ -7249,8 +7249,8 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | **Hecho y verificado** (2026-09-02) |
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | **Hecho** (2026-09-02) |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | **Hecho** (2026-09-02) — sitio en vivo en `amalfigo.app` |
-| 6 | Enlaces de aplicacion de Android (`https://amalfigo.app/auth`, `autoVerify`) + migrar el enlace de recuperacion de `motomoto://` a `https://` (D95, H7) | paso 5 | **Codigo hecho** (2026-09-02, commit `29ed38f`), **verificado en el paso 8**. En cola en el panel de Supabase: anadir `https://amalfigo.app/**` a Redirect URLs |
-| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | **7b y 7c: codigo hecho** (2026-09-02, commits `0d61576`, `be85f06`). **7a (SMTP) y las tareas de panel pendientes** (dashboard caido): activar "Confirm email", SMTP de Resend, traducir plantillas |
+| 6 | Enlaces de aplicacion de Android (`https://amalfigo.app/auth`, `autoVerify`) + migrar el enlace de recuperacion de `motomoto://` a `https://` (D95, H7) | paso 5 | **Hecho y verificado de punta a punta** (2026-09-03). Reviso el enfoque: enlace de correo directo a `amalfigo.app` con `token_hash` (sin el salto por `supabase.co`) + `verifyOtp` en la app. Probado en la tablet: enlace -> App Link -> app -> pantalla de contrasena nueva |
+| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | **7a, 7b hechos y verificados** (2026-09-03). SMTP de Resend enviando (llega a Recibidos), "Confirm email" activado, plantillas traducidas (falta traducir los 3 *Subject*). Registro nuevo -> correo -> enlace abre la app y entra: verificado. 7c (cambio de correo) usa el mismo mecanismo, cubierto por pruebas |
 | 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | **Hecho y medido** (2026-09-02) — arranque **~2,5–3,6 s** (era ~28,6 s en dev); App Links verificados en el dispositivo |
 | 9 | Crear el super admin de produccion + procedimiento para los secretos del CI | nada | **Hecho** (2026-09-02) — `jhank.45617@gmail.com` es el super admin de prod (mismo proyecto). Script de purga de cuentas QA listo (sin ejecutar). Runbook de secretos en `docs/operaciones/secretos-ci.md` |
 
@@ -7560,6 +7560,57 @@ secretos (`SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` y las dos
 Confirmado de paso: la clave `service_role` **no se usa en ningún sitio** del
 proyecto (todo va por funciones `security definer` acotadas).
 
+### Lo que se hizo y verificó: pasos 6 y 7, el correo de la cuenta de punta a punta (2026-09-03)
+
+Con el panel de Supabase de vuelta se cerraron las tareas que quedaban en cola y
+se probó el ciclo completo en la tablet. **Apareció un problema real y se
+resolvió cambiando el enfoque del paso 6.**
+
+**El problema.** El enlace por defecto de los correos de Supabase
+(`{{ .ConfirmationURL }}`) apunta primero a
+`<proyecto>.supabase.co/auth/v1/verify?...` y **de ahí** hace un redirect a
+`amalfigo.app/auth`. Android solo comprueba el App Link en la **primera**
+navegación —la de `supabase.co`, que no es nuestro dominio—, no en el redirect
+del navegador. Resultado: el enlace abría Chrome, no la app. Es H7 una capa más
+arriba. Verificado en la tablet con el log: `mCurrentFocus` en
+`com.android.chrome`.
+
+**La solución (Supabase la recomienda para móvil).** Que el enlace del correo
+apunte **directo** a `{{ .SiteURL }}/auth?token_hash={{ .TokenHash }}&type=...`,
+sin pasar por `supabase.co`. Así la primera navegación ya es a `amalfigo.app`,
+Android entrega la URL a la app, y la app canjea el `token_hash` con
+`supabase.auth.verifyOtp({ type, token_hash })`.
+
+- **Código** (`src/features/auth/auth-service.ts`): las tres `complete*FromLink`
+  aceptan ahora `token_hash` y llaman a `verifyOtp`; se mantienen `code` y
+  `access_token` de respaldo para enlaces viejos. `is*Link` ya leían la query,
+  no hubo que tocarlas. `site/build.mjs`: la página `/auth` de respaldo arrastra
+  también la query al rebote `motomoto://`. Prueba nueva del formato
+  `token_hash`. `tsc`, `lint`, Jest 63/63 y Prettier en verde.
+- **Plantillas de correo** (panel): "Confirm signup", "Reset password" y
+  "Change Email Address" reescritas al español con el enlace directo. **Los tres
+  *Subject* siguen en inglés** —pendiente menor para el usuario—.
+- **SMTP de Resend** (paso 7a): host `smtp.resend.com:465`, user `resend`,
+  remitente `soporte@amalfigo.app`. Un correo de recuperación real llega a
+  **Recibidos** (no spam). Rate limit subido.
+- **"Confirm email" activado** (paso 7b).
+- **URL Configuration**: Site URL `https://amalfigo.app`, y
+  `https://amalfigo.app/auth` + `/**` en Redirect URLs.
+
+**Verificado en la tablet con un build de release** (mismo keystore de
+depuración, Fase 26 para el real):
+
+- **Recuperación**: correo → toca el enlace → **abre la app** (no el navegador) →
+  `verifyOtp` → pantalla de contraseña nueva. Se completó el cambio (de paso, la
+  contraseña real del super admin de producción, tarea del paso 9).
+- **Registro nuevo**: alta en la app → pantalla "Confirma tu correo" → correo →
+  toca el enlace → abre la app y entra al mapa. `email_confirmed_at` quedó puesto
+  en la base.
+- Cuenta de prueba (`jhank.45617+prueba1@gmail.com`) borrada al terminar.
+
+**Falta el rebuild limpio firmado con el keystore de producción (Fase 26).** El
+APK probado hoy lleva el código bueno pero va con el keystore de depuración.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7626,24 +7677,24 @@ proyecto (todo va por funciones `security definer` acotadas).
   municipio que ningun proveedor conoce y que se marcaron a mano; con el uso apareceran mas.
   Se dan de alta desde el panel (Fase 20)
 - Anadir la huella SHA-1 de la clave de publicacion a la clave de Google Maps (Fase 26)
-- Configuracion de un servidor de correo propio para la recuperacion de contrasena en
-  produccion. El correo integrado de Supabase tiene limites bajos y no sirve para usuarios
-  reales (antes de la Fase 25)
+- **RESUELTO en la Fase 25, paso 7a** (2026-09-03). SMTP propio de Resend
+  (`smtp.resend.com:465`, remitente `soporte@amalfigo.app`) configurado en Supabase. Correo de
+  recuperacion real verificado: llega a Recibidos. Detalle en 15.27
 - **RESUELTO en la Fase 25, pasos 6 y 8** (2026-09-02). Enlaces de aplicacion de Android
   (`https://amalfigo.app/auth`, `autoVerify`) con `assetlinks.json` publicado en el dominio
   propio. En el paso 8 se verifico en la tablet con un build de release: `pm get-app-links` da
   `amalfigo.app: verified`, el enlace se entrega a la app y no al navegador (H7), y la
   recuperacion enruta a `/reset-password` con el fragment de tokens intacto. Detalle en 15.27
-- **RESUELTO en la Fase 25, paso 8** (2026-09-02). La recuperacion de contrasena se verifico
-  de punta a punta en un build de release en la tablet. El esquema propio se cambio por un
-  enlace de aplicacion `https://` (D95/H7): el navegador no entrega un `https` a un esquema
-  propio, y el enlace de aplicacion verificado si. Detalle en 15.27
+- **RESUELTO en la Fase 25, pasos 6 y 7** (2026-09-03). La recuperacion de contrasena Y la
+  confirmacion de registro se verificaron de punta a punta en la tablet. El enfoque final:
+  enlace de correo directo a `amalfigo.app/auth?token_hash=...` (sin el salto por
+  `supabase.co` que rompia el App Link) + `verifyOtp` en la app. Detalle en 15.27
 - **ANTES DE ABRIR AL PUBLICO: correr `supabase/dev-tools/purge_qa_accounts.sql`.** Borra las
   8 cuentas `@motomoto-qa.co` y sus datos del proyecto de produccion (mismo proyecto, Fase 25
   paso 9). No antes: se sigue probando en el dispositivo con esas cuentas. Detalle en 15.27
-- **ANTES DE ABRIR AL PUBLICO: confirmar la contrasena de `jhank.45617@gmail.com`** (super
-  admin de produccion). Que sea una contrasena fuerte propia, no una de prueba. Panel ->
-  Authentication -> Users, o por recuperacion una vez este el SMTP (paso 7a). Fase 25 paso 9
+- **RESUELTO en la Fase 25, paso 6/7** (2026-09-03). La contrasena de `jhank.45617@gmail.com`
+  (super admin de produccion) se cambio por una fuerte propia, usando el propio flujo de
+  recuperacion al probarlo
 - **Secretos del CI: documentados en `docs/operaciones/secretos-ci.md`** (Fase 25 paso 9). El
   trabajo `regresion-bd` se deja omitiendose (correria contra la base de produccion); la
   regresion se corre a mano con `npm run test:db`. Si se quiere en CI, hace falta un proyecto
@@ -7664,8 +7715,13 @@ proyecto (todo va por funciones `security definer` acotadas).
   demas sesiones al cambiar la contrasena; el pendiente venia de la Fase 6 y quedo obsoleto.
   Verificado con `supabase/dev-tools/prueba_cambio_contrasena_sesiones.mjs`. Sin cambio de codigo
   (seccion 15.23)
-- Habilitar el cambio de correo cuando exista verificacion (D101, Fase 25)
-- Reactivar la confirmacion de correo cuando exista servidor propio (D91, Fase 25)
+- **RESUELTO en la Fase 25, paso 7c** (2026-09-03). El cambio de correo (D101) esta habilitado:
+  pantalla `passenger/change-email`, `verifyOtp({type:'email_change'})`, doble confirmacion.
+  Mismo mecanismo que recuperacion/registro, cubierto por pruebas
+- **RESUELTO en la Fase 25, paso 7b** (2026-09-03). "Confirm email" activado (D91), SMTP propio
+  de Resend, flujo de registro verificado en la tablet. Detalle en 15.27
+- **Pendiente menor: traducir los 3 *Subject* de las plantillas de correo** en el panel de
+  Supabase (el cuerpo ya esta en español; el asunto quedo en ingles). Fase 25 paso 7
 - **BORRADOR HECHO en la Fase 25, paso 4** (2026-09-02, `docs/legal/`). Falta la revision de
   abogado -las decisiones que la necesitan estan marcadas `[REVISAR]` en el texto- y añadir la
   casilla de aceptacion en la pantalla de registro con los enlaces publicos. Detalle en 15.27

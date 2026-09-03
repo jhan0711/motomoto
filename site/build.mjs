@@ -125,7 +125,8 @@ writeFileSync(
 // el enlace de aplicación verificado, Android abre la app directamente y esta
 // página no se llega a ver. Se ve cuando la app no está instalada o el enlace
 // aún no está verificado: intenta pasar a la app por el esquema `motomoto://`
-// -llevándose el fragmento con los tokens- y si no, explica qué hacer.
+// -llevándose la query y el fragmento con el token_hash- y si no, explica qué
+// hacer. Los enlaces nuevos traen `?token_hash=...&type=...` en la query.
 mkdirSync(resolve(DIST, 'auth'), { recursive: true });
 writeFileSync(
   resolve(DIST, 'auth/index.html'),
@@ -138,7 +139,7 @@ writeFileSync(
     <p style="margin-top:24px"><a id="manual" href="#">Abrir la aplicación</a></p>
     <script>
       (function () {
-        var destino = 'motomoto://auth' + window.location.hash;
+        var destino = 'motomoto://auth' + window.location.search + window.location.hash;
         document.getElementById('manual').setAttribute('href', destino);
         // Intento automático.
         window.location.replace(destino);

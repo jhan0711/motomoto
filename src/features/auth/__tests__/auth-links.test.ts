@@ -34,6 +34,18 @@ describe('reconocimiento de enlaces del correo', () => {
     expect(isConfirmationLink(cambioCorreo)).toBe(false);
   });
 
+  it('reconoce el formato directo nuevo con token_hash en la query', () => {
+    expect(isRecoveryLink('https://amalfigo.app/auth?token_hash=pkce_x&type=recovery')).toBe(true);
+    expect(isConfirmationLink('https://amalfigo.app/auth?token_hash=pkce_x&type=signup')).toBe(
+      true,
+    );
+    expect(isEmailChangeLink('https://amalfigo.app/auth?token_hash=pkce_x&type=email_change')).toBe(
+      true,
+    );
+    // Y por el esquema propio, cuando la pagina de respaldo rebota a la app.
+    expect(isRecoveryLink('motomoto://auth?token_hash=pkce_x&type=recovery')).toBe(true);
+  });
+
   it('sigue reconociendo el enlace motomoto:// viejo de recuperacion', () => {
     expect(isRecoveryLink('motomoto://reset-password#type=recovery')).toBe(true);
   });

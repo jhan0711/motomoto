@@ -13,20 +13,25 @@ import type {
 
 /**
  * A donde vuelven los enlaces de los correos de la cuenta (recuperar contrasena,
- * y en la Fase 25 tambien confirmar la cuenta y cambiar el correo).
+ * confirmar la cuenta, cambiar el correo).
  *
  * Es un enlace de aplicacion de Android (`https://`), no el esquema `motomoto://`
- * (D95, hallazgo H7). El navegador de Android no completa la redireccion de un
- * `https` de Supabase a un esquema propio -el enlace se abre en el navegador
- * interno del cliente de correo y ahi muere-. Con un enlace de aplicacion,
- * Android verifica la propiedad del dominio contra
- * `https://amalfigo.app/.well-known/assetlinks.json` y entrega la URL a la app
- * directamente.
+ * (D95, hallazgo H7): Android verifica la propiedad del dominio contra
+ * `https://amalfigo.app/.well-known/assetlinks.json` y entrega la URL a la app.
  *
- * La ruta `/auth` la atiende `src/app/auth.tsx`, una pantalla que solo espera
- * mientras `session.tsx` lee los parametros del enlace y decide que hacer.
+ * CLAVE (revision del paso 6): las plantillas de correo del panel apuntan
+ * DIRECTO a `{{ .SiteURL }}/auth?token_hash=...&type=...`, sin pasar por
+ * `<proyecto>.supabase.co/auth/v1/verify`. Ese salto por supabase.co abria el
+ * navegador y el App Link ya no se disparaba en el redirect (H7 una capa mas
+ * arriba). Con el enlace directo, la primera navegacion ya es a `amalfigo.app`
+ * y la app lo recibe; luego canjea el `token_hash` con `verifyOtp`.
  *
- * Debe estar en la lista de "Redirect URLs" del panel de Supabase.
+ * Este valor se sigue pasando como `redirectTo`/`emailRedirectTo` en las
+ * llamadas de abajo: GoTrue exige que este en la lista de "Redirect URLs" del
+ * panel aunque la plantilla ya no use `{{ .ConfirmationURL }}`.
+ *
+ * La ruta `/auth` la atiende `src/app/auth.tsx`, que solo espera mientras
+ * `session.tsx` lee los parametros del enlace y decide que hacer.
  */
 export const AUTH_CALLBACK_URL = 'https://amalfigo.app/auth';
 
@@ -243,10 +248,10 @@ function parseLinkParams(url: string): Record<string, string> {
 export function isRecoveryLink(url: string): boolean {
   const params = parseLinkParams(url);
 
-  // `type=recovery` es lo que manda Supabase en el fragmento, y sirve igual para
-  // el enlace de aplicacion nuevo (`.../auth#...type=recovery`) que para el
-  // `motomoto://` viejo. El `includes` es respaldo para enlaces antiguos que
-  // sigan en la bandeja de alguien.
+  // `type=recovery` llega en la query del enlace directo nuevo
+  // (`.../auth?token_hash=...&type=recovery`) o en el fragmento de los formatos
+  // viejos (`#...type=recovery`); `parseLinkParams` lee los dos. El `includes`
+  // es respaldo para enlaces `motomoto://reset-password` de bandejas antiguas.
   return params.type === 'recovery' || url.includes('/reset-password');
 }
 
@@ -276,10 +281,12 @@ export function isEmailChangeLink(url: string): boolean {
  * Abre la sesion que viene dentro de un enlace del correo.
  *
  * Sirve para recuperacion (`type=recovery`) y para confirmacion de cuenta
- * (`type=signup`): el intercambio de tokens es identico, solo cambian los
- * textos de error. Es una sesion real y con todos los permisos del usuario.
- * Para la recuperacion, la aplicacion la marca ademas como "recuperacion en
- * curso" y no deja entrar a las pantallas normales hasta cambiar la contrasena.
+ * (`type=signup`): el canje es identico, solo cambian los textos de error.
+ * Acepta el formato nuevo (`token_hash` -> `verifyOtp`) y los viejos (`code`,
+ * `access_token`) como respaldo. Es una sesion real y con todos los permisos
+ * del usuario. Para la recuperacion, la aplicacion la marca ademas como
+ * "recuperacion en curso" y no deja entrar a las pantallas normales hasta
+ * cambiar la contrasena.
  */
 async function abrirSesionDesdeEnlace(
   url: string,
@@ -297,6 +304,22 @@ async function abrirSesionDesdeEnlace(
         message: textos.invalido,
       },
     };
+  }
+
+  // Enlace del correo con `token_hash` (Fase 25, revision del paso 6). Es el
+  // formato que apunta DIRECTO a `https://amalfigo.app/auth?token_hash=...` sin
+  // pasar por `<proyecto>.supabase.co/verify`. Ese salto por supabase.co era lo
+  // que rompia el enlace de aplicacion: Android solo comprueba el App Link en la
+  // primera navegacion, no en el redirect del navegador (H7, una capa mas
+  // arriba). Con el enlace directo, Android entrega la URL a la app y aqui se
+  // canjea el token con `verifyOtp`.
+  if (params.token_hash !== undefined && params.type !== undefined) {
+    const { error } = await supabase.auth.verifyOtp({
+      type: params.type as 'recovery' | 'signup',
+      token_hash: params.token_hash,
+    });
+
+    return error ? fail(error) : ok(undefined);
   }
 
   if (params.code !== undefined) {
@@ -366,6 +389,25 @@ export async function completeEmailChangeFromLink(
         message: 'Ese enlace de cambio de correo ya no es válido. Pídelo de nuevo desde tu perfil.',
       },
     };
+  }
+
+  // Enlace directo con `token_hash` (revision del paso 6, ver el comentario en
+  // `abrirSesionDesdeEnlace`). Con el cambio seguro hay dos enlaces -uno al
+  // correo actual y otro al nuevo- y cada uno trae su `token_hash`. Mientras
+  // quede un `new_email` pendiente en el usuario, falta abrir el otro.
+  if (params.token_hash !== undefined) {
+    const { data, error } = await supabase.auth.verifyOtp({
+      type: 'email_change',
+      token_hash: params.token_hash,
+    });
+
+    if (error) {
+      return fail(error);
+    }
+
+    const pendiente = (data.user as { new_email?: string | null } | null)?.new_email;
+
+    return ok(pendiente ? 'falta_el_otro' : 'completo');
   }
 
   if (params.access_token !== undefined && params.refresh_token !== undefined) {
