@@ -7246,7 +7246,7 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 |---|---|---|---|
 | 1 | Alinear la coordenada del parque (H17): `AMALFI_CENTER` esta a 353 m del parque de la tabla `places` | nada | **Hecho** (2026-09-02) |
 | 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | **Hecho** (2026-09-02) |
-| 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | Pendiente |
+| 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | **Hecho y verificado** (2026-09-02) |
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | Pendiente |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | Pendiente |
 | 6 | Enlaces de aplicacion de Android + verificar la recuperacion de contrasena con `motomoto://` en un build real (D95, H7) | paso 5 | Pendiente |
@@ -7305,6 +7305,61 @@ Verificado: `tsc` y `format:check` limpios, `expo config` resuelve
 `blockedPermissions` y `microphonePermission: false`, y el manifest de release
 compilado no tiene ninguno de los dos permisos.
 
+### Lo que se hizo: paso 3, la identidad (2026-09-02)
+
+**Nombre visible.** `app.config.ts`: `name: 'AmalfiGoApp'`, `slug: 'amalfigoapp'`.
+El `scheme` sigue siendo `motomoto` -es el esquema de enlace profundo, no se ve, y
+cambiarlo rompería el enlace de recuperación de contraseña (D95, paso 6)-. El
+`android.package` (`com.motomoto.app`) NO se toca aquí: está atado a la clave de
+Google Maps y al proyecto de Firebase, así que renombrarlo es una decisión aparte
+(ver pendientes).
+
+**Icono y splash desde el SVG.** `assets/brand/logo.svg` (el que envió el usuario)
++ `assets/brand/generate.mjs`, que con `@resvg/resvg-js` produce:
+
+- `assets/images/icon.png` — el logo entero sobre su fondo `#2a323c`.
+- `assets/images/android-icon-foreground.png` — solo la marca, centrada al 62 %,
+  fondo transparente. Sobre el `#2a323c` del icono adaptativo el linework naranja
+  y los faros brillantes destacan y los detalles oscuros se funden con el fondo:
+  queda limpio.
+- `assets/images/android-icon-monochrome.png` — la marca en blanco plano (iconos
+  con tema de Android 13+).
+- `assets/images/splash-icon.png` — la marca sola; el fondo del splash pasa a
+  `#2a323c` y el ancho a 160.
+- `assets/images/favicon.png` — 48 px para web.
+
+`app.config.ts`: `adaptiveIcon.backgroundColor: '#2A323C'` (antes `#E6F4FE`, y se
+quitó `backgroundImage`), splash `backgroundColor: '#2A323C'`. El SVG es un calco
+automático (183 trazos, un fondo duplicado en `<rect>` y `<path>` que el script
+quita); un redibujado limpio queda para después, no bloquea.
+
+**Eslogan.** `src/app/(auth)/welcome.tsx`: título "AmalfiGoApp", subtítulo
+"Muévete fácil, llega seguro.", y el logo real (`icon.png` vía `expo-image`) en
+lugar del icono de lucide. `src/features/map/location-gate.tsx`: "MotoMoto" ->
+"AmalfiGoApp" en el texto del permiso de ubicación. Los strings de permiso de
+`expo-image-picker` también.
+
+**`LICENSE`.** `Copyright (c) 2026 Jhan Carlo Roldán Sepúlveda. Todos los derechos
+reservados.` — persona natural, con la cláusula de propiedad privada.
+
+**Verificado:** `tsc`, `lint`, `format:check` limpios, Jest 55/55; `expo config`
+resuelve `name: AmalfiGoApp` / `slug: amalfigoapp` / los colores; los PNG
+generados revisados a ojo. **En la tablet** (tras reiniciar Metro con `--clear`):
+la bienvenida muestra el logo, "AmalfiGoApp" y "Muévete fácil, llega seguro.",
+todo limpio en modo oscuro. El icono, el nombre bajo el icono y el splash se
+verifican en el build de release (paso 8), no en el cliente de desarrollo.
+
+Nota: `expo prebuild --clean` en el paso 2 dejó a Metro sin responder por HTTP
+aunque siguiera reteniendo el puerto 8081. **Después de un prebuild hay que
+reiniciar Metro con `npx.cmd expo start --clear`.** Anotado para no volver a
+perder el tiempo.
+
+**Anotado -decisión aparte:** renombrar `android.package` de `com.motomoto.app`
+a algo como `co.amalfigo.app` antes del lanzamiento. Cascadea a: nueva
+restricción de la clave de Google Maps por paquete, nuevo `google-services.json`
+de Firebase para el paquete nuevo, y la asociación de EAS. Mejor hacerlo ahora
+-nunca se ha publicado- que después. Lo decide el usuario.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7344,9 +7399,13 @@ compilado no tiene ninguno de los dos permisos.
   reservados" pero no nombra a nadie. Falta decidir si el codigo pertenece al desarrollador
   o a la empresa de motorratones, y anadir ese nombre (antes de la Fase 25)
 - Nombre comercial definitivo e identidad de marca (antes de la Fase 25)
-- **Nombre visible de la aplicacion.** Android muestra "motomoto" en minusculas en el dialogo
-  de permisos y bajo el icono, porque es el nombre tecnico del proyecto. Se corrige junto al
-  nombre comercial (D1, Fase 25)
+- **RESUELTO en la Fase 25, paso 3** (2026-09-02). `name: 'AmalfiGoApp'` en `app.config.ts`;
+  el icono, el splash y el eslogan salen del SVG de la marca. Falta verlo en pantalla (Metro
+  se colgo) y falta el build de release (paso 8). Detalle en 15.27
+- **Renombrar el `android.package`** de `com.motomoto.app` a uno con la marca nueva (ej.
+  `co.amalfigo.app`), antes de publicar y mientras nadie lo haya instalado. Cascadea a la clave
+  de Google Maps (restringida por paquete), a `google-services.json` de Firebase y a EAS. Lo
+  decide el usuario. Encontrado en la Fase 25 paso 3
 - **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
   (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
   solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`

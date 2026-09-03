@@ -1,29 +1,30 @@
+import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import { CarTaxiFront } from 'lucide-react-native';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
-import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
+import { radius, spacing } from '@/theme';
+
+// El logo de la marca. Es un PNG y no un icono de lucide: es la identidad de la
+// aplicación, no un adorno (Fase 25 paso 3).
+const LOGO = require('../../../assets/images/icon.png');
 
 export default function Welcome() {
-  const { colors } = useTheme();
   const router = useRouter();
 
   return (
     <Screen>
       <View style={styles.hero}>
-        <View style={[styles.mark, { backgroundColor: colors.brand }]}>
-          <CarTaxiFront size={iconSize.xxl} color={colors.onBrand} strokeWidth={iconStrokeWidth} />
-        </View>
+        <Image source={LOGO} style={styles.mark} contentFit="cover" />
 
         <View style={styles.copy}>
           <Text variant="display" align="center">
-            MotoMoto
+            AmalfiGoApp
           </Text>
           <Text variant="body" color="textSecondary" align="center">
-            Solicita tu motorratón en Amalfi, sin llamadas y sin esperas.
+            Muévete fácil, llega seguro.
           </Text>
         </View>
       </View>
@@ -60,10 +61,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   mark: {
-    alignItems: 'center',
     borderRadius: radius.xxl,
-    height: 96,
-    justifyContent: 'center',
-    width: 96,
+    height: 112,
+    width: 112,
   },
 });

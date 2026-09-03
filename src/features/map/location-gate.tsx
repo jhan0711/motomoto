@@ -110,7 +110,7 @@ function resolve(state: BlockingState): GateContent {
             icon: MapPinOff,
             title: 'Necesitamos saber dónde estás',
             description:
-              'MotoMoto usa tu ubicación para mostrarte en el mapa y para que el conductor sepa dónde recogerte. Solo mientras tengas la aplicación abierta.',
+              'AmalfiGoApp usa tu ubicación para mostrarte en el mapa y para que el conductor sepa dónde recogerte. Solo mientras tengas la aplicación abierta.',
             actionLabel: 'Permitir ubicación',
             action: 'request',
           }

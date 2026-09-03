@@ -52,8 +52,12 @@ if (!mapboxDownloadToken) {
 }
 
 const config: ExpoConfig = {
-  name: 'motomoto',
-  slug: 'motomoto',
+  // Nombre visible: bajo el icono, en el conmutador de apps y en los diálogos
+  // de permisos (Fase 25 paso 3). El `scheme` sigue siendo `motomoto`: es el
+  // esquema de enlace profundo, no es visible, y cambiarlo rompería el enlace de
+  // recuperación de contraseña (D95, paso 6).
+  name: 'AmalfiGoApp',
+  slug: 'amalfigoapp',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
@@ -89,9 +93,10 @@ const config: ExpoConfig = {
     // paquete com.motomoto.app). Queda anotado en la seccion 15.20.
     googleServicesFile: './google-services.json',
     adaptiveIcon: {
-      backgroundColor: '#E6F4FE',
+      // El fondo del logo (Fase 25 paso 3). Color plano en vez de imagen: el
+      // logo ya trae ese tono, y una imagen de un solo color es peso de más.
+      backgroundColor: '#2A323C',
       foregroundImage: './assets/images/android-icon-foreground.png',
-      backgroundImage: './assets/images/android-icon-background.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
     predictiveBackGestureEnabled: false,
@@ -135,11 +140,11 @@ const config: ExpoConfig = {
       'expo-image-picker',
       {
         photosPermission:
-          'MotoMoto necesita acceso a tus fotos para que puedas elegir tu foto de perfil.',
+          'AmalfiGoApp necesita acceso a tus fotos para que puedas elegir tu foto de perfil.',
         cameraPermission:
-          'MotoMoto necesita acceso a la cámara para que puedas tomarte una foto de perfil.',
+          'AmalfiGoApp necesita acceso a la cámara para que puedas tomarte una foto de perfil.',
         // No se graba vídeo: sin esto el plugin añade RECORD_AUDIO al manifest
-        // (Fase 25 paso 2). Los textos se ajustan al nombre nuevo en el paso 3.
+        // (Fase 25 paso 2).
         microphonePermission: false,
       },
     ],
@@ -158,9 +163,10 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        backgroundColor: '#208AEF',
+        // Fase 25 paso 3: el fondo del logo y la marca centrada.
+        backgroundColor: '#2A323C',
         image: './assets/images/splash-icon.png',
-        imageWidth: 76,
+        imageWidth: 160,
       },
     ],
     [
