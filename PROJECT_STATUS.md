@@ -170,6 +170,13 @@ este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo 
   inicio del conductor. **Dos hallazgos agendados aparte:** la busqueda del panel no escala
   (indices `pg_trgm`), y la posicion del conductor podria ir a Broadcast. La medida de arranque
   de produccion, a la Fase 25. Todo comiteado
+- **AHORA EN CURSO: Fase 25, Preparacion para produccion** (seccion 15.27). Nueve pasos,
+  **lanzamiento completo en Amalfi**. Nombre decidido: **AmalfiGoApp**, eslogan "Muevete facil,
+  llega seguro.", titular de los derechos Jhan Carlo Roldan Sepulveda (persona natural), correo
+  con Resend, dominio por comprar (Cloudflare recomendado). **Paso 1 hecho:** `AMALFI_CENTER`
+  alineado con la coordenada de `places` (H17 resuelto). Faltan: manifest, identidad, borrador
+  legal, dominio + assetlinks, enlaces de app, correo, build de release arm64, super admin de
+  produccion. **SIN COMITEAR:** el paso 1 y el plan (este documento)
 - **Antes de la Fase 22 se hizo un diagnostico del puntero del conductor**, a peticion del
   usuario: el pasajero veia moverse al conductor con ~15 s de retraso, al borde del criterio de
   aceptacion. Medido con datos reales -el emisor escribe cada 10 s, correcto; el retraso estaba
@@ -657,7 +664,7 @@ aplicacion sigue sin tocar dinero.
 | D119 | Salida sin ubicacion | Todas las pantallas de fallo ofrecen "Continuar sin ubicacion", que muestra el mapa centrado en Amalfi. Es lo que cumple el criterio de aceptacion 6 |
 | D120 | Precision del GPS | `Balanced`, no `BestForNavigation`. Unos metros de error son invisibles en el mapa del pasajero, y el modo de alta precision mantiene el chip ocupado sin parar |
 | D121 | Espera del primer arreglo | 20 segundos. Bajo techo un arranque en frio tarda mas de un minuto, y un giro infinito se lee como una app colgada. El vigilante sigue activo: si el arreglo llega en el segundo 40, la pantalla se actualiza sola |
-| D122 | Vista inicial del mapa | Parque de Amalfi (6,9047 / -75,0767) con zoom de municipio, y desliza a la posicion real cuando llega. Una pantalla en blanco no dice nada; el parque dice donde opera el servicio |
+| D122 | Vista inicial del mapa | Parque de Amalfi con zoom de municipio, y desliza a la posicion real cuando llega. Una pantalla en blanco no dice nada; el parque dice donde opera el servicio. **Coordenada corregida en la Fase 25 paso 1** (2026-09-02): pasa de `6,9047 / -75,0767` -redondeo municipal- a `6,907392 / -75,074987`, la de `places`, a 353 m de distancia (H17) |
 | D123 | Teclado | Lo gestiona `BottomSheet`, no las pantallas. Se corrige en el componente para que cualquier hoja futura lo herede |
 | D124 | Altura de la hoja con el teclado | Conserva la altura del punto de anclaje activo y solo se eleva. Estirarla al maximo era lo obvio y quedaba mal: en tablet se comia la pantalla y dejaba una plancha de blanco bajo tres controles |
 | D125 | Estilo del mapa | Propio en los dos esquemas, con los puntos de interes apagados. Compiten con nuestros marcadores y en Amalfi son en buena parte incorrectos, como demostro la evaluacion de proveedores |
@@ -1243,7 +1250,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
 | 23 | Pruebas | **TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Los seis pasos. Destapo y corrigio la regresion D268. El checklist de GPS en movimiento (8 puntos) queda escrito y **bloqueado por hardware**: se ejecuta cuando haya un telefono Android con datos, en Amalfi. Pendiente operativo, no de la fase: configurar los secretos de GitHub para que el CI corra la regresion de BD |
 | 24 | Optimizacion | **TERMINADA** (2026-09-02, seccion 15.26). Seis pasos. Borro un indice muerto de `driver_locations`, primer test e2e del canal de posicion, y difirio 2 llamadas del arranque del pasajero. Dos hallazgos agendados aparte (busqueda del panel, posicion por Broadcast). La medida de arranque de produccion, a la Fase 25 |
-| 25 | Preparacion para produccion | Pendiente |
+| 25 | Preparacion para produccion | **EN CURSO** (2026-09-02, seccion 15.27). Nueve pasos. Nombre: AmalfiGoApp. Lanzamiento completo en Amalfi |
 | 26 | Publicacion y despliegue | Pendiente |
 
 ---
@@ -7216,6 +7223,58 @@ Fase 25.
 
 ---
 
+## 15.27 FASE 25: PREPARACION PARA PRODUCCION (EN CURSO, 2026-09-02)
+
+Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
+
+### Decisiones tomadas
+
+| Que | Valor |
+|---|---|
+| Nombre de la app | **AmalfiGoApp** |
+| Eslogan | "Muevete facil, llega seguro." |
+| Logo | SVG que envio el usuario (`upscalemedia-transformed.svg`, calco automatico, 183 trazos, naranja `~#ca852d`). Sirve para icono y splash; un redibujado limpio en vector queda para despues |
+| Titular de los derechos | **Jhan Carlo Roldan Sepulveda**, persona natural. `LICENSE`: `Copyright (c) 2026 Jhan Carlo Roldan Sepulveda` |
+| Dominio | Por comprar. Recomendado: Cloudflare Registrar (precio de costo) + Cloudflare Pages (gratis) para `assetlinks.json` y los textos legales. Nombre a revisar: `amalfigo.app` / `amalfigo.com` / `amalfigoapp.com` |
+| Proveedor de correo | **Resend** (nivel gratis 3.000/mes, SMTP para Supabase Auth, buena entregabilidad) |
+| Textos legales | El asistente deja un borrador (Colombia, Ley 1581); revision de abogado la organiza el usuario despues |
+| Selector de municipio | **Fase 26 o mas adelante.** Solo hace falta si la empresa se expande a otro municipio; hoy todo esta cableado para Amalfi y el nombre lo fija |
+
+### Los nueve pasos acordados
+
+| # | Paso | Depende de | Estado |
+|---|---|---|---|
+| 1 | Alinear la coordenada del parque (H17): `AMALFI_CENTER` esta a 353 m del parque de la tabla `places` | nada | **Hecho** (2026-09-02) |
+| 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | Pendiente |
+| 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | Pendiente |
+| 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | Pendiente |
+| 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | Pendiente |
+| 6 | Enlaces de aplicacion de Android + verificar la recuperacion de contrasena con `motomoto://` en un build real (D95, H7) | paso 5 | Pendiente |
+| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | Pendiente |
+| 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | Pendiente |
+| 9 | Crear el super admin de produccion + procedimiento para los secretos del CI | nada | Pendiente |
+
+### Lo que se hizo: paso 1, la coordenada del parque (2026-09-02)
+
+**`AMALFI_CENTER` (`src/features/map/region.ts`) pasa de `6.9047 / -75.0767` a
+`6.907392 / -75.074987`** — la misma coordenada que la fila "El parque" de
+`places` (migracion `20260801012726`) y que el `fare_center` de `app_settings`.
+La anterior era un redondeo de las coordenadas municipales y estaba a 353 m del
+parque que marco la empresa. Se alinea con la fuente operativa: el sistema de
+tarifas ya usaba la de `places` desde D219, y esa lista la curan desde el panel.
+`AMALFI_CENTER` solo decide donde abre el mapa antes del primer fix de GPS, asi
+que el cambio no toca nada operativo.
+
+**De paso**, los dos seeds que colocaban conductores "junto al parque" con la
+coordenada vieja: `seed_test_driver.sql` (el conductor pasa a 69 m del parque) y
+`seed_second_driver.sql` (el segundo, a 214 m, al otro lado). Sus SELECT de
+verificacion tambien median la distancia contra el punto equivocado.
+
+Verificado: `tsc`, `lint`, `format:check` limpios, Jest 55/55, y los dos seeds
+corren y devuelven distancias sensatas.
+
+---
+
 ## 16. PENDIENTES CONOCIDOS
 
 - **La posicion del conductor en tiempo real podria ir a Broadcast.** Encontrado en la Fase 24,
@@ -7244,8 +7303,9 @@ Fase 25.
   Los checklists de 15.12 y 15.14 apuntan ya a archivos que existen. Detalle en la seccion 15.25
 - **RESUELTO en la Fase 22, paso 1** (2026-09-02). `anon` ya no puede ejecutar ninguna funcion
   de `public`: dos migraciones, `20260902170000` y `20260902180000`. Detalle en la seccion 15.23
-- **Decidir la coordenada del parque (H17).** `AMALFI_CENTER` esta a 353 m del parque que dice
-  la tabla de lugares, y D122 la documenta como el parque
+- **RESUELTO en la Fase 25, paso 1** (2026-09-02). `AMALFI_CENTER` se alineo con la coordenada
+  de `places` "El parque" (`6.907392 / -75.074987`), que es la que ya usaba el sistema de
+  tarifas. Detalle en la seccion 15.27
 - Conectividad de datos durante las pruebas de campo en Amalfi. Sin ella el dispositivo
   obtiene su posicion por GPS pero no puede enviarla al servidor
 - Titular de los derechos del software. El archivo LICENSE dice "Todos los derechos

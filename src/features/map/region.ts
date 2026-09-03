@@ -26,16 +26,23 @@ export interface Region extends Coordinates {
 }
 
 /**
- * Parque principal de Amalfi. Verified against the municipal coordinates
- * (6°54'17" N, 75°04'36" W) during the Phase 8 provider evaluation.
+ * Parque principal de Amalfi.
  *
- * This is where the map opens before the device reports a position. A blank
- * screen would tell the passenger nothing; the town square tells them where the
- * service operates while the GPS gets a fix.
+ * ES LA MISMA COORDENADA QUE LA FILA "El parque" DE `places` y que el
+ * `fare_center` de `app_settings` (-75.074987 / 6.907392). Hasta la Fase 25 aqui
+ * habia una version distinta -6.9047 / -75.0767, redondeo de las coordenadas
+ * municipales-, a 353 m de donde la empresa marco el parque de verdad. Lo
+ * encontro el usuario al ver que el punto de una prueba no caia en el parque
+ * (hallazgo H17). Se alinea con la fuente operativa: el sistema de tarifas ya
+ * usaba la de `places`, y esa la curan desde el panel.
+ *
+ * Aqui abre el mapa antes de que el aparato reporte posicion. Una pantalla en
+ * blanco no dice nada; el parque dice donde opera el servicio mientras el GPS
+ * consigue un fix.
  */
 export const AMALFI_CENTER: Coordinates = {
-  latitude: 6.9047,
-  longitude: -75.0767,
+  latitude: 6.907392,
+  longitude: -75.074987,
 };
 
 /**

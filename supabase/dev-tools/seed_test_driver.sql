@@ -41,10 +41,11 @@ declare
   c_email    constant text := 'conductor.prueba@motomoto-qa.co';
   c_password constant text := 'Conductor.2026';
 
-  -- A unos 130 metros del parque. No exactamente encima, para que la distancia
+  -- A unos 70 metros del parque real (H17: la coordenada del parque se alineo en
+  -- la Fase 25 con la de `places`). No exactamente encima, para que la distancia
   -- que calcula el buscador de conductores sea un numero y no un cero.
-  c_lng constant double precision := -75.0760;
-  c_lat constant double precision := 6.9040;
+  c_lng constant double precision := -75.0745;
+  c_lat constant double precision := 6.9070;
 begin
   if not exists (select 1 from auth.users where id = c_driver) then
     -- Las cuatro columnas de token van a cadena vacia y NO a nulo. Es la
@@ -131,6 +132,6 @@ select
   (select round(extract(epoch from (now() - updated_at))::numeric, 0)
      from public.driver_locations where driver_id = d.driver_id) as antiguedad_ubicacion_s
 from public.find_available_drivers(
-       extensions.st_setsrid(extensions.st_makepoint(-75.0767, 6.9047), 4326)::extensions.geography,
+       extensions.st_setsrid(extensions.st_makepoint(-75.074987, 6.907392), 4326)::extensions.geography,
        1::smallint
      ) d;

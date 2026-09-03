@@ -40,12 +40,13 @@ declare
   c_email    constant text := 'conductor2.prueba@motomoto-qa.co';
   c_password constant text := 'Conductor2.2026';
 
-  -- Al otro lado del parque respecto del primer conductor, a unos 250 metros.
+  -- Al otro lado del parque respecto del primer conductor, a unos 220 metros
+  -- (coordenada del parque alineada con `places` en la Fase 25, H17).
   -- Separarlos importa: con los dos en el mismo punto, la distancia de las dos
   -- ofertas sale igual y no se puede comprobar que el orden por cercania
   -- funciona.
-  c_lng constant double precision := -75.0785;
-  c_lat constant double precision := 6.9062;
+  c_lng constant double precision := -75.0762;
+  c_lat constant double precision := 6.9089;
 begin
   if not exists (select 1 from auth.users where id = c_driver) then
     -- Las cuatro columnas de token van a cadena vacia y NO a nulo. Es la
@@ -122,7 +123,7 @@ select
   (select round(extract(epoch from (now() - updated_at))::numeric, 0)
      from public.driver_locations where driver_id = d.driver_id) as antiguedad_ubicacion_s
 from public.find_available_drivers(
-       extensions.st_setsrid(extensions.st_makepoint(-75.0767, 6.9047), 4326)::extensions.geography,
+       extensions.st_setsrid(extensions.st_makepoint(-75.074987, 6.907392), 4326)::extensions.geography,
        1::smallint
      ) d
 order by d.distance_m;
