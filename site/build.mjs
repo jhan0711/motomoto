@@ -24,13 +24,13 @@ const BRAND = {
 };
 
 /** Envuelve el cuerpo HTML en la plantilla del sitio. */
-function pagina({ titulo, cuerpo, esLegal = false }) {
+function pagina({ titulo, cuerpo, esLegal = false, noindex = esLegal }) {
   return `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-${esLegal ? '<meta name="robots" content="noindex">' : ''}
+${noindex ? '<meta name="robots" content="noindex">' : ''}
 <title>${titulo} · AmalfiGoApp</title>
 <style>
   :root { color-scheme: dark; }
@@ -118,6 +118,37 @@ writeFileSync(
       <a href="/privacidad">Política de privacidad</a> ·
       <a href="/terminos">Términos de uso</a>
     </p>`,
+  }),
+);
+
+// Aterrizaje de los enlaces de los correos de la cuenta. Con la app instalada y
+// el enlace de aplicación verificado, Android abre la app directamente y esta
+// página no se llega a ver. Se ve cuando la app no está instalada o el enlace
+// aún no está verificado: intenta pasar a la app por el esquema `motomoto://`
+// -llevándose el fragmento con los tokens- y si no, explica qué hacer.
+mkdirSync(resolve(DIST, 'auth'), { recursive: true });
+writeFileSync(
+  resolve(DIST, 'auth/index.html'),
+  pagina({
+    titulo: 'Abrir en la app',
+    noindex: true,
+    cuerpo: `
+    <h1>Abre AmalfiGoApp para continuar</h1>
+    <p id="msg">Te estamos llevando a la aplicación…</p>
+    <p style="margin-top:24px"><a id="manual" href="#">Abrir la aplicación</a></p>
+    <script>
+      (function () {
+        var destino = 'motomoto://auth' + window.location.hash;
+        document.getElementById('manual').setAttribute('href', destino);
+        // Intento automático.
+        window.location.replace(destino);
+        // Si a los 2 s seguimos aquí, la app no está instalada.
+        setTimeout(function () {
+          document.getElementById('msg').textContent =
+            'Si no se abrió sola, toca "Abrir la aplicación". Si no tienes AmalfiGoApp instalada, descárgala e intenta el enlace de nuevo.';
+        }, 2000);
+      })();
+    </script>`,
   }),
 );
 

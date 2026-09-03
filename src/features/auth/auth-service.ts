@@ -1,5 +1,3 @@
-import { createURL } from 'expo-linking';
-
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
 
@@ -11,6 +9,25 @@ import type {
   LoginValues,
   RegisterValues,
 } from './schemas';
+
+/**
+ * A donde vuelven los enlaces de los correos de la cuenta (recuperar contrasena,
+ * y en la Fase 25 tambien confirmar la cuenta y cambiar el correo).
+ *
+ * Es un enlace de aplicacion de Android (`https://`), no el esquema `motomoto://`
+ * (D95, hallazgo H7). El navegador de Android no completa la redireccion de un
+ * `https` de Supabase a un esquema propio -el enlace se abre en el navegador
+ * interno del cliente de correo y ahi muere-. Con un enlace de aplicacion,
+ * Android verifica la propiedad del dominio contra
+ * `https://amalfigo.app/.well-known/assetlinks.json` y entrega la URL a la app
+ * directamente.
+ *
+ * La ruta `/auth` la atiende `src/app/auth.tsx`, una pantalla que solo espera
+ * mientras `session.tsx` lee los parametros del enlace y decide que hacer.
+ *
+ * Debe estar en la lista de "Redirect URLs" del panel de Supabase.
+ */
+export const AUTH_CALLBACK_URL = 'https://amalfigo.app/auth';
 
 /**
  * Capa de servicio de autenticacion.
@@ -145,15 +162,14 @@ export function onAuthUserChange(listener: (user: AuthUser | null) => void): () 
  * remediar: falta de conexion y limite de envios. Callarlos dejaria a alguien
  * esperando un correo que nunca se envio.
  *
- * El enlace del correo vuelve a la propia aplicacion mediante un enlace profundo
- * (D94). `createURL` construye la direccion correcta para cada entorno: dentro
- * de Expo Go es una direccion exp://, y en la aplicacion instalada es
- * motomoto://. Escribirla a mano funcionaria en uno de los dos y fallaria en el
- * otro, siempre en el que no estas mirando.
+ * El enlace del correo vuelve a la aplicacion por `AUTH_CALLBACK_URL`, un enlace
+ * de aplicacion de Android (ver ahi el porque, D95/H7). Antes se usaba
+ * `createURL('/reset-password')`, que daba `motomoto://` y no llegaba desde el
+ * navegador del cliente de correo.
  */
 export async function sendPasswordReset(values: ForgotPasswordValues): Promise<Result> {
   const { error } = await supabase.auth.resetPasswordForEmail(values.email, {
-    redirectTo: createURL('/reset-password'),
+    redirectTo: AUTH_CALLBACK_URL,
   });
 
   return error ? fail(error) : ok(undefined);
@@ -194,6 +210,10 @@ function parseLinkParams(url: string): Record<string, string> {
 export function isRecoveryLink(url: string): boolean {
   const params = parseLinkParams(url);
 
+  // `type=recovery` es lo que manda Supabase en el fragmento, y sirve igual para
+  // el enlace de aplicacion nuevo (`.../auth#...type=recovery`) que para el
+  // `motomoto://` viejo. El `includes` es respaldo para enlaces antiguos que
+  // sigan en la bandeja de alguien.
   return params.type === 'recovery' || url.includes('/reset-password');
 }
 

@@ -118,6 +118,22 @@ const config: ExpoConfig = {
       'android.permission.SYSTEM_ALERT_WINDOW',
       'android.permission.RECORD_AUDIO',
     ],
+
+    // Fase 25, paso 6. Enlace de aplicación de Android para los correos de la
+    // cuenta (recuperar contraseña, y en esta fase también confirmar la cuenta y
+    // cambiar el correo). `autoVerify` hace que Android compruebe la propiedad
+    // del dominio contra `https://amalfigo.app/.well-known/assetlinks.json`; si
+    // cuadra, entrega `https://amalfigo.app/auth...` a la app sin pasar por el
+    // navegador (D95, H7). Solo esa ruta: el resto del dominio -la página, los
+    // textos legales- sigue abriéndose en el navegador.
+    intentFilters: [
+      {
+        action: 'VIEW',
+        autoVerify: true,
+        data: [{ scheme: 'https', host: 'amalfigo.app', pathPrefix: '/auth' }],
+        category: ['BROWSABLE', 'DEFAULT'],
+      },
+    ],
     config: {
       googleMaps: {
         apiKey: googleMapsApiKey,
