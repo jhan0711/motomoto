@@ -70,16 +70,48 @@ function fail<T = never>(error: unknown): Result<T> {
  * con un segundo INSERT, un corte de red entre las dos llamadas dejaria un
  * usuario sin perfil, en un limbo del que no se puede salir.
  */
-export async function signUp(values: RegisterValues): Promise<Result> {
-  const { error } = await supabase.auth.signUp({
+export async function signUp(
+  values: RegisterValues,
+): Promise<Result<{ needsConfirmation: boolean }>> {
+  const { data, error } = await supabase.auth.signUp({
     email: values.email,
     password: values.password,
     options: {
+      // A donde vuelve el enlace de "confirma tu cuenta" del correo (Fase 25
+      // paso 7b). Mismo enlace de aplicacion que la recuperacion, ver
+      // AUTH_CALLBACK_URL.
+      emailRedirectTo: AUTH_CALLBACK_URL,
       data: {
         full_name: values.fullName,
         phone: values.phone,
       },
     },
+  });
+
+  if (error) {
+    return fail(error);
+  }
+
+  // Con "Confirm email" activado, Supabase no abre sesion: devuelve `session`
+  // nula y manda el correo. Si el correo ya tenia cuenta, Supabase devuelve
+  // exactamente lo mismo -sin identidades- para no revelar que existe (D74). En
+  // los dos casos la pantalla dice "revisa tu correo", que es la respuesta
+  // correcta para ambos.
+  return ok({ needsConfirmation: data.session === null });
+}
+
+/**
+ * Reenvia el correo de confirmacion de cuenta.
+ *
+ * Lo piden dos pantallas: el registro (por si el primer correo no llego) y el
+ * login (cuando alguien intenta entrar con una cuenta sin confirmar). El limite
+ * de envios de Supabase se traduce a un mensaje que el usuario entiende.
+ */
+export async function resendConfirmation(email: string): Promise<Result> {
+  const { error } = await supabase.auth.resend({
+    type: 'signup',
+    email,
+    options: { emailRedirectTo: AUTH_CALLBACK_URL },
   });
 
   return error ? fail(error) : ok(undefined);
@@ -218,14 +250,29 @@ export function isRecoveryLink(url: string): boolean {
 }
 
 /**
- * Abre la sesion que viene dentro del enlace del correo.
+ * Distingue un enlace de confirmacion de cuenta (Fase 25 paso 7b).
  *
- * Es una sesion real y con todos los permisos del usuario, no un permiso
- * limitado a cambiar la contrasena. Por eso la aplicacion la marca como
- * "recuperacion en curso" y no deja entrar a las pantallas normales hasta que la
- * contrasena se ha cambiado.
+ * Supabase manda `type=signup` en el fragmento. A diferencia de la
+ * recuperacion, aqui no hay pantalla que llenar: el enlace abre la sesion y el
+ * usuario ya puede usar la aplicacion.
  */
-export async function completeRecoveryFromLink(url: string): Promise<Result> {
+export function isConfirmationLink(url: string): boolean {
+  return parseLinkParams(url).type === 'signup';
+}
+
+/**
+ * Abre la sesion que viene dentro de un enlace del correo.
+ *
+ * Sirve para recuperacion (`type=recovery`) y para confirmacion de cuenta
+ * (`type=signup`): el intercambio de tokens es identico, solo cambian los
+ * textos de error. Es una sesion real y con todos los permisos del usuario.
+ * Para la recuperacion, la aplicacion la marca ademas como "recuperacion en
+ * curso" y no deja entrar a las pantallas normales hasta cambiar la contrasena.
+ */
+async function abrirSesionDesdeEnlace(
+  url: string,
+  textos: { invalido: string; incompleto: string },
+): Promise<Result> {
   const params = parseLinkParams(url);
 
   // Enlace caducado o ya usado. Supabase lo dice aqui, y es el caso mas frecuente
@@ -234,8 +281,8 @@ export async function completeRecoveryFromLink(url: string): Promise<Result> {
     return {
       ok: false,
       failure: {
-        code: params.error_code ?? 'recovery_link_invalid',
-        message: 'Ese enlace ya no es válido. Pide uno nuevo.',
+        code: params.error_code ?? 'auth_link_invalid',
+        message: textos.invalido,
       },
     };
   }
@@ -257,11 +304,22 @@ export async function completeRecoveryFromLink(url: string): Promise<Result> {
 
   return {
     ok: false,
-    failure: {
-      code: 'recovery_link_incomplete',
-      message: 'Ese enlace está incompleto. Pide uno nuevo.',
-    },
+    failure: { code: 'auth_link_incomplete', message: textos.incompleto },
   };
+}
+
+export function completeRecoveryFromLink(url: string): Promise<Result> {
+  return abrirSesionDesdeEnlace(url, {
+    invalido: 'Ese enlace ya no es válido. Pide uno nuevo.',
+    incompleto: 'Ese enlace está incompleto. Pide uno nuevo.',
+  });
+}
+
+export function completeConfirmationFromLink(url: string): Promise<Result> {
+  return abrirSesionDesdeEnlace(url, {
+    invalido: 'Ese enlace de confirmación ya no es válido. Inicia sesión y pídelo de nuevo.',
+    incompleto: 'Ese enlace de confirmación está incompleto. Inicia sesión y pídelo de nuevo.',
+  });
 }
 
 /**

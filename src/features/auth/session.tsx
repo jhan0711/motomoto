@@ -10,9 +10,11 @@ import {
 } from 'react';
 
 import {
+  completeConfirmationFromLink,
   completeRecoveryFromLink,
   fetchDriver,
   fetchProfile,
+  isConfirmationLink,
   isRecoveryLink,
   onAuthUserChange,
   signOut as requestSignOut,
@@ -119,6 +121,14 @@ interface SessionValue {
   isRecoveringPassword: boolean;
   /** Mensaje cuando el enlace estaba caducado, ya usado o incompleto. */
   recoveryError: string | null;
+  /**
+   * Mensaje cuando el enlace de confirmacion de cuenta fallo (Fase 25 paso 7b).
+   *
+   * A diferencia de la recuperacion no hay pantalla que bloquear: si el enlace
+   * abre bien, el usuario queda con sesion y las guardias lo llevan a su zona.
+   * Solo hay que enseñar el error si el enlace estaba caducado.
+   */
+  confirmationError: string | null;
   /** Cierra la recuperacion. La llama la pantalla al guardar la contrasena. */
   endPasswordRecovery: () => void;
   signOut: () => void;
@@ -193,6 +203,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     active: false,
     error: null,
   });
+  const [confirmationError, setConfirmationError] = useState<string | null>(null);
 
   // Enlaces de recuperacion de contrasena.
   //
@@ -202,20 +213,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   // que aparece exactamente la mitad de las veces.
   useEffect(() => {
     function handleUrl(url: string | null) {
-      if (url === null || !isRecoveryLink(url)) {
+      if (url === null) {
         return;
       }
 
-      // Se marca antes de abrir la sesion, no despues. Al abrirla, las guardias
-      // reaccionan de inmediato, y si la marca llegara tarde darian tiempo a
-      // colar al usuario en la pantalla principal.
-      setRecovery({ active: true, error: null });
+      if (isRecoveryLink(url)) {
+        // Se marca antes de abrir la sesion, no despues. Al abrirla, las guardias
+        // reaccionan de inmediato, y si la marca llegara tarde darian tiempo a
+        // colar al usuario en la pantalla principal.
+        setRecovery({ active: true, error: null });
 
-      void completeRecoveryFromLink(url).then((result) => {
-        if (!result.ok) {
-          setRecovery({ active: true, error: result.failure.message });
-        }
-      });
+        void completeRecoveryFromLink(url).then((result) => {
+          if (!result.ok) {
+            setRecovery({ active: true, error: result.failure.message });
+          }
+        });
+        return;
+      }
+
+      if (isConfirmationLink(url)) {
+        // Aqui no se bloquea nada: si el enlace abre bien, la suscripcion de
+        // Supabase avisa del cambio y las guardias llevan al usuario a su zona.
+        setConfirmationError(null);
+
+        void completeConfirmationFromLink(url).then((result) => {
+          if (!result.ok) {
+            setConfirmationError(result.failure.message);
+          }
+        });
+      }
     }
 
     void Linking.getInitialURL().then(handleUrl);
@@ -360,11 +386,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       canOperate,
       isRecoveringPassword: recovery.active,
       recoveryError: recovery.error,
+      confirmationError,
       endPasswordRecovery,
       signOut,
       refreshProfile,
     }),
-    [user, isLoading, error, canOperate, recovery, endPasswordRecovery, signOut, refreshProfile],
+    [
+      user,
+      isLoading,
+      error,
+      canOperate,
+      recovery,
+      confirmationError,
+      endPasswordRecovery,
+      signOut,
+      refreshProfile,
+    ],
   );
 
   return <SessionContext.Provider value={value}>{children}</SessionContext.Provider>;

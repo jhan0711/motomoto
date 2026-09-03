@@ -1,16 +1,17 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'expo-router';
-import { Lock, Mail, Phone, UserRound } from 'lucide-react-native';
+import { Lock, Mail, MailCheck, Phone, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { Header } from '@/components/ui/header';
 import { Input } from '@/components/ui/input';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
-import { signUp } from '@/features/auth/auth-service';
+import { resendConfirmation, signUp } from '@/features/auth/auth-service';
 import { FormError } from '@/components/ui/form-error';
 import { registerSchema, type RegisterValues } from '@/features/auth/schemas';
 import { spacing } from '@/theme';
@@ -29,6 +30,12 @@ import { spacing } from '@/theme';
 export default function Register() {
   const router = useRouter();
   const [formError, setFormError] = useState<string | null>(null);
+  // Correo al que se mandó la confirmación. Null mientras se ve el formulario.
+  const [pendiente, setPendiente] = useState<string | null>(null);
+  const [reenvio, setReenvio] = useState<{
+    estado: 'idle' | 'enviando' | 'hecho';
+    error: string | null;
+  }>({ estado: 'idle', error: null });
 
   const { control, handleSubmit, formState } = useForm({
     resolver: zodResolver(registerSchema),
@@ -42,11 +49,65 @@ export default function Register() {
 
     if (!result.ok) {
       setFormError(result.failure.message);
+      return;
     }
 
-    // Al registrarse correctamente Supabase deja la sesion abierta, porque la
-    // confirmacion por correo esta desactivada (D91). La guardia de
-    // (auth)/_layout se encarga de llevar al usuario a su zona.
+    // Con "Confirm email" activado (Fase 25 paso 7b) Supabase no abre sesion:
+    // manda un correo y hay que esperar a que el usuario toque el enlace. Si
+    // algun dia se desactiva, `needsConfirmation` sera falso y la guardia de
+    // (auth)/_layout llevara al usuario a su zona sin pasar por esta pantalla.
+    if (result.data.needsConfirmation) {
+      setPendiente(values.email);
+    }
+  }
+
+  async function onResend() {
+    if (pendiente === null) {
+      return;
+    }
+
+    setReenvio({ estado: 'enviando', error: null });
+
+    const result = await resendConfirmation(pendiente);
+
+    setReenvio(
+      result.ok
+        ? { estado: 'hecho', error: null }
+        : { estado: 'idle', error: result.failure.message },
+    );
+  }
+
+  if (pendiente !== null) {
+    return (
+      <Screen header={<Header onBack={() => router.replace('/login')} />}>
+        <EmptyState
+          icon={MailCheck}
+          title="Confirma tu correo"
+          description={`Te enviamos un enlace a ${pendiente}. Ábrelo desde este teléfono para activar tu cuenta y poder entrar.`}
+        />
+        <View style={styles.actions}>
+          <FormError message={reenvio.error} />
+          {reenvio.estado === 'hecho' ? (
+            <Text variant="caption" color="textSecondary" align="center">
+              Te enviamos el correo de nuevo. Revisa también la carpeta de spam.
+            </Text>
+          ) : (
+            <Button
+              label="Reenviar correo"
+              variant="secondary"
+              fullWidth
+              loading={reenvio.estado === 'enviando'}
+              onPress={() => void onResend()}
+            />
+          )}
+          <Button
+            label="Ir a iniciar sesión"
+            variant="ghost"
+            onPress={() => router.replace('/login')}
+          />
+        </View>
+      </Screen>
+    );
   }
 
   return (
