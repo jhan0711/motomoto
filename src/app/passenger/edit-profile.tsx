@@ -19,8 +19,9 @@ import { spacing } from '@/theme';
 /**
  * Edicion del nombre y el telefono del pasajero.
  *
- * El correo no esta aqui: no se edita en el MVP. La razon completa esta en el
- * comentario de `SessionUser.email`.
+ * El correo no esta aqui: se cambia en su propia pantalla
+ * (`passenger/change-email`), porque necesita la contrasena y una confirmacion
+ * por enlace que el nombre y el telefono no piden.
  *
  * Al guardar se pide a la sesion que vuelva a leer el perfil y se vuelve atras.
  * No se actualiza el estado a mano con los valores del formulario: eso mostraria
@@ -98,8 +99,8 @@ export default function EditProfile() {
         />
 
         <Text variant="caption" color="textTertiary">
-          Tu correo no se puede cambiar desde la aplicación. Si necesitas cambiarlo, comunícate con
-          la empresa.
+          Tu correo se cambia desde «Correo» en tu perfil: pide tu contraseña y una confirmación por
+          enlace.
         </Text>
       </View>
 

@@ -111,6 +111,21 @@ export const changePasswordSchema = z
     path: ['password'],
   });
 
+/**
+ * Cambio de correo desde dentro de la aplicacion (Fase 25 paso 7c, D101).
+ *
+ * Pide la contrasena actual por el mismo motivo que el cambio de contrasena
+ * (D102): sin ella, un telefono desbloqueado un minuto basta para apuntar la
+ * cuenta a otro correo y, con "recuperar contrasena", quedarse con ella. La
+ * verificacion por correo -que es lo que faltaba para levantar D101- la aporta
+ * Supabase: manda un enlace al correo nuevo (y al actual) y el cambio no surte
+ * efecto hasta que se abren.
+ */
+export const changeEmailSchema = z.object({
+  email,
+  currentPassword: z.string().min(1, { error: 'Escribe tu contraseña actual.' }),
+});
+
 export const forgotPasswordSchema = z.object({ email });
 
 /**
@@ -131,6 +146,7 @@ export const resetPasswordSchema = z
   });
 
 export type ChangePasswordValues = z.output<typeof changePasswordSchema>;
+export type ChangeEmailValues = z.output<typeof changeEmailSchema>;
 export type EditProfileValues = z.output<typeof editProfileSchema>;
 export type RegisterInput = z.input<typeof registerSchema>;
 export type RegisterValues = z.output<typeof registerSchema>;

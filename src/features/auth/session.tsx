@@ -11,10 +11,12 @@ import {
 
 import {
   completeConfirmationFromLink,
+  completeEmailChangeFromLink,
   completeRecoveryFromLink,
   fetchDriver,
   fetchProfile,
   isConfirmationLink,
+  isEmailChangeLink,
   isRecoveryLink,
   onAuthUserChange,
   signOut as requestSignOut,
@@ -59,10 +61,9 @@ export interface SessionUser {
   phone: string | null;
   /**
    * Viene de `auth.users`, no de `profiles`: es la credencial de acceso y no un
-   * dato del perfil. No se puede cambiar desde la aplicacion en el MVP, porque
-   * con la confirmacion de correo desactivada (D91) el cambio seria inmediato y
-   * sin verificar, y quien tuviera el telefono desbloqueado un minuto podria
-   * apuntar la cuenta a su propio correo y quedarse con ella.
+   * dato del perfil. El pasajero lo cambia desde `passenger/change-email` (Fase
+   * 25 paso 7c): pide la contrasena (D102) y Supabase verifica el correo nuevo
+   * -y, con el cambio seguro, tambien el actual- por enlace antes de aplicarlo.
    */
   email: string | null;
   /**
@@ -129,6 +130,16 @@ interface SessionValue {
    * Solo hay que enseñar el error si el enlace estaba caducado.
    */
   confirmationError: string | null;
+  /**
+   * Resultado de abrir un enlace de cambio de correo (Fase 25 paso 7c).
+   *
+   *   - `done`: el correo ya cambio.
+   *   - `partial`: este enlace se acepto, falta abrir el del otro correo.
+   *   - `error`: el enlace estaba caducado o ya usado.
+   *
+   * Null mientras no se abre ninguno. La pantalla `/auth` lo muestra.
+   */
+  emailChangeNotice: { kind: 'done' | 'partial' | 'error'; message: string } | null;
   /** Cierra la recuperacion. La llama la pantalla al guardar la contrasena. */
   endPasswordRecovery: () => void;
   signOut: () => void;
@@ -204,6 +215,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     error: null,
   });
   const [confirmationError, setConfirmationError] = useState<string | null>(null);
+  const [emailChangeNotice, setEmailChangeNotice] = useState<{
+    kind: 'done' | 'partial' | 'error';
+    message: string;
+  } | null>(null);
 
   // Enlaces de recuperacion de contrasena.
   //
@@ -240,6 +255,30 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           if (!result.ok) {
             setConfirmationError(result.failure.message);
           }
+        });
+        return;
+      }
+
+      if (isEmailChangeLink(url)) {
+        setEmailChangeNotice(null);
+
+        void completeEmailChangeFromLink(url).then((result) => {
+          if (!result.ok) {
+            setEmailChangeNotice({ kind: 'error', message: result.failure.message });
+            return;
+          }
+
+          // Si el cambio quedo completo, `setSession` de dentro ya disparo el
+          // aviso de Supabase y el perfil se releera con el correo nuevo.
+          setEmailChangeNotice(
+            result.data === 'completo'
+              ? { kind: 'done', message: 'Listo, tu correo quedó actualizado.' }
+              : {
+                  kind: 'partial',
+                  message:
+                    'Confirmamos este correo. Abre también el enlace del otro mensaje para terminar el cambio.',
+                },
+          );
         });
       }
     }
@@ -387,6 +426,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       isRecoveringPassword: recovery.active,
       recoveryError: recovery.error,
       confirmationError,
+      emailChangeNotice,
       endPasswordRecovery,
       signOut,
       refreshProfile,
@@ -398,6 +438,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       canOperate,
       recovery,
       confirmationError,
+      emailChangeNotice,
       endPasswordRecovery,
       signOut,
       refreshProfile,

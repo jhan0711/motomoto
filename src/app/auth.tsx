@@ -1,5 +1,5 @@
 import { Redirect, useRouter } from 'expo-router';
-import { MailWarning } from 'lucide-react-native';
+import { MailCheck, MailWarning } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 
 import { EmptyState } from '@/components/ui/empty-state';
@@ -27,7 +27,7 @@ import { useSession } from '@/features/auth/session';
  */
 export default function AuthCallback() {
   const router = useRouter();
-  const { user, isRecoveringPassword, confirmationError } = useSession();
+  const { user, isRecoveringPassword, confirmationError, emailChangeNotice } = useSession();
   const [rendirse, setRendirse] = useState(false);
 
   // Si en unos segundos nada ha pasado -un enlace que no reconocemos, o que
@@ -40,6 +40,29 @@ export default function AuthCallback() {
 
   if (isRecoveringPassword) {
     return <Redirect href="/reset-password" />;
+  }
+
+  if (emailChangeNotice !== null) {
+    const esError = emailChangeNotice.kind === 'error';
+
+    return (
+      <Screen>
+        <EmptyState
+          icon={esError ? MailWarning : MailCheck}
+          tone={esError ? 'danger' : 'neutral'}
+          title={
+            emailChangeNotice.kind === 'done'
+              ? 'Correo actualizado'
+              : emailChangeNotice.kind === 'partial'
+                ? 'Falta un paso'
+                : 'No pudimos cambiar tu correo'
+          }
+          description={emailChangeNotice.message}
+          actionLabel="Continuar"
+          onAction={() => router.replace('/')}
+        />
+      </Screen>
+    );
   }
 
   if (confirmationError !== null) {

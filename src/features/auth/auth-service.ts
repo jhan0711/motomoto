@@ -3,6 +3,7 @@ import type { Database } from '@/types/database';
 
 import { toAuthFailure, type AuthFailure } from './errors';
 import type {
+  ChangeEmailValues,
   ChangePasswordValues,
   EditProfileValues,
   ForgotPasswordValues,
@@ -261,6 +262,17 @@ export function isConfirmationLink(url: string): boolean {
 }
 
 /**
+ * Distingue un enlace de cambio de correo (Fase 25 paso 7c).
+ *
+ * Supabase manda `type=email_change` tanto en el enlace del correo nuevo como
+ * en el del actual. Con el cambio seguro activado hay que abrir los dos para
+ * que surta efecto.
+ */
+export function isEmailChangeLink(url: string): boolean {
+  return parseLinkParams(url).type === 'email_change';
+}
+
+/**
  * Abre la sesion que viene dentro de un enlace del correo.
  *
  * Sirve para recuperacion (`type=recovery`) y para confirmacion de cuenta
@@ -323,6 +335,53 @@ export function completeConfirmationFromLink(url: string): Promise<Result> {
 }
 
 /**
+ * Estado en que queda un enlace de cambio de correo al abrirlo.
+ *
+ *   - `completo`: el correo ya cambio (se abrieron los dos enlaces, o el
+ *     proyecto no exige el doble).
+ *   - `falta_el_otro`: este enlace se acepto, pero el cambio no surte efecto
+ *     hasta abrir el del otro correo.
+ */
+export type EmailChangeOutcome = 'completo' | 'falta_el_otro';
+
+/**
+ * Abre un enlace de cambio de correo.
+ *
+ * A diferencia de la confirmacion, "sin tokens" no es un error: con el cambio
+ * seguro de Supabase, abrir solo uno de los dos enlaces devuelve un `message` y
+ * ningun token, y el cambio queda a la espera del segundo. Solo cuando Supabase
+ * devuelve una sesion nueva (los dos enlaces abiertos) el correo ha cambiado de
+ * verdad; entonces se aplica para que la suscripcion de la sesion se entere.
+ */
+export async function completeEmailChangeFromLink(
+  url: string,
+): Promise<Result<EmailChangeOutcome>> {
+  const params = parseLinkParams(url);
+
+  if (params.error_description !== undefined || params.error !== undefined) {
+    return {
+      ok: false,
+      failure: {
+        code: params.error_code ?? 'email_change_link_invalid',
+        message: 'Ese enlace de cambio de correo ya no es válido. Pídelo de nuevo desde tu perfil.',
+      },
+    };
+  }
+
+  if (params.access_token !== undefined && params.refresh_token !== undefined) {
+    const { error } = await supabase.auth.setSession({
+      access_token: params.access_token,
+      refresh_token: params.refresh_token,
+    });
+
+    return error ? fail(error) : ok('completo');
+  }
+
+  // Sin tokens y sin error: este lado quedo confirmado y falta el otro.
+  return ok('falta_el_otro');
+}
+
+/**
  * Cambia la contrasena del usuario que tiene la sesion abierta.
  *
  * Se usa al final del enlace de recuperacion. Ahi no se pide la contrasena
@@ -378,6 +437,54 @@ export async function changePassword(email: string, values: ChangePasswordValues
   }
 
   return updatePassword(values.password);
+}
+
+/**
+ * Cambia el correo desde dentro de la aplicacion, comprobando la contrasena.
+ *
+ * Levanta D101: se permitia mirar el correo pero no cambiarlo porque no habia
+ * verificacion. Ahora Supabase manda un enlace al correo nuevo -y, con el
+ * cambio seguro, tambien al actual- y el cambio no surte efecto hasta abrirlos.
+ *
+ * La contrasena actual se comprueba igual que en `changePassword` y por el
+ * mismo motivo (D102): sin ella, un telefono desbloqueado un minuto es una
+ * cuenta perdida. Se comprueba intentando iniciar sesion; un intento fallido no
+ * afecta a la sesion abierta.
+ */
+export async function changeEmail(
+  currentEmail: string,
+  values: ChangeEmailValues,
+): Promise<Result> {
+  if (values.email === currentEmail) {
+    return {
+      ok: false,
+      failure: { code: 'SAME_EMAIL', message: 'Ese ya es tu correo actual.' },
+    };
+  }
+
+  const { error: reauthError } = await supabase.auth.signInWithPassword({
+    email: currentEmail,
+    password: values.currentPassword,
+  });
+
+  if (reauthError) {
+    const failure = toAuthFailure(reauthError);
+
+    return {
+      ok: false,
+      failure:
+        failure.code === 'invalid_credentials'
+          ? { code: 'INVALID_CURRENT_PASSWORD', message: 'La contraseña no es correcta.' }
+          : failure,
+    };
+  }
+
+  const { error } = await supabase.auth.updateUser(
+    { email: values.email },
+    { emailRedirectTo: AUTH_CALLBACK_URL },
+  );
+
+  return error ? fail(error) : ok(undefined);
 }
 
 /**

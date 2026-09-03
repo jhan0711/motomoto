@@ -31,11 +31,10 @@ import { iconSize, iconStrokeWidth, spacing, useTheme } from '@/theme';
  * fijo que decia "Sin registrar" incluso cuando el dato existia, que es peor que
  * no mostrarlo.
  *
- * El correo se muestra pero no se edita, y no es un olvido: con la confirmacion
- * de correo desactivada (D91) el cambio seria inmediato y sin verificar. Quien
- * tuviera el telefono desbloqueado un minuto podria apuntar la cuenta a su
- * propio correo y luego usar "recuperar contrasena" para quedarse con ella. Se
- * habilita en la Fase 25, cuando exista verificacion.
+ * El correo ya se puede cambiar (Fase 25 paso 7c): Supabase verifica el nuevo
+ * -y, con el cambio seguro, tambien el actual- por enlace antes de aplicarlo,
+ * que es lo que faltaba para levantar D101. Se pide la contrasena en la
+ * pantalla del cambio, por el mismo motivo que en el de contrasena (D102).
  *
  * La edicion de nombre y telefono llega en el paso 7.2, y el cambio de
  * contrasena en el 7.3. Mientras no funcionen, sus filas no aparecen: una fila
@@ -69,15 +68,18 @@ export default function PassengerProfile() {
       <FormError message={avatarError} />
 
       <View style={styles.list}>
-        {/* El telefono lleva flecha porque se puede editar; el correo no la lleva
-            porque no se puede. La flecha informa, no decora. */}
         <Row
           icon={Phone}
           label="Teléfono"
           value={user?.phone}
           onPress={() => router.push('/passenger/edit-profile')}
         />
-        <Row icon={Mail} label="Correo" value={user?.email} />
+        <Row
+          icon={Mail}
+          label="Correo"
+          value={user?.email}
+          onPress={() => router.push('/passenger/change-email')}
+        />
         <Row
           icon={ShieldCheck}
           label="Seguridad"
