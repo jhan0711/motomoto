@@ -7247,7 +7247,7 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | 1 | Alinear la coordenada del parque (H17): `AMALFI_CENTER` esta a 353 m del parque de la tabla `places` | nada | **Hecho** (2026-09-02) |
 | 2 | Auditar y quitar permisos heredados del manifest (`RECORD_AUDIO`, `SYSTEM_ALERT_WINDOW`) para el build de produccion | nada | **Hecho** (2026-09-02) |
 | 3 | Identidad: nombre visible "AmalfiGoApp", icono y splash desde el SVG, eslogan en bienvenida, `LICENSE` con el nombre real | nada | **Hecho y verificado** (2026-09-02) |
-| 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | Pendiente |
+| 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | **Hecho** (2026-09-02) |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | Pendiente |
 | 6 | Enlaces de aplicacion de Android + verificar la recuperacion de contrasena con `motomoto://` en un build real (D95, H7) | paso 5 | Pendiente |
 | 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | Pendiente |
@@ -7360,6 +7360,32 @@ restricción de la clave de Google Maps por paquete, nuevo `google-services.json
 de Firebase para el paquete nuevo, y la asociación de EAS. Mejor hacerlo ahora
 -nunca se ha publicado- que después. Lo decide el usuario.
 
+### Lo que se hizo: paso 4, el borrador legal (2026-09-02)
+
+**`docs/legal/`** — tres archivos:
+
+- `politica-de-privacidad.md` — Ley 1581 de 2012 y Decreto 1377 de 2013.
+  Responsable, datos que se recogen (tabla), finalidades, autorización,
+  encargados y terceros (Supabase, Mapbox, Google, Resend, Expo), derechos del
+  titular con plazos, seguridad, conservación, menores, RNBD, vigencia.
+- `terminos-de-uso.md` — qué es la app, cuenta y registro, el valor del servicio,
+  cómo funciona un servicio, encomiendas, cancelaciones, conducta prohibida,
+  responsabilidad del conductor, limitación de responsabilidad, datos personales,
+  propiedad intelectual (Jhan Carlo Roldán Sepúlveda), cambios, ley aplicable.
+- `README.md` — la lista de lo que un abogado tiene que decidir.
+
+**Son un BORRADOR.** El texto lleva marcas `[REVISAR]` en las decisiones que
+necesitan abogado. Las principales: la naturaleza del servicio (plataforma de
+intermediación vs transportador — el mototaxismo tiene tratamiento legal
+particular en Colombia), quién es el responsable del tratamiento (Jhan o una
+empresa de mototaxis), la limitación de responsabilidad, los seguros, la
+transferencia internacional de datos, y el correo/dirección de contacto (van con
+el dominio). El usuario organiza la revisión legal después.
+
+**Pendiente derivado:** la pantalla de registro no tiene una casilla de "acepto
+los términos y la política de privacidad" con enlaces. Hay que añadirla cuando
+existan las URL públicas (paso 5).
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7454,7 +7480,9 @@ de Firebase para el paquete nuevo, y la asociación de EAS. Mejor hacerlo ahora
   (seccion 15.23)
 - Habilitar el cambio de correo cuando exista verificacion (D101, Fase 25)
 - Reactivar la confirmacion de correo cuando exista servidor propio (D91, Fase 25)
-- Textos legales: terminos de uso y politica de privacidad (antes de la Fase 25)
+- **BORRADOR HECHO en la Fase 25, paso 4** (2026-09-02, `docs/legal/`). Falta la revision de
+  abogado -las decisiones que la necesitan estan marcadas `[REVISAR]` en el texto- y añadir la
+  casilla de aceptacion en la pantalla de registro con los enlaces publicos. Detalle en 15.27
 - Cuenta de Google Play Console (antes de la Fase 26)
 - Definicion final de los documentos exigidos a conductores y vehiculos. En el MVP se
   arranca con documento de identidad del conductor y matricula del vehiculo
