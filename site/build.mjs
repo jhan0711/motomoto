@@ -116,8 +116,37 @@ writeFileSync(
     <p>AmalfiGoApp conecta a quien necesita un motorratón en Amalfi con los conductores disponibles. Pide el servicio, ve el valor antes de confirmar y sigue al conductor en el mapa mientras llega.</p>
     <p style="margin-top:32px">
       <a href="/privacidad">Política de privacidad</a> ·
-      <a href="/terminos">Términos de uso</a>
+      <a href="/terminos">Términos de uso</a> ·
+      <a href="/eliminar-cuenta">Eliminar cuenta</a>
     </p>`,
+  }),
+);
+
+// Eliminación de cuenta (Fase 26 paso 7b). Google Play exige, para apps con
+// registro, una URL web que explique cómo borrar la cuenta y los datos. No lleva
+// `noindex`: Google necesita rastrearla.
+writeFileSync(
+  resolve(DIST, 'eliminar-cuenta.html'),
+  pagina({
+    titulo: 'Eliminar tu cuenta',
+    cuerpo: `
+    <h1>Eliminar tu cuenta de AmalfiGoApp</h1>
+    <p>Puedes borrar tu cuenta y tus datos personales desde la propia aplicación:</p>
+    <ol>
+      <li>Abre AmalfiGoApp e inicia sesión.</li>
+      <li>Ve a <strong>Mi perfil</strong>.</li>
+      <li>Toca <strong>Eliminar mi cuenta</strong> y confirma.</li>
+    </ol>
+    <h2>Qué se borra</h2>
+    <p>Tu nombre, tu teléfono, tu correo y tu foto de perfil. La eliminación es
+    inmediata y no se puede deshacer.</p>
+    <h2>Qué se conserva</h2>
+    <p>Los servicios que hiciste quedan en el registro operativo de la empresa de
+    motorratones <strong>sin tu nombre ni tus datos de contacto</strong>, porque
+    son parte de la contabilidad del conductor.</p>
+    <h2>Si ya desinstalaste la aplicación</h2>
+    <p>Escríbenos a <a href="mailto:soporte@amalfigo.app">soporte@amalfigo.app</a>
+    desde el correo de tu cuenta y la eliminamos por ti.</p>`,
   }),
 );
 
@@ -168,5 +197,5 @@ cpSync(resolve(AQUI, '.well-known/assetlinks.json'), resolve(DIST, '.well-known/
 cpSync(resolve(RAIZ, 'assets/images/icon.png'), resolve(DIST, 'icon.png'));
 
 console.log(
-  'site/dist/ generado: index.html, privacidad.html, terminos.html, .well-known/assetlinks.json, icon.png',
+  'site/dist/ generado: index.html, privacidad.html, terminos.html, eliminar-cuenta.html, .well-known/assetlinks.json, icon.png',
 );

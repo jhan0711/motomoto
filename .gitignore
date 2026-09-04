@@ -18,6 +18,10 @@ expo-env.d.ts
 *.key
 *.mobileprovision
 
+# APK de pruebas en la raiz. Se regenera con `assembleRelease` tras cada cambio
+# de la app y pesa ~75 MB; no va al repositorio (Fase 26).
+/*.apk
+
 # Metro
 .metro-health-check*
 

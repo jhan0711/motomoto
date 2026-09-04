@@ -530,6 +530,62 @@ export async function changeEmail(
 }
 
 /**
+ * Elimina la cuenta del pasajero (Fase 26 paso 7b).
+ *
+ * Google Play lo exige para apps con registro. La logica esta en la funcion
+ * `delete_my_account` de la base -que borra `auth.users` y anonimiza el
+ * historial de viajes hacia el perfil marcador-; aqui se hace lo unico que la
+ * funcion no puede: borrar el avatar del bucket (una funcion `security definer`
+ * no toca `storage.objects` en el Supabase gestionado, y el cliente si tiene
+ * permiso RLS sobre su propia carpeta).
+ *
+ * Solo pasajeros. Un conductor tiene vehiculo, turnos y documentos: su baja la
+ * gestiona la empresa, y la funcion la rechaza con `ACCOUNT_DELETE_NOT_PASSENGER`.
+ */
+export async function deleteAccount(avatarPath: string | null): Promise<Result> {
+  if (avatarPath !== null) {
+    // Si falla, se sigue: un avatar huerfano es ruido de almacenamiento, no
+    // motivo para dejar la cuenta a medio borrar.
+    await supabase.storage.from('avatars').remove([avatarPath]);
+  }
+
+  const { error } = await supabase.rpc('delete_my_account');
+
+  if (error) {
+    const hint = typeof error.hint === 'string' ? error.hint.trim() : '';
+
+    if (hint === 'ACCOUNT_DELETE_ACTIVE_RIDE') {
+      return {
+        ok: false,
+        failure: {
+          code: hint,
+          message:
+            'Tienes un servicio en curso. Termínalo o cancélalo antes de eliminar tu cuenta.',
+        },
+      };
+    }
+
+    if (hint === 'ACCOUNT_DELETE_NOT_PASSENGER') {
+      return {
+        ok: false,
+        failure: {
+          code: hint,
+          message: 'Esta cuenta la gestiona la empresa. Comunícate con la administración.',
+        },
+      };
+    }
+
+    return fail(error);
+  }
+
+  // La cuenta ya no existe en el servidor. Se cierra la sesion en local -el
+  // token en memoria ya no vale-, y el aviso de Supabase lleva a bienvenida.
+  await supabase.auth.signOut({ scope: 'local' });
+
+  return ok(undefined);
+}
+
+/**
  * Perfil del usuario que tiene la sesion abierta.
  *
  * De aqui salen el rol y el estado de la cuenta, que son lo que deciden que

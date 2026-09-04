@@ -1666,6 +1666,7 @@ export type Database = {
         Args: { p_ride_id: string };
         Returns: undefined;
       };
+      delete_my_account: { Args: never; Returns: undefined };
       driver_linked_to_request: {
         Args: { p_request_id: string };
         Returns: boolean;

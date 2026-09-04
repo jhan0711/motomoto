@@ -7628,7 +7628,8 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03): keystore de producción generado por EAS (nube), clave de FCM V1 asignada a `co.amalfigo.app`, **push verificado** (Expo `ok` + recibo FCM `ok` + visto en la tablet). **4b (el AAB) espera** a la verificación de Play Console |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente. Huella SHA-256 del keystore de subida (EAS): `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`. Falta la de Play App Signing (la da Google al subir el primer AAB) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
-| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | Pendiente |
+| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
+| 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta`. `prueba_eliminar_cuenta.sql` 10/10 contra el servidor. Falta verlo en el dispositivo (paso 5) |
 | 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
 
 Fuera de la Fase 26 (post-lanzamiento): liquidación mensual del conductor (D267),
@@ -7784,6 +7785,68 @@ tablet), da `otp_expired`. Uno fresco, abierto una sola vez, funciona.
 (`panel` → el destino `vercel-dns` que dio Vercel, DNS only). Propagó en minutos,
 Vercel emitió el certificado, y el super admin entra por el dominio propio.
 **Paso 6 cerrado.**
+
+### Lo que se hizo: paso 7, la ficha de Play (borrador) (2026-09-03)
+
+`docs/operaciones/ficha-play-store.md` con todo lo que pide Play Console:
+nombre, descripción breve y completa (en español), categoría (Mapas y
+navegación), cuestionario de clasificación de contenido, la tabla de Data Safety
+(nombre, correo, teléfono, foto, ubicación, historial, token de push — **nada de
+información financiera**, D8/D217; sin anuncios), la declaración de permisos
+(ubicación solo en primer plano), público 18+, solo Colombia, y el plan de
+lanzamiento (prueba interna → cerrada con 12 testers 14 días → producción,
+requisito de cuenta personal reciente).
+
+**Destapó dos bloqueadores de publicación:**
+
+1. **Eliminación de cuenta.** Google exige, para apps con registro, un camino
+   dentro de la app para borrar la cuenta y los datos, **y** una URL web. La app
+   no tiene ninguna. Es el **paso 7b**: pantalla en el perfil + función
+   `security definer` en Supabase + una página `amalfigo.app/eliminar-cuenta`.
+   No depende de Play Console, se puede hacer ya.
+2. **La política de privacidad tiene que estar publicada de verdad**
+   (`amalfigo.app/privacidad` sigue con `noindex` y aviso de borrador). Depende
+   de la revisión de abogado (paso 3).
+
+Faltan también los **gráficos**: el "feature graphic" (1024×500) y 2-8 capturas,
+que salen del build del paso 5.
+
+### Lo que se hizo: paso 7b, la eliminación de cuenta (2026-09-04)
+
+Requisito de Google Play para apps con registro: un camino en la app para borrar
+la cuenta y los datos, y una URL web equivalente.
+
+- **`supabase/migrations/20260904000000_delete_my_account.sql` (NUEVA).**
+  - **`delete_my_account()`** (`security definer`): solo pasajeros -un conductor
+    tiene vehículo, turnos y documentos, su baja la gestiona la empresa-, y no
+    con un servicio en curso. Borra `auth.users` del que llama -por cascada:
+    `profiles`, `notifications`, `reports`- y sus calificaciones (borrado
+    explícito para que `refresh_driver_rating` recalcule el promedio del
+    conductor). El **historial de viajes terminados NO se borra**: se anonimiza
+    -`passenger_id` pasa al perfil marcador y se borra `pickup_reference`- porque
+    es registro operativo del conductor (su recaudo).
+  - **Perfil marcador "Cuenta eliminada"** (`de1e7ed0-0000-4000-8000-000000000000`,
+    passenger, blocked), con su fila en `auth.users` porque `profiles.id` tiene
+    FK con `ON DELETE CASCADE`. Idempotente.
+  - El **avatar** lo borra el cliente antes de llamar: una función
+    `security definer` no toca `storage.objects` en el Supabase gestionado, y el
+    cliente sí tiene permiso RLS sobre su carpeta.
+- **`deleteAccount(avatarPath)` en `auth-service.ts`**: borra el avatar, llama a
+  la RPC, traduce los dos códigos de error (`ACCOUNT_DELETE_ACTIVE_RIDE`,
+  `ACCOUNT_DELETE_NOT_PASSENGER`) y cierra la sesión local.
+- **`passenger/profile.tsx`**: botón "Eliminar mi cuenta" (ghost, papelera) al
+  final, con un `Modal` `tone="danger"` de confirmación fuerte.
+- **`site/build.mjs`**: página `amalfigo.app/eliminar-cuenta` (sin `noindex`,
+  Google la rastrea) — cómo borrar en la app, qué se borra, qué se conserva, y
+  `soporte@amalfigo.app` para quien ya desinstaló.
+- **`supabase/dev-tools/prueba_eliminar_cuenta.sql` (NUEVA), 10 comprobaciones**
+  contra el servidor, todas en verde: anon no puede, conductor no puede, servicio
+  en curso bloquea, y en el camino feliz `auth.users` y el perfil desaparecen, la
+  solicitud terminada pasa al marcador con `pickup_reference` nula, y el marcador
+  queda intacto. Hubo que desactivar `profiles_protect_columns` en el test para
+  poder poner rol conductor (H5).
+- `tsc`, `lint`, Prettier y Jest 67/67. `src/types/database.ts` regenerado.
+- Falta la **verificación en el dispositivo** (con el build del paso 5).
 
 ---
 

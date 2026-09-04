@@ -7,6 +7,7 @@ import {
   Pencil,
   Phone,
   ShieldCheck,
+  Trash2,
   UserRound,
   type LucideIcon,
 } from 'lucide-react-native';
@@ -20,6 +21,7 @@ import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { FormError } from '@/components/ui/form-error';
+import { deleteAccount } from '@/features/auth/auth-service';
 import { useSession } from '@/features/auth/session';
 import { ProfileAvatar } from '@/features/profile/profile-avatar';
 import { iconSize, iconStrokeWidth, spacing, useTheme } from '@/theme';
@@ -44,7 +46,27 @@ export default function PassengerProfile() {
   const router = useRouter();
   const { user, signOut, refreshProfile } = useSession();
   const [confirmingSignOut, setConfirmingSignOut] = useState(false);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  async function onDeleteAccount() {
+    setDeleteError(null);
+    setDeleting(true);
+
+    const result = await deleteAccount(user?.avatarPath ?? null);
+
+    if (result.ok) {
+      // La sesion local ya se cerro dentro de `deleteAccount`; el aviso de
+      // Supabase lleva a bienvenida. No hay que navegar a mano.
+      return;
+    }
+
+    setDeleting(false);
+    setConfirmingDelete(false);
+    setDeleteError(result.failure.message);
+  }
 
   return (
     <Screen scroll header={<Header title="Mi perfil" onBack={() => router.back()} />}>
@@ -66,6 +88,7 @@ export default function PassengerProfile() {
       </View>
 
       <FormError message={avatarError} />
+      <FormError message={deleteError} />
 
       <View style={styles.list}>
         <Row
@@ -120,6 +143,17 @@ export default function PassengerProfile() {
         onPress={() => setConfirmingSignOut(true)}
       />
 
+      {/* Eliminar la cuenta (Fase 26 paso 7b). Requisito de Google Play para
+          apis con registro. Va al final, en ghost y con el icono de papelera,
+          para que no compita visualmente con "cerrar sesión". */}
+      <Button
+        label="Eliminar mi cuenta"
+        variant="ghost"
+        icon={Trash2}
+        fullWidth
+        onPress={() => setConfirmingDelete(true)}
+      />
+
       <Modal
         visible={confirmingSignOut}
         onRequestClose={() => setConfirmingSignOut(false)}
@@ -132,6 +166,19 @@ export default function PassengerProfile() {
           setConfirmingSignOut(false);
           signOut();
         }}
+      />
+
+      <Modal
+        visible={confirmingDelete}
+        onRequestClose={() => !deleting && setConfirmingDelete(false)}
+        icon={Trash2}
+        tone="danger"
+        title="¿Eliminar tu cuenta?"
+        description="Se borran tu nombre, tu teléfono, tu correo y tu foto. Tus servicios pasados quedan en el historial de la empresa sin tu nombre. Esto no se puede deshacer."
+        confirmLabel="Eliminar mi cuenta"
+        cancelLabel="Conservar mi cuenta"
+        confirmLoading={deleting}
+        onConfirm={() => void onDeleteAccount()}
       />
     </Screen>
   );
