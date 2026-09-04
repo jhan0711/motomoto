@@ -57,7 +57,11 @@ const config: ExpoConfig = {
   // esquema de enlace profundo, no es visible, y cambiarlo rompería el enlace de
   // recuperación de contraseña (D95, paso 6).
   name: 'AmalfiGoApp',
-  slug: 'amalfigoapp',
+  // El `slug` es el identificador interno del proyecto en Expo (`jhan160711/motomoto`,
+  // creado en la Fase 19). No es visible para nadie y no se puede renombrar desde
+  // el panel, así que se deja como el proyecto ya existe: cambiarlo a `amalfigoapp`
+  // rompía todos los comandos de `eas` por no cuadrar con `extra.eas.projectId`.
+  slug: 'motomoto',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/images/icon.png',

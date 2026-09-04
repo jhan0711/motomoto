@@ -1,0 +1,39 @@
+{
+  // Configuración de EAS Build/Submit. Fase 26 paso 4.
+  // `eas build:configure` generó la base; aquí se ajusta a este proyecto.
+  "cli": {
+    "version": ">= 23.2.0",
+    // EAS lleva la cuenta del versionCode de Android (no hay que subirlo a mano
+    // en app.config.ts). El versionName sigue saliendo de `version` en la config.
+    "appVersionSource": "remote"
+  },
+  "build": {
+    // Cliente de desarrollo sobre Metro. No se usa en el flujo de publicación,
+    // pero lo deja listo por si hace falta recompilar el dev-client.
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    // APK instalable directo, sin Metro. Para la prueba cerrada y la tablet.
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    // El que se sube a Google Play: Android App Bundle, firmado con el keystore
+    // de EAS (Play App Signing se activa al subir el primer .aab).
+    "production": {
+      "autoIncrement": true,
+      "android": {
+        "buildType": "app-bundle"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
