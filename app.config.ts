@@ -69,9 +69,17 @@ const config: ExpoConfig = {
   },
 
   android: {
-    // Necesario desde la Fase 8: identifica la aplicación ante Google Maps.
-    // La clave de la API está restringida a este nombre exacto.
-    package: 'com.motomoto.app',
+    // Identifica la app ante Google Maps (la clave está restringida a este
+    // nombre) y es el id con el que se publica en Google Play.
+    //
+    // Fase 26 paso 1: se renombró de `com.motomoto.app` a `co.amalfigo.app`
+    // ANTES de la primera subida a Play -después no se puede cambiar-. El
+    // cambio arrastra: la clave de Google Maps (Google Cloud), el
+    // `google-services.json` de Firebase (proyecto `motomoto2026-444cb`) y, más
+    // adelante, las credenciales de EAS. El `scheme` de enlace profundo sigue
+    // siendo `motomoto` a propósito: solo se usa como respaldo de los App
+    // Links y renombrarlo no aporta nada.
+    package: 'co.amalfigo.app',
 
     // Fase 22, paso 4 (D93). Sin esto, Android sube los datos de la aplicación
     // —incluida la sesión de Supabase, que vive en AsyncStorage sin cifrar— a la
@@ -90,7 +98,7 @@ const config: ExpoConfig = {
     // tampoco hace falta versionarlo con un solo desarrollador. Consecuencia a
     // no olvidar: **si este archivo falta, la compilacion nativa falla**, y hay
     // que volver a bajarlo de Firebase Console (proyecto motomoto2026-444cb,
-    // paquete com.motomoto.app). Queda anotado en la seccion 15.20.
+    // paquete co.amalfigo.app). Queda anotado en la seccion 15.20.
     googleServicesFile: './google-services.json',
     adaptiveIcon: {
       // El fondo del logo (Fase 25 paso 3). Color plano en vez de imagen: el

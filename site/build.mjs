@@ -157,6 +157,12 @@ writeFileSync(
 // manejo por defecto de HTML (auto-trailing-slash). No hacen falta copias.
 
 // assetlinks.json y el icono.
+//
+// Fase 26 paso 1: durante el rename del paquete el archivo lleva DOS entradas
+// -`co.amalfigo.app` (nuevo) y `com.motomoto.app` (viejo)- con la misma huella
+// de depuración, para que los App Links no se rompan en ningún build mientras
+// dura la transición. Se quita la entrada vieja cuando el build nuevo esté
+// verificado (paso 5), y ahí se añade la huella del keystore de producción.
 mkdirSync(resolve(DIST, '.well-known'), { recursive: true });
 cpSync(resolve(AQUI, '.well-known/assetlinks.json'), resolve(DIST, '.well-known/assetlinks.json'));
 cpSync(resolve(RAIZ, 'assets/images/icon.png'), resolve(DIST, 'icon.png'));

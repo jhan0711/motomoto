@@ -657,7 +657,7 @@ aplicacion sigue sin tocar dinero.
 | D112 | Las dos decisiones son separadas | Dibujar el mapa y buscar direcciones son servicios distintos y se eligieron con criterios distintos. Mezclar proveedores cuesta una llamada HTTP en un archivo |
 | D113 | Build de desarrollo | Local, con la cadena de la Fase 1. Sin cuenta de Expo, sin cola y sin conexion. EAS Build queda como plan B |
 | D114 | Configuracion de la app | `app.json` sustituido por `app.config.ts`. La clave de Google Maps debe venir del `.env`, y un JSON estatico no puede leer variables de entorno: la clave habria acabado en un archivo que sube al repositorio |
-| D115 | Nombre del paquete | `com.motomoto.app`. Necesario desde esta fase: es lo que identifica la app ante Google Maps y contra lo que se restringe la clave |
+| D115 | Nombre del paquete | Era `com.motomoto.app` desde la Fase 8. **Renombrado a `co.amalfigo.app` en la Fase 26 paso 1** (2026-09-03), antes de la primera subida a Play -después no se puede cambiar-. Es lo que identifica la app ante Google Maps, Firebase y Google Play |
 | D116 | Ubicacion | Solo primer plano. El segundo plano es de la Fase 14 y es del conductor; declararlo antes anade un permiso que Google Play exige justificar para algo que nada usa |
 | D117 | El mapa va envuelto | Ninguna pantalla importa `react-native-maps`. Todo pasa por `src/features/map/map.tsx`, asi que D110 vive en un archivo y no en doce |
 | D118 | Estados de la ubicacion | Union discriminada de siete casos, no un puñado de booleanos. Con booleanos, `isLoading && hasError && !hasPermission` es representable y no significa nada |
@@ -1250,8 +1250,8 @@ Nunca confiar unicamente en validaciones del frontend.
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
 | 23 | Pruebas | **TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Los seis pasos. Destapo y corrigio la regresion D268. El checklist de GPS en movimiento (8 puntos) queda escrito y **bloqueado por hardware**: se ejecuta cuando haya un telefono Android con datos, en Amalfi. Pendiente operativo, no de la fase: configurar los secretos de GitHub para que el CI corra la regresion de BD |
 | 24 | Optimizacion | **TERMINADA** (2026-09-02, seccion 15.26). Seis pasos. Borro un indice muerto de `driver_locations`, primer test e2e del canal de posicion, y difirio 2 llamadas del arranque del pasajero. Dos hallazgos agendados aparte (busqueda del panel, posicion por Broadcast). La medida de arranque de produccion, a la Fase 25 |
-| 25 | Preparacion para produccion | **EN CURSO** (2026-09-02, seccion 15.27). Nueve pasos. Nombre: AmalfiGoApp. Lanzamiento completo en Amalfi |
-| 26 | Publicacion y despliegue | Pendiente |
+| 25 | Preparacion para produccion | **COMPLETADA** (2026-09-03, seccion 15.27). Nueve pasos. Nombre: AmalfiGoApp. Correo (recuperacion + confirmacion) verificado de punta a punta en la tablet. Falta traducir 3 asuntos de correo |
+| 26 | Publicacion y despliegue | **EN CURSO** (2026-09-03, seccion 15.28). Ocho pasos. Paquete `co.amalfigo.app`, EAS + Play, Play App Signing, despliegue del panel |
 
 ---
 
@@ -1745,7 +1745,7 @@ Dos claves distintas, y conviene no confundirlas:
 
 | Clave | Para que | Restriccion |
 |---|---|---|
-| `GOOGLE_MAPS_ANDROID_KEY` | El mapa dentro de la app | Apps de Android: `com.motomoto.app` + huella SHA-1. API: Maps SDK for Android |
+| `GOOGLE_MAPS_ANDROID_KEY` | El mapa dentro de la app | Apps de Android: `co.amalfigo.app` (renombrado en la Fase 26 paso 1) + huella SHA-1. API: Maps SDK for Android |
 | `GOOGLE_TEST_API_KEY` | Solo la evaluacion de proveedores, desde el PC | Sin restriccion de aplicacion. APIs: Places (New) y Geocoding |
 
 **Huella SHA-1 de depuracion:** `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
@@ -7613,6 +7613,61 @@ APK probado hoy lleva el código bueno pero va con el keystore de depuración.
 
 ---
 
+## 15.28 FASE 26: PUBLICACION Y DESPLIEGUE (EN CURSO, 2026-09-03)
+
+Es la última fase. Publicar AmalfiGoApp en Google Play y dejar el panel
+administrativo desplegado. Lanzamiento completo en Amalfi.
+
+### Los ocho pasos acordados
+
+| # | Paso | Estado |
+|---|---|---|
+| 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Código hecho** (2026-09-03). Falta que el usuario ajuste Firebase y la clave de Maps, y verificar en la tablet |
+| 2 | Cuentas: Google Play Console ($25) y EAS/Expo | Pendiente |
+| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | Pendiente |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB | Pendiente |
+| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente |
+| 6 | Desplegar el panel administrativo (`admin/`, Next.js) | Pendiente |
+| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | Pendiente |
+| 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
+
+Fuera de la Fase 26 (post-lanzamiento): liquidación mensual del conductor (D267),
+selector de municipio, deudas técnicas (posición por Broadcast, búsqueda del
+panel con `pg_trgm`), condiciones de Mapbox sobre mapa de Google.
+
+### Lo que se hizo: paso 1, el rename del paquete (2026-09-03)
+
+`android.package` pasa de `com.motomoto.app` a **`co.amalfigo.app`**. Se hace
+ahora porque **el id de una app en Google Play no se puede cambiar tras la
+primera subida**, y el nombre viejo no tenía nada que ver con la marca.
+
+**Código** (el `android/` lo regenera `prebuild`, no se toca a mano):
+
+- `app.config.ts`: `package: 'co.amalfigo.app'`. El `scheme` de enlace profundo
+  sigue siendo `motomoto` a propósito -solo es respaldo de los App Links-.
+- `site/.well-known/assetlinks.json`: durante la transición lleva **dos
+  entradas**, `co.amalfigo.app` y `com.motomoto.app`, las dos con la huella de
+  depuración, para que los App Links no se rompan en ningún build. La entrada
+  vieja se quita en el paso 5, cuando se añade la del keystore de producción.
+- Comentarios de `app.config.ts` y `.env.example` actualizados.
+- `tsc`, `lint`, Prettier y el sitio en verde.
+
+**Huella SHA-1 de depuración** (para la clave de Maps):
+`5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+
+**Falta que el usuario:**
+
+1. **Firebase** (proyecto `motomoto2026-444cb`): añadir una app Android con
+   paquete `co.amalfigo.app`, descargar el `google-services.json` nuevo y
+   reemplazar el de la raíz.
+2. **Google Cloud** (clave `GOOGLE_MAPS_ANDROID_KEY`): añadir el paquete
+   `co.amalfigo.app` con la huella SHA-1 de arriba a las restricciones de app
+   (dejar también la entrada vieja hasta que el build nuevo esté probado).
+3. Con eso hecho: `expo prebuild --clean` + build de depuración + instalar en la
+   tablet y verificar que el mapa carga y que las notificaciones push llegan.
+
+---
+
 ## 16. PENDIENTES CONOCIDOS
 
 - **La posicion del conductor en tiempo real podria ir a Broadcast.** Encontrado en la Fase 24,
@@ -7653,10 +7708,10 @@ APK probado hoy lleva el código bueno pero va con el keystore de depuración.
 - **RESUELTO en la Fase 25, paso 3** (2026-09-02). `name: 'AmalfiGoApp'` en `app.config.ts`;
   el icono, el splash y el eslogan salen del SVG de la marca. Verificado en pantalla y, en el
   paso 8, en un build de release en la tablet. Detalle en 15.27
-- **Renombrar el `android.package`** de `com.motomoto.app` a uno con la marca nueva (ej.
-  `co.amalfigo.app`), antes de publicar y mientras nadie lo haya instalado. Cascadea a la clave
-  de Google Maps (restringida por paquete), a `google-services.json` de Firebase y a EAS. Lo
-  decide el usuario. Encontrado en la Fase 25 paso 3
+- **EN CURSO en la Fase 26, paso 1** (2026-09-03). `android.package` renombrado a
+  `co.amalfigo.app` en el código. Falta que el usuario ajuste Firebase (`google-services.json`
+  nuevo) y la clave de Google Maps (añadir el paquete + SHA-1), y verificar en la tablet.
+  Detalle en 15.28
 - **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
   (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
   solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`
