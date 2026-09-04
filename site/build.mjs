@@ -187,11 +187,12 @@ writeFileSync(
 
 // assetlinks.json y el icono.
 //
-// Fase 26 paso 1: durante el rename del paquete el archivo lleva DOS entradas
-// -`co.amalfigo.app` (nuevo) y `com.motomoto.app` (viejo)- con la misma huella
-// de depuración, para que los App Links no se rompan en ningún build mientras
-// dura la transición. Se quita la entrada vieja cuando el build nuevo esté
-// verificado (paso 5), y ahí se añade la huella del keystore de producción.
+// `co.amalfigo.app` con DOS huellas SHA-256: la del keystore de depuración
+// (`FA:C6:...`, para los APK de prueba locales) y la del keystore de subida de
+// EAS (`8C:59:...`, para el build de producción). Cuando se suba el primer AAB
+// a Google Play y se active Play App Signing, Google da una TERCERA huella -la
+// de su propia clave de firma- que hay que añadir aquí tambien.
+// La entrada vieja `com.motomoto.app` se quitó al verificar el rename (paso 1).
 mkdirSync(resolve(DIST, '.well-known'), { recursive: true });
 cpSync(resolve(AQUI, '.well-known/assetlinks.json'), resolve(DIST, '.well-known/assetlinks.json'));
 cpSync(resolve(RAIZ, 'assets/images/icon.png'), resolve(DIST, 'icon.png'));

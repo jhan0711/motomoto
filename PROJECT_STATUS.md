@@ -7625,8 +7625,8 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho y verificado en la tablet** (2026-09-04): los enlaces abren `terminos`/`privacidad` sin tocar la casilla, sin marcar no deja crear, marcando sí. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03): keystore de producción generado por EAS (nube), clave de FCM V1 asignada a `co.amalfigo.app`, **push verificado** (Expo `ok` + recibo FCM `ok` + visto en la tablet). **4b (el AAB) espera** a la verificación de Play Console |
-| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente. Huella SHA-256 del keystore de subida (EAS): `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`. Falta la de Play App Signing (la da Google al subir el primer AAB) |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03). **4b: lanzado el 2026-09-04** — `eas build --profile production`, tras subir las 5 env vars del build a EAS (`env:push`). El AAB no depende de Play Console; se construye ya para tenerlo listo y validar la cadena |
+| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB) y la SHA-1 a Google Maps |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
 | 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
@@ -7719,9 +7719,13 @@ para la prueba cerrada y la tablet) y `production` (AAB, `autoIncrement`).
   Con Play App Signing (paso 5) habrá una segunda huella, la de la clave que
   genera Google, y las dos van a `assetlinks.json`.
 
-**Falta (paso 4b):** el `eas build -p android --profile production` que produce el
-AAB. Espera a la verificación de Play Console -no tiene sentido construir el
-bundle antes de poder subirlo- y consume minutos de EAS Build.
+**Paso 4b, lanzado el 2026-09-04.** Antes hubo que subir a EAS las variables que
+el build necesita -no lee el `.env` local-: `EXPO_PUBLIC_SUPABASE_URL`,
+`EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_MAPBOX_SEARCH_TOKEN`
+(plaintext), `GOOGLE_MAPS_ANDROID_KEY` y `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`
+(sensitive). Se subieron con `eas env:push production/preview --path .env`. El
+`eas build --profile production` produce el `.aab`, firmado con el keystore de
+EAS, listo para subir a Play en cuanto Google verifique la cuenta.
 
 ### Lo que se hizo: paso 3, la casilla de aceptación (2026-09-03)
 
