@@ -7723,8 +7723,17 @@ para la prueba cerrada y la tablet) y `production` (AAB, `autoIncrement`).
 el build necesita -no lee el `.env` local-: `EXPO_PUBLIC_SUPABASE_URL`,
 `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `EXPO_PUBLIC_MAPBOX_SEARCH_TOKEN`
 (plaintext), `GOOGLE_MAPS_ANDROID_KEY` y `RNMAPBOX_MAPS_DOWNLOAD_TOKEN`
-(sensitive). Se subieron con `eas env:push production/preview --path .env`. El
-`eas build --profile production` produce el `.aab`, firmado con el keystore de
+(sensitive). Se subieron con `eas env:push production/preview --path .env`.
+
+**El primer intento falló:** `EAS Build solo sube lo que rastrea git`, y
+`google-services.json` está en `.gitignore`. De paso se descubrió que el archivo
+**había desaparecido de la raíz** del repo (seguramente un `git clean -x`); se
+restauró desde `android/app/google-services.json` (lo copia `prebuild`). Arreglo:
+se subió a EAS como variable de tipo **`file`** (`GOOGLE_SERVICES_JSON`, secret),
+y `app.config.ts` la usa: `googleServicesFile: process.env.GOOGLE_SERVICES_JSON ??
+'./google-services.json'`.
+
+El `eas build --profile production` produce el `.aab` firmado con el keystore de
 EAS, listo para subir a Play en cuanto Google verifique la cuenta.
 
 ### Lo que se hizo: paso 3, la casilla de aceptación (2026-09-03)

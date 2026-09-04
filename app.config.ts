@@ -103,7 +103,12 @@ const config: ExpoConfig = {
     // no olvidar: **si este archivo falta, la compilacion nativa falla**, y hay
     // que volver a bajarlo de Firebase Console (proyecto motomoto2026-444cb,
     // paquete co.amalfigo.app). Queda anotado en la seccion 15.20.
-    googleServicesFile: './google-services.json',
+    //
+    // Fase 26 paso 4b: EAS Build en la nube solo sube lo que rastrea git, asi
+    // que este archivo ignorado no llegaba y el build fallaba. Se subio a EAS
+    // como variable de tipo `file` (`GOOGLE_SERVICES_JSON`), que EAS escribe en
+    // disco y expone por su ruta. En local sigue leyendo `./google-services.json`.
+    googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     adaptiveIcon: {
       // El fondo del logo (Fase 25 paso 3). Color plano en vez de imagen: el
       // logo ya trae ese tono, y una imagen de un solo color es peso de más.
