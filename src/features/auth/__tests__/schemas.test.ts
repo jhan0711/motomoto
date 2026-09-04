@@ -12,6 +12,7 @@ describe('registerSchema', () => {
     phone: '3001234567',
     email: 'Ana@Ejemplo.com',
     password: 'clave-larga',
+    acceptedTerms: true,
   };
 
   it('acepta un registro bien formado y normaliza el correo a minusculas', () => {
@@ -36,6 +37,12 @@ describe('registerSchema', () => {
 
   it('exige contrasena de al menos 8 caracteres', () => {
     expect(registerSchema.safeParse({ ...base, password: 'corta' }).success).toBe(false);
+  });
+
+  it('exige aceptar los terminos (Fase 26 paso 3)', () => {
+    expect(registerSchema.safeParse({ ...base, acceptedTerms: false }).success).toBe(false);
+    const r = registerSchema.safeParse({ ...base, acceptedTerms: false });
+    if (!r.success) expect(r.error.issues[0]?.path).toEqual(['acceptedTerms']);
   });
 });
 

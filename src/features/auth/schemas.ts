@@ -60,6 +60,14 @@ export const registerSchema = z.object({
   phone,
   email,
   password: newPassword,
+  // Consentimiento explícito (Fase 26 paso 3). El `refine` obliga a marcar la
+  // casilla: con `false` el formulario no valida y no se llama a Supabase. Se usa
+  // `boolean().refine` y no `literal(true)` para que el valor por defecto del
+  // formulario pueda ser `false` sin pelearse con los tipos. El valor no se
+  // envía a ningún sitio, es solo la puerta.
+  acceptedTerms: z.boolean().refine((v) => v, {
+    error: 'Debes aceptar los términos y la política de privacidad para crear la cuenta.',
+  }),
 });
 
 /**

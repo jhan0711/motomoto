@@ -3,9 +3,10 @@ import { useRouter } from 'expo-router';
 import { Lock, Mail, MailCheck, Phone, UserRound } from 'lucide-react-native';
 import { useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Header } from '@/components/ui/header';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,11 @@ import { resendConfirmation, signUp } from '@/features/auth/auth-service';
 import { FormError } from '@/components/ui/form-error';
 import { registerSchema, type RegisterValues } from '@/features/auth/schemas';
 import { spacing } from '@/theme';
+
+// Páginas públicas del sitio (Fase 25 paso 5). Se abren en el navegador: son
+// texto legal para leer, no una pantalla de la app.
+const TERMINOS_URL = 'https://amalfigo.app/terminos';
+const PRIVACIDAD_URL = 'https://amalfigo.app/privacidad';
 
 /**
  * Registro de pasajero.
@@ -39,7 +45,7 @@ export default function Register() {
 
   const { control, handleSubmit, formState } = useForm({
     resolver: zodResolver(registerSchema),
-    defaultValues: { fullName: '', phone: '', email: '', password: '' },
+    defaultValues: { fullName: '', phone: '', email: '', password: '', acceptedTerms: false },
   });
 
   async function onSubmit(values: RegisterValues) {
@@ -185,6 +191,48 @@ export default function Register() {
             />
           )}
         />
+
+        <Controller
+          control={control}
+          name="acceptedTerms"
+          render={({ field, fieldState }) => (
+            <View style={styles.terms}>
+              <Checkbox
+                checked={field.value}
+                onChange={field.onChange}
+                error={fieldState.error !== undefined}
+                accessibilityLabel="Acepto los términos de uso y la política de privacidad"
+              >
+                <Text variant="caption" color="textSecondary">
+                  Acepto los{' '}
+                  <Text
+                    variant="caption"
+                    color="brand"
+                    style={styles.link}
+                    onPress={() => void Linking.openURL(TERMINOS_URL)}
+                  >
+                    Términos de uso
+                  </Text>{' '}
+                  y la{' '}
+                  <Text
+                    variant="caption"
+                    color="brand"
+                    style={styles.link}
+                    onPress={() => void Linking.openURL(PRIVACIDAD_URL)}
+                  >
+                    Política de privacidad
+                  </Text>
+                  .
+                </Text>
+              </Checkbox>
+              {fieldState.error !== undefined && (
+                <Text variant="caption" color="danger">
+                  {fieldState.error.message}
+                </Text>
+              )}
+            </View>
+          )}
+        />
       </View>
 
       <View style={styles.actions}>
@@ -225,5 +273,11 @@ const styles = StyleSheet.create({
   form: {
     gap: spacing.lg,
     marginTop: spacing.lg,
+  },
+  link: {
+    textDecorationLine: 'underline',
+  },
+  terms: {
+    gap: spacing.xs,
   },
 });

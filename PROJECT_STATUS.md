@@ -7622,11 +7622,11 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 
 | # | Paso | Estado |
 |---|---|---|
-| 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados por el usuario. El push queda pendiente de que el paso 4 dé de alta las credenciales de EAS del paquete nuevo |
-| 2 | Cuentas: Google Play Console ($25) y EAS/Expo | Pendiente |
+| 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
+| 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | Pendiente |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + **clave de FCM V1 para `co.amalfigo.app`** (el push no entrega hasta esto) | Pendiente |
-| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03): keystore de producción generado por EAS (nube), clave de FCM V1 asignada a `co.amalfigo.app`, **push verificado** (Expo `ok` + recibo FCM `ok` + visto en la tablet). **4b (el AAB) espera** a la verificación de Play Console |
+| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente. Huella SHA-256 del keystore de subida (EAS): `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`. Falta la de Play App Signing (la da Google al subir el primer AAB) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | Pendiente |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | Pendiente |
 | 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
@@ -7685,6 +7685,43 @@ también del paso 4, así que no se tocó.
 **El proyecto en expo.dev sigue con el slug `motomoto`** (no se renombró). No
 afecta: el push y `eas` usan el `projectId` (`93c1536c-...`), no el slug.
 
+### Lo que se hizo: pasos 2 y 4a, cuentas y credenciales (2026-09-03)
+
+**Play Console.** Cuenta de desarrollador **personal** creada y pagada (USD 25,
+único). Titular Jhan Carlo Roldán, id de cuenta `5059351305439156816`. Se eligió
+personal, no organización: el titular de los derechos ya es persona natural y la
+cuenta de organización exige un D-U-N-S que solo tiene una empresa constituida.
+**Consecuencia:** una cuenta personal debe hacer primero una **prueba cerrada con
+12 testers durante 14 días** antes de poder publicar en producción. Pendiente la
+verificación de identidad de Google (cédula, unos días); hasta que la acepten no
+se pueden crear apps.
+
+**EAS.** `eas-cli` 23.2 instalado, con sesión (`jhan160711`). El slug no cuadraba
+-`app.config.ts` decía `amalfigoapp`, el proyecto en Expo es `motomoto`- y eso
+**rompía todos los comandos de `eas`**. El panel no deja renombrar el slug, así
+que se cambió `slug` a `'motomoto'` en `app.config.ts` (es interno, no visible).
+`eas.json` generado con `eas build:configure` y ajustado: perfil `preview` (APK
+para la prueba cerrada y la tablet) y `production` (AAB, `autoIncrement`).
+
+**Credenciales de Android en EAS** (`eas credentials -p android`, perfil
+`production`):
+
+- **Clave de FCM V1**: se reusó la que ya existía para `com.motomoto.app`
+  (`firebase-adminsdk-fbsvc@motomoto2026-444cb`), ahora asignada también a
+  `co.amalfigo.app`. **Esto arregló el push** roto tras el rename: una push de
+  prueba al pasajero de prueba dio Expo `ok`, recibo de FCM `ok`, y llegó a la
+  tablet. Las credenciales de Expo son por paquete, de ahí que el rename las
+  invalidara.
+- **Keystore de producción**: generado por EAS en la nube (no había `keytool`
+  local). SHA-256 del keystore de subida:
+  `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`.
+  Con Play App Signing (paso 5) habrá una segunda huella, la de la clave que
+  genera Google, y las dos van a `assetlinks.json`.
+
+**Falta (paso 4b):** el `eas build -p android --profile production` que produce el
+AAB. Espera a la verificación de Play Console -no tiene sentido construir el
+bundle antes de poder subirlo- y consume minutos de EAS Build.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7730,10 +7767,9 @@ afecta: el push y `eas` usan el `projectId` (`93c1536c-...`), no el slug.
 - **RESUELTO en la Fase 26, paso 1** (2026-09-03). `android.package` = `co.amalfigo.app`.
   Firebase y la clave de Maps ajustados, build de release verificado en la tablet (mapa OK).
   Detalle en 15.28
-- **Fase 26 paso 4: dar de alta la clave de FCM V1 para `co.amalfigo.app` en EAS.** Tras el
-  rename, el push no entrega -las credenciales de Expo son por paquete-. Se sube la misma
-  clave de servicio de `motomoto2026-444cb` con `eas credentials`. Hasta entonces las
-  notificaciones no llegan al build nuevo
+- **RESUELTO en la Fase 26, paso 4a** (2026-09-03). La clave de FCM V1 de `motomoto2026-444cb`
+  se asignó a `co.amalfigo.app` con `eas credentials`. Push verificado (Expo `ok` + recibo FCM
+  `ok` + visto en la tablet). Detalle en 15.28
 - **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
   (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
   solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`
