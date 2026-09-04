@@ -64,20 +64,18 @@ AmalfiGoApp es para Amalfi, Antioquia. Hoy no funciona en otros municipios.
 
 ## 2. Gráficos (Store listing → Graphics)
 
-| Recurso                                | Especificación                                                 | Estado                                                          |
-| -------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| Icono                                  | 512 × 512 PNG, 32 bits                                         | **Existe:** `assets/images/icon.png`                            |
-| Gráfico de funciones (feature graphic) | 1024 × 500 PNG/JPG, sin texto crítico en los bordes            | **FALTA** — se puede hacer con el logo sobre el color `#2A323C` |
-| Capturas de teléfono                   | 2 a 8, PNG/JPG, lado mín. 320 px, máx. 3840, ratio 16:9 o 9:16 | **FALTAN** — sacarlas del build del paso 5                      |
-| Capturas de tablet 7" / 10"            | Opcionales                                                     | —                                                               |
+| Recurso                                | Especificación                                                 | Estado                                                                                                                                                                                              |
+| -------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Icono                                  | 512 × 512 PNG, 32 bits                                         | **Existe:** `assets/images/icon.png`                                                                                                                                                                |
+| Gráfico de funciones (feature graphic) | 1024 × 500 PNG/JPG, sin texto crítico en los bordes            | **HECHO:** `assets/store/feature-graphic.png` (lo genera `assets/brand/feature-graphic.mjs`)                                                                                                        |
+| Capturas de teléfono                   | 2 a 8, PNG/JPG, lado mín. 320 px, máx. 3840, ratio 16:9 o 9:16 | **4 hechas** en `assets/store/capturas/` (1080×2340): bienvenida, inicio, perfil, historial. Con datos de prueba — **rehacerlas con datos limpios y GPS en Amalfi** cuando esté el build del paso 5 |
+| Capturas de tablet 7" / 10"            | Opcionales                                                     | —                                                                                                                                                                                                   |
 
-**Capturas recomendadas (del build de release):**
+**Capturas que faltan (necesitan un viaje montado, build del paso 5):**
 
-1. Mapa de inicio del pasajero con la hoja de "¿A dónde vas?"
-2. Pantalla con la tarifa antes de confirmar
-3. Conductor en camino, siguiéndolo en el mapa
-4. Historial de servicios
-5. (Conductor) lista de solicitudes entrantes
+1. Pantalla con la tarifa antes de confirmar
+2. Conductor en camino, siguiéndolo en el mapa
+3. (Conductor) lista de solicitudes entrantes
 
 ---
 

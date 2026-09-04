@@ -7624,12 +7624,12 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 |---|---|---|
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
-| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho** (2026-09-03): componente `Checkbox` nuevo, `acceptedTerms` obligatorio en `registerSchema`, enlaces a `amalfigo.app/terminos` y `/privacidad`. Jest 67. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) y verlo en el dispositivo (paso 5) |
+| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho y verificado en la tablet** (2026-09-04): los enlaces abren `terminos`/`privacidad` sin tocar la casilla, sin marcar no deja crear, marcando sí. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) |
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03): keystore de producción generado por EAS (nube), clave de FCM V1 asignada a `co.amalfigo.app`, **push verificado** (Expo `ok` + recibo FCM `ok` + visto en la tablet). **4b (el AAB) espera** a la verificación de Play Console |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente. Huella SHA-256 del keystore de subida (EAS): `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`. Falta la de Play App Signing (la da Google al subir el primer AAB) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
-| 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta`. `prueba_eliminar_cuenta.sql` 10/10 contra el servidor. Falta verlo en el dispositivo (paso 5) |
+| 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
 | 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
 
 Fuera de la Fase 26 (post-lanzamiento): liquidación mensual del conductor (D267),
@@ -7808,8 +7808,14 @@ requisito de cuenta personal reciente).
    (`amalfigo.app/privacidad` sigue con `noindex` y aviso de borrador). Depende
    de la revisión de abogado (paso 3).
 
-Faltan también los **gráficos**: el "feature graphic" (1024×500) y 2-8 capturas,
-que salen del build del paso 5.
+**Gráficos (2026-09-04):** el "feature graphic" 1024×500 lo genera
+`assets/brand/feature-graphic.mjs` (marca + eslogan sobre `#2a323c`) →
+`assets/store/feature-graphic.png`. Cuatro capturas en `assets/store/capturas/`
+(1080×2340: bienvenida, inicio, perfil, historial), sacadas de la tablet con el
+APK de pruebas emulando tamaño de teléfono (`wm size 1080x2340`). Llevan datos
+de prueba y el mapa sale en Bogotá (la tablet no está en Amalfi); se rehacen con
+datos limpios y las 3 que faltan -tarifa, seguimiento, solicitudes del
+conductor- cuando esté el build del paso 5.
 
 ### Lo que se hizo: paso 7b, la eliminación de cuenta (2026-09-04)
 
@@ -7846,7 +7852,11 @@ la cuenta y los datos, y una URL web equivalente.
   queda intacto. Hubo que desactivar `profiles_protect_columns` en el test para
   poder poner rol conductor (H5).
 - `tsc`, `lint`, Prettier y Jest 67/67. `src/types/database.ts` regenerado.
-- Falta la **verificación en el dispositivo** (con el build del paso 5).
+- **Verificado en la tablet el 2026-09-04** con el APK de pruebas: crear una
+  cuenta `+borrar1`, confirmarla, Perfil → "Eliminar mi cuenta" → confirmar →
+  la cuenta desaparece de `auth.users` (comprobado), el perfil marcador queda
+  intacto, y la app vuelve a bienvenida. La pagina `amalfigo.app/eliminar-cuenta`
+  esta en vivo. De paso se verifico el paso 3 (la casilla de terminos).
 
 ---
 
