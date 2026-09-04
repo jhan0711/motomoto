@@ -1250,7 +1250,7 @@ Nunca confiar unicamente en validaciones del frontend.
 | — | **BLOQUE ESPECIAL: super admin y usuarios administradores** (seccion 15.24) | **TERMINADO Y COMITEADO** (`563f2d0`), los cuatro pasos. La liquidacion mensual, aplazada (D267) |
 | 23 | Pruebas | **TERMINADA Y COMITEADA** (2026-09-02, seccion 15.25). Los seis pasos. Destapo y corrigio la regresion D268. El checklist de GPS en movimiento (8 puntos) queda escrito y **bloqueado por hardware**: se ejecuta cuando haya un telefono Android con datos, en Amalfi. Pendiente operativo, no de la fase: configurar los secretos de GitHub para que el CI corra la regresion de BD |
 | 24 | Optimizacion | **TERMINADA** (2026-09-02, seccion 15.26). Seis pasos. Borro un indice muerto de `driver_locations`, primer test e2e del canal de posicion, y difirio 2 llamadas del arranque del pasajero. Dos hallazgos agendados aparte (busqueda del panel, posicion por Broadcast). La medida de arranque de produccion, a la Fase 25 |
-| 25 | Preparacion para produccion | **COMPLETADA** (2026-09-03, seccion 15.27). Nueve pasos. Nombre: AmalfiGoApp. Correo (recuperacion + confirmacion) verificado de punta a punta en la tablet. Falta traducir 3 asuntos de correo |
+| 25 | Preparacion para produccion | **COMPLETADA** (2026-09-03, seccion 15.27). Nueve pasos. Nombre: AmalfiGoApp. Correo (recuperacion + confirmacion) verificado de punta a punta en la tablet |
 | 26 | Publicacion y despliegue | **EN CURSO** (2026-09-03, seccion 15.28). Ocho pasos. Paquete `co.amalfigo.app`, EAS + Play, Play App Signing, despliegue del panel |
 
 ---
@@ -7253,7 +7253,7 @@ Autorizada con nueve pasos. **Lanzamiento completo en Amalfi**, no un piloto.
 | 4 | Borrador de terminos de uso y politica de privacidad (Colombia, Ley 1581), marcado para revision legal | nada | **Hecho** (2026-09-02) |
 | 5 | Comprar el dominio (guiado) + publicar `assetlinks.json` y los textos legales en hosting estatico | dominio | **Hecho** (2026-09-02) — sitio en vivo en `amalfigo.app` |
 | 6 | Enlaces de aplicacion de Android (`https://amalfigo.app/auth`, `autoVerify`) + migrar el enlace de recuperacion de `motomoto://` a `https://` (D95, H7) | paso 5 | **Hecho y verificado de punta a punta** (2026-09-03). Reviso el enfoque: enlace de correo directo a `amalfigo.app` con `token_hash` (sin el salto por `supabase.co`) + `verifyOtp` en la app. Probado en la tablet: enlace -> App Link -> app -> pantalla de contrasena nueva |
-| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | **7a, 7b hechos y verificados** (2026-09-03). SMTP de Resend enviando (llega a Recibidos), "Confirm email" activado, plantillas traducidas (falta traducir los 3 *Subject*). Registro nuevo -> correo -> enlace abre la app y entra: verificado. 7c (cambio de correo) usa el mismo mecanismo, cubierto por pruebas |
+| 7 | Resend + reactivar la confirmacion de correo (D91) + habilitar el cambio de correo (D101) | dominio, Resend | **7a, 7b hechos y verificados** (2026-09-03). SMTP de Resend enviando (llega a Recibidos), "Confirm email" activado, plantillas traducidas, incluidos los 3 *Subject* (Fase 26). Registro nuevo -> correo -> enlace abre la app y entra: verificado. 7c (cambio de correo) usa el mismo mecanismo, cubierto por pruebas |
 | 8 | Compilar el build de release **arm64** con `allowBackup: false`; medir el arranque real de produccion | pasos 2, 3, 6 | **Hecho y medido** (2026-09-02) — arranque **~2,5–3,6 s** (era ~28,6 s en dev); App Links verificados en el dispositivo |
 | 9 | Crear el super admin de produccion + procedimiento para los secretos del CI | nada | **Hecho** (2026-09-02) — `jhank.45617@gmail.com` es el super admin de prod (mismo proyecto). Script de purga de cuentas QA listo (sin ejecutar). Runbook de secretos en `docs/operaciones/secretos-ci.md` |
 
@@ -7633,7 +7633,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
 | 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
-| 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
+| 8 | Limpieza (`purge_qa_accounts.sql`), envío a revisión y verificación final | Pendiente. Los 3 asuntos de correo ya se tradujeron (2026-09-04) |
 
 Fuera de la Fase 26 (post-lanzamiento): liquidación mensual del conductor (D267),
 selector de municipio, deudas técnicas (posición por Broadcast, búsqueda del
@@ -8025,8 +8025,9 @@ la cuenta y los datos, y una URL web equivalente.
   Mismo mecanismo que recuperacion/registro, cubierto por pruebas
 - **RESUELTO en la Fase 25, paso 7b** (2026-09-03). "Confirm email" activado (D91), SMTP propio
   de Resend, flujo de registro verificado en la tablet. Detalle en 15.27
-- **Pendiente menor: traducir los 3 *Subject* de las plantillas de correo** en el panel de
-  Supabase (el cuerpo ya esta en español; el asunto quedo en ingles). Fase 25 paso 7
+- **RESUELTO en la Fase 26** (2026-09-04). Los 3 *Subject* traducidos y pegados por el usuario
+  en el panel de Supabase: "Confirma tu cuenta en AmalfiGoApp", "Restablece tu contraseña de
+  AmalfiGoApp", "Confirma tu cambio de correo en AmalfiGoApp"
 - **BORRADOR HECHO en la Fase 25, paso 4** (2026-09-02, `docs/legal/`). Falta la revision de
   abogado -las decisiones que la necesitan estan marcadas `[REVISAR]` en el texto- y añadir la
   casilla de aceptacion en la pantalla de registro con los enlaces publicos. Detalle en 15.27
