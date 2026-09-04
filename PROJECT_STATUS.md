@@ -7622,10 +7622,10 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 
 | # | Paso | Estado |
 |---|---|---|
-| 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Código hecho** (2026-09-03). Falta que el usuario ajuste Firebase y la clave de Maps, y verificar en la tablet |
+| 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados por el usuario. El push queda pendiente de que el paso 4 dé de alta las credenciales de EAS del paquete nuevo |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | Pendiente |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | Pendiente |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB | Pendiente |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + **clave de FCM V1 para `co.amalfigo.app`** (el push no entrega hasta esto) | Pendiente |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | Pendiente |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | Pendiente |
@@ -7655,16 +7655,35 @@ primera subida**, y el nombre viejo no tenía nada que ver con la marca.
 **Huella SHA-1 de depuración** (para la clave de Maps):
 `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
 
-**Falta que el usuario:**
+**Hecho por el usuario:**
 
-1. **Firebase** (proyecto `motomoto2026-444cb`): añadir una app Android con
-   paquete `co.amalfigo.app`, descargar el `google-services.json` nuevo y
-   reemplazar el de la raíz.
-2. **Google Cloud** (clave `GOOGLE_MAPS_ANDROID_KEY`): añadir el paquete
-   `co.amalfigo.app` con la huella SHA-1 de arriba a las restricciones de app
-   (dejar también la entrada vieja hasta que el build nuevo esté probado).
-3. Con eso hecho: `expo prebuild --clean` + build de depuración + instalar en la
-   tablet y verificar que el mapa carga y que las notificaciones push llegan.
+1. **Firebase** (proyecto `motomoto2026-444cb`): app Android nueva con paquete
+   `co.amalfigo.app`; `google-services.json` nuevo (trae las dos apps) en la raíz.
+2. **Google Cloud** (clave `GOOGLE_MAPS_ANDROID_KEY` = "Clave de API 5", Maps SDK
+   for Android): añadida la entrada `co.amalfigo.app` + SHA-1, sin borrar la vieja.
+
+**Verificado en la tablet** con un build de release limpio (`prebuild --clean` +
+`assembleRelease` arm64, keystore de depuración):
+
+- `aapt` confirma `package: name='co.amalfigo.app'`, label "AmalfiGoApp", arm64.
+- **El mapa carga con calles** -la clave de Maps acepta el paquete nuevo-.
+- Firebase inicia bien (`FirebaseInitProvider: initialization successful` para
+  `co.amalfigo.app`; el `google-services.json` nuevo es correcto).
+- El intent-filter del App Link (`amalfigo.app/auth`, `autoVerify`) está en el
+  manifest.
+
+**El push NO entrega todavía, y es esperado.** Al enviar una notificación de
+prueba, Expo responde `InvalidCredentials` / "Unable to retrieve the FCM server
+key for the recipient's app". Las credenciales de Expo son **por paquete**: la
+clave de FCM V1 está dada de alta para `com.motomoto.app`, no para
+`co.amalfigo.app`. El registro del token en el dispositivo sí funciona (Firebase
+inicia, sin avisos en el log). **Lo resuelve el paso 4** (`eas credentials`):
+se sube la misma clave de servicio de `motomoto2026-444cb` para el paquete nuevo.
+El asistente web de "Add application identifier" monta además el keystore, que es
+también del paso 4, así que no se tocó.
+
+**El proyecto en expo.dev sigue con el slug `motomoto`** (no se renombró). No
+afecta: el push y `eas` usan el `projectId` (`93c1536c-...`), no el slug.
 
 ---
 
@@ -7708,10 +7727,13 @@ primera subida**, y el nombre viejo no tenía nada que ver con la marca.
 - **RESUELTO en la Fase 25, paso 3** (2026-09-02). `name: 'AmalfiGoApp'` en `app.config.ts`;
   el icono, el splash y el eslogan salen del SVG de la marca. Verificado en pantalla y, en el
   paso 8, en un build de release en la tablet. Detalle en 15.27
-- **EN CURSO en la Fase 26, paso 1** (2026-09-03). `android.package` renombrado a
-  `co.amalfigo.app` en el código. Falta que el usuario ajuste Firebase (`google-services.json`
-  nuevo) y la clave de Google Maps (añadir el paquete + SHA-1), y verificar en la tablet.
+- **RESUELTO en la Fase 26, paso 1** (2026-09-03). `android.package` = `co.amalfigo.app`.
+  Firebase y la clave de Maps ajustados, build de release verificado en la tablet (mapa OK).
   Detalle en 15.28
+- **Fase 26 paso 4: dar de alta la clave de FCM V1 para `co.amalfigo.app` en EAS.** Tras el
+  rename, el push no entrega -las credenciales de Expo son por paquete-. Se sube la misma
+  clave de servicio de `motomoto2026-444cb` con `eas credentials`. Hasta entonces las
+  notificaciones no llegan al build nuevo
 - **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
   (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
   solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`
