@@ -7624,10 +7624,10 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 |---|---|---|
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
-| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | Pendiente |
+| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho** (2026-09-03): componente `Checkbox` nuevo, `acceptedTerms` obligatorio en `registerSchema`, enlaces a `amalfigo.app/terminos` y `/privacidad`. Jest 67. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) y verlo en el dispositivo (paso 5) |
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03): keystore de producción generado por EAS (nube), clave de FCM V1 asignada a `co.amalfigo.app`, **push verificado** (Expo `ok` + recibo FCM `ok` + visto en la tablet). **4b (el AAB) espera** a la verificación de Play Console |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | Pendiente. Huella SHA-256 del keystore de subida (EAS): `8C:59:91:7A:44:E4:2D:62:7B:75:10:22:DB:B4:EC:6C:B1:52:0F:37:0E:94:24:CC:A9:0D:71:CC:6B:F0:02:83`. Falta la de Play App Signing (la da Google al subir el primer AAB) |
-| 6 | Desplegar el panel administrativo (`admin/`, Next.js) | Pendiente |
+| 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | Pendiente |
 | 8 | Limpieza (`purge_qa_accounts.sql`, 3 asuntos de correo), envío a revisión y verificación final | Pendiente |
 
@@ -7722,6 +7722,69 @@ para la prueba cerrada y la tablet) y `production` (AAB, `autoIncrement`).
 AAB. Espera a la verificación de Play Console -no tiene sentido construir el
 bundle antes de poder subirlo- y consume minutos de EAS Build.
 
+### Lo que se hizo: paso 3, la casilla de aceptación (2026-09-03)
+
+Consentimiento explícito en el registro, requisito de Google Play y de la Ley
+1581.
+
+- **`src/components/ui/checkbox.tsx` (NUEVO).** Primer componente de casilla del
+  proyecto -no hacía falta hasta ahora-. Recuadro de 22 dp, área tocable de 48
+  con `hitSlop`, estado de error, rol de accesibilidad `checkbox`. Acepta un
+  nodo como etiqueta para poder meter enlaces.
+- **`registerSchema`**: campo `acceptedTerms`, `z.boolean().refine((v) => v)`
+  -no `literal(true)`, para que el valor por defecto del formulario pueda ser
+  `false` sin pelearse con los tipos-. Con la casilla sin marcar el formulario
+  no valida y no se llama a Supabase.
+- **`register.tsx`**: la casilla "Acepto los **Términos de uso** y la **Política
+  de privacidad**", con los dos textos como enlaces a `amalfigo.app/terminos` y
+  `/privacidad` (se abren en el navegador con `Linking.openURL`).
+- **`jest/lucide-react-native.mock.js` (NUEVO)** + `moduleNameMapper`. Probar un
+  componente que importa un icono cargaba el barril entero de
+  `lucide-react-native` (~1.500 iconos ESM) y añadía ~1 min por suite. El mock
+  hace de cada icono un elemento vacío. La corrida completa volvió de ~69 s a
+  ~9 s.
+- `tsc`, `lint`, Prettier y Jest 67/67 en verde. Pruebas nuevas: `checkbox`
+  (3) y "exige aceptar los términos" en `schemas`.
+
+**No se tocó el `noindex` de las páginas legales.** Sigue pendiente la revisión
+de abogado (`[REVISAR]` en `docs/legal/`). La verificación en el dispositivo -que
+tocar un enlace abra el navegador sin marcar/desmarcar la casilla- va con el
+build del paso 5.
+
+### Lo que se preparó: paso 6, el despliegue del panel (2026-09-03)
+
+El panel (`admin/`, Next.js con middleware de sesión) se desplegará en **Vercel**
+(gratis, nativo para Next.js). `npm run build` del panel pasa en verde -13 rutas,
+middleware-. Solo necesita dos variables `NEXT_PUBLIC_*` de Supabase, ninguna
+secreta.
+
+**Runbook en `docs/operaciones/despliegue-panel.md`:** importar el repo
+`jhan0711/motomoto` en Vercel con **Root Directory = `admin`** (la raíz es la app
+móvil), las dos env vars, y el dominio `panel.amalfigo.app` con un CNAME en
+Cloudflare.
+
+**Desplegado el 2026-09-03** en `motomoto-zeta.vercel.app` (proyecto Vercel
+`motomoto`, cuenta Hobby de jhan45617). El super admin entra y las listas
+cargan. Dos tropiezos en el camino, los dos del usuario y ya resueltos:
+
+- El primer deploy usó la raíz del repo (Expo) porque el "Root Directory" se
+  quedó en `./`; se corrigió a `admin` en Settings → General y se redesplegó.
+- El login fallaba con "correo o contraseña incorrectos" pese a que la
+  contraseña era buena (verificado entrando en la app móvil): las dos env vars
+  estaban mal puestas y como tipo "Secret". Se rehicieron como "Config" con los
+  valores exactos y un redeploy.
+
+**Sobre "el enlace de recuperación salía roto":** los enlaces de recuperación de
+Supabase son de **un solo uso** -abrirlos, aunque sea solo cargar la página, los
+consume- y **cada correo nuevo anula todos los anteriores**. Durante las pruebas
+de hoy se enviaron varios; abrir uno viejo, o el mismo dos veces (PC y luego
+tablet), da `otp_expired`. Uno fresco, abierto una sola vez, funciona.
+
+**Dominio `panel.amalfigo.app` en vivo** (2026-09-03): un CNAME en Cloudflare
+(`panel` → el destino `vercel-dns` que dio Vercel, DNS only). Propagó en minutos,
+Vercel emitió el certificado, y el super admin entra por el dominio propio.
+**Paso 6 cerrado.**
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
@@ -7770,6 +7833,12 @@ bundle antes de poder subirlo- y consume minutos de EAS Build.
 - **RESUELTO en la Fase 26, paso 4a** (2026-09-03). La clave de FCM V1 de `motomoto2026-444cb`
   se asignó a `co.amalfigo.app` con `eas credentials`. Push verificado (Expo `ok` + recibo FCM
   `ok` + visto en la tablet). Detalle en 15.28
+- **El panel administrativo no tiene "recuperar contraseña".** Encontrado en la Fase 26 paso 6.
+  Un admin que olvide su clave debe recuperarla desde la **app móvil** (el flujo funciona) o
+  desde el panel de Supabase. Las plantillas de correo apuntan al enlace de la app móvil
+  (`amalfigo.app/auth`), no al panel, así que añadir el flujo al panel implicaría manejar
+  `{{ .RedirectTo }}` en las plantillas. Con 1-2 admins es asumible para el MVP; se revisa si
+  crece el equipo
 - **RESUELTO en la Fase 25, paso 2** (2026-09-02). `RECORD_AUDIO` fuera del manifest de release
   (`microphonePermission: false` + `blockedPermissions`); `SYSTEM_ALERT_WINDOW` resulto ser
   solo de la variante `debug` y nunca estuvo en release. Verificado con un `processReleaseMainManifest`
