@@ -1741,22 +1741,25 @@ TypeScript sigue siendo instantaneo.
 
 ### Claves de Google Cloud
 
-Dos claves distintas, y conviene no confundirlas:
+Una sola clave activa hoy:
 
 | Clave | Para que | Restriccion |
 |---|---|---|
-| `GOOGLE_MAPS_ANDROID_KEY` | El mapa dentro de la app | Apps de Android: `co.amalfigo.app` (renombrado en la Fase 26 paso 1) + huella SHA-1. API: Maps SDK for Android |
 | `GOOGLE_TEST_API_KEY` | Solo la evaluacion de proveedores, desde el PC | Sin restriccion de aplicacion. APIs: Places (New) y Geocoding |
 
-**Huella SHA-1 de depuracion:** `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
+**`GOOGLE_MAPS_ANDROID_KEY` se elimino en la Fase 26** (2026-09-04): el mapa lo dibuja Mapbox
+(`@rnmapbox/maps`) desde antes, `react-native-maps` era una dependencia muerta y esta clave no
+se usaba para nada. Se quito de `app.config.ts`, `.env`, `.env.example` y de las variables de
+EAS (production y preview). Detalle en 15.28.
+
+**Huella SHA-1 de depuracion** (queda documentada por si hace falta para otra cosa, ya no para
+Maps): `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`
 
 Sale de `android/app/debug.keystore`, que trae la plantilla de Expo. Se consulta asi:
 
 ```powershell
 & "$env:JAVA_HOME\bin\keytool.exe" -list -v -keystore android\app\debug.keystore -storepass android -alias androiddebugkey
 ```
-
-Al publicar (Fase 26) habra otra huella distinta y habra que anadirla a la misma clave.
 
 ### Archivos
 
@@ -1765,7 +1768,7 @@ app.config.ts                        Sustituye a app.json. Lee la clave del .env
 src/features/map/region.ts           Coordenadas de Amalfi y niveles de zoom
 src/features/map/use-location.ts     Permisos, GPS y los siete estados
 src/features/map/map-style.ts        Estilo del mapa, claro y oscuro
-src/features/map/map.tsx             Envoltorio de react-native-maps (D117)
+src/features/map/map.tsx             Envoltorio del mapa (D117; era react-native-maps, hoy @rnmapbox/maps -Fase 26-)
 src/features/map/location-gate.tsx   Pantallas de permiso, GPS apagado y sin senal
 src/app/passenger/index.tsx          El mapa real sustituye al marcador de posicion
 src/components/ui/bottom-sheet.tsx   Gestion del teclado (D123)
@@ -7626,7 +7629,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho y verificado en la tablet** (2026-09-04): los enlaces abren `terminos`/`privacidad` sin tocar la casilla, sin marcar no deja crear, marcando sí. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) |
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03). **4b HECHO** (2026-09-04): `.aab` de producción construido por EAS (build `428cd943`, versionCode 3), firmado con el keystore de EAS. Falta subirlo a Play (espera la verificación de la cuenta) |
-| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json`, SHA-1 a Google Maps | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB) y la SHA-1 a Google Maps |
+| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB). La SHA-1 a Google Maps ya no aplica: se eliminó esa clave por no usarse (ver más abajo) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
 | 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
@@ -7634,7 +7637,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 
 Fuera de la Fase 26 (post-lanzamiento): liquidación mensual del conductor (D267),
 selector de municipio, deudas técnicas (posición por Broadcast, búsqueda del
-panel con `pg_trgm`), condiciones de Mapbox sobre mapa de Google.
+panel con `pg_trgm`).
 
 ### Lo que se hizo: paso 1, el rename del paquete (2026-09-03)
 
@@ -7740,6 +7743,30 @@ Listo para subir a Play en cuanto Google verifique la cuenta. Un `.aab` no se
 instala directo: la prueba en dispositivo de la app firmada de producción se
 hace desde la pista de prueba interna de Play, o con un build del perfil
 `preview` (APK).
+
+### Lo que se hizo: limpieza de la clave de Google Maps (2026-09-04)
+
+Al ir a sacar la huella SHA-1 del keystore de producción para el paso 5 (había
+que añadirla a `GOOGLE_MAPS_ANDROID_KEY`), surgió la pregunta de por qué hacía
+falta si el mapa se ve con Mapbox. Al revisar el código, `map.tsx` importa
+`@rnmapbox/maps`, no `react-native-maps`: el mapa lleva tiempo dibujándose con
+Mapbox y esa clave y esa dependencia no se usaban para nada. D110 (el mapa lo
+dibuja Google) quedó revertida en algún punto sin que la documentación se
+actualizara.
+
+Se quitó todo:
+
+- `app.config.ts`: la constante `googleMapsApiKey`, su aviso y el bloque
+  `android.config.googleMaps`.
+- `package.json`: `npm uninstall react-native-maps`.
+- `.env` y `.env.example`: la línea `GOOGLE_MAPS_ANDROID_KEY` y el comentario
+  de D110/D111 corregido.
+- EAS: `eas env:delete production/preview --variable-name GOOGLE_MAPS_ANDROID_KEY`.
+
+La clave en sí sigue viva en Google Cloud (no se tocó desde ahí); se puede
+borrar o restringir por completo cuando convenga, ya sin nada que la use.
+`GOOGLE_TEST_API_KEY` no se tocó: es de la comparación de proveedores de la
+Fase 8, no del build.
 
 ### Lo que se hizo: paso 3, la casilla de aceptación (2026-09-03)
 
@@ -7938,18 +7965,23 @@ la cuenta y los datos, y una URL web equivalente.
   alternativa: la API barata no conoce Amalfi (D126). Con las tres medidas puestas (testigo
   por busqueda, pausa de 400 ms y la lista de lugares primero) deberia sobrar para el piloto,
   pero conviene mirar el consumo real en Mapbox tras el primer mes de uso (Fase 24)
-- **Condiciones de uso de Mapbox sobre un mapa de Google.** Sus terminos restringen mostrar
-  datos de Mapbox sobre un mapa base de otro proveedor, y aqui el mapa lo dibuja Google (D110)
-  mientras la ruta la calcula Mapbox (D149). Venia ocurriendo desde la Fase 11 con el tiempo
-  estimado; con D161 la ruta se dibuja y es mas visible. No bloquea nada hoy y esto no es una
-  lectura legal, pero conviene mirarlo antes de publicar (Fase 26)
+- **RESUELTO, ya no aplica (Fase 26).** La preocupacion era mostrar datos de Mapbox sobre un
+  mapa base de Google (D110), lo que sus terminos restringen. Para cuando se reviso esto en la
+  Fase 26 el mapa ya lo dibujaba Mapbox por completo (`@rnmapbox/maps`, ver `map.tsx`) y
+  `react-native-maps`/`GOOGLE_MAPS_ANDROID_KEY` eran dependencia y clave muertas sin ningun uso;
+  se quitaron del proyecto, de `.env`, de EAS y de `app.config.ts`. No hay mapa de Google que
+  mezclar con nada.
 - **Peticiones de ruta por oferta.** Cada oferta pide su trazado mas el de cada viaje en curso.
   Con el cupo de 100.000 al mes sobra para el piloto, pero es la primera vez que una pantalla
   hace varias llamadas a Directions a la vez y conviene medirlo con uso real (Fase 24)
 - **Ampliar la lista de lugares.** Los 36 actuales son el arranque. Hay 16 sitios del
   municipio que ningun proveedor conoce y que se marcaron a mano; con el uso apareceran mas.
   Se dan de alta desde el panel (Fase 20)
-- Anadir la huella SHA-1 de la clave de publicacion a la clave de Google Maps (Fase 26)
+- **RESUELTO, ya no aplica (Fase 26, 2026-09-04).** Se iba a anadir la huella SHA-1 del
+  keystore de produccion a la clave `GOOGLE_MAPS_ANDROID_KEY`, pero al revisar el codigo para
+  sacar esa huella se confirmo que el mapa lo dibuja Mapbox (`@rnmapbox/maps`) y esa clave no se
+  usa para nada. Se elimino la clave, `react-native-maps` (dependencia muerta) y toda la
+  plomeria asociada; detalle en 15.28
 - **RESUELTO en la Fase 25, paso 7a** (2026-09-03). SMTP propio de Resend
   (`smtp.resend.com:465`, remitente `soporte@amalfigo.app`) configurado en Supabase. Correo de
   recuperacion real verificado: llega a Recibidos. Detalle en 15.27

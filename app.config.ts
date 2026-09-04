@@ -14,16 +14,6 @@ import type { ExpoConfig } from 'expo/config';
  * alguien la extraiga del APK, no puede usarla desde otra aplicación.
  */
 
-const googleMapsApiKey = process.env.GOOGLE_MAPS_ANDROID_KEY;
-
-if (!googleMapsApiKey) {
-  // Un aviso, no un fallo. Permite seguir trabajando en pantallas que no son el
-  // mapa, pero deja claro por qué el mapa saldría en gris si se abre.
-  console.warn(
-    '[app.config] Falta GOOGLE_MAPS_ANDROID_KEY en .env. El mapa se verá como una cuadrícula gris.',
-  );
-}
-
 /**
  * Token SECRETO de descarga de Mapbox, distinto del público.
  *
@@ -151,11 +141,6 @@ const config: ExpoConfig = {
         category: ['BROWSABLE', 'DEFAULT'],
       },
     ],
-    config: {
-      googleMaps: {
-        apiKey: googleMapsApiKey,
-      },
-    },
   },
 
   web: {
