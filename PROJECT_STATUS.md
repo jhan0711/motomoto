@@ -7631,7 +7631,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03). **4b HECHO** (2026-09-04): `.aab` de producción construido por EAS (build `428cd943`, versionCode 3), firmado con el keystore de EAS. Falta subirlo a Play (espera la verificación de la cuenta) |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB). La SHA-1 a Google Maps ya no aplica: se eliminó esa clave por no usarse (ver más abajo) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
-| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Faltan los gráficos (feature graphic + capturas del build del paso 5) |
+| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Feature graphic hecho; 4 de 7 capturas hechas con datos limpios (2026-09-04). Faltan 3 que necesitan un viaje simulado completo |
 | 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
 | 8 | Limpieza (`purge_qa_accounts.sql`), envío a revisión y verificación final | Pendiente. Los 3 asuntos de correo ya se tradujeron (2026-09-04) |
 
@@ -7857,10 +7857,28 @@ requisito de cuenta personal reciente).
 `assets/brand/feature-graphic.mjs` (marca + eslogan sobre `#2a323c`) →
 `assets/store/feature-graphic.png`. Cuatro capturas en `assets/store/capturas/`
 (1080×2340: bienvenida, inicio, perfil, historial), sacadas de la tablet con el
-APK de pruebas emulando tamaño de teléfono (`wm size 1080x2340`). Llevan datos
-de prueba y el mapa sale en Bogotá (la tablet no está en Amalfi); se rehacen con
-datos limpios y las 3 que faltan -tarifa, seguimiento, solicitudes del
-conductor- cuando esté el build del paso 5.
+APK de pruebas emulando tamaño de teléfono (`wm size 1080x2340`).
+
+**Repetidas con datos limpios el mismo día.** La primera tanda tenía datos de
+QA visibles: el perfil mostraba `pasajero.prueba@motomoto-qa.co`, el historial
+"Conductor de prueba"/"Segundo conductor", y el mapa salía en Medellín (la
+ubicación real de la tablet, no Bogotá como se pensó al principio) en vez de
+Amalfi. Arreglos, sin tocar los datos de QA de forma permanente:
+
+- **Mapa:** desde el buscador de destino, "Elegir en el mapa" con un lugar de
+  Amalfi como origen y otro como destino centra la cámara en el pueblo sin
+  necesidad de spoofear el GPS.
+- **Historial:** los nombres de los conductores de prueba (`d0000000-...0001`
+  y `...0002`) se renombraron por SQL solo mientras se tomaba la captura y se
+  revirtieron enseguida -uno de ellos lo verifica por texto literal
+  `prueba_cancelaciones.sql`, así que dejarlo cambiado habría roto esa prueba-.
+- **Perfil:** se registró una cuenta nueva y desechable ("Camila Restrepo",
+  `+demo` sobre el gmail del usuario) por el flujo normal de la app, se
+  confirmó por correo, se tomó la captura y se borró con "Eliminar mi cuenta"
+  (Fase 26 paso 7b) al terminar.
+
+Faltan las 3 que necesitan un viaje completo simulado: tarifa antes de
+confirmar, conductor en el mapa, lista de solicitudes del conductor.
 
 ### Lo que se hizo: paso 7b, la eliminación de cuenta (2026-09-04)
 
