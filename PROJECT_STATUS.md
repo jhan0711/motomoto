@@ -8047,13 +8047,34 @@ Play (editar en consola, sin build), textos legales (push → Cloudflare), panel
 (push → Vercel). Tiempos de revisión por pista. Qué NO cambia con cada build
 (`assetlinks.json`, credenciales de EAS).
 
-**Pendiente inmediato:** build de EAS **vc 5** con los dos arreglos de la hoja
-(`82b74f4` + `57bb84c`) y subirlo a la prueba interna; verificar en la tablet
-desde Play; añadir testers y arrancar la prueba cerrada (12 testers / 14 días);
-antes de producción, `purge_qa_accounts.sql`.
+### vc 5 verificado en la tablet desde Play (2026-09-07)
 
-**Nota de disco:** el disco C: estuvo al 100 % (8-11 GB libres). Bloqueó el
-segundo emulador. Conviene que el usuario libere espacio.
+Build de EAS **`64e30d94`, versionCode 5**, con el arreglo `57bb84c`. Subido a
+la prueba interna (el borrador de esta mañana bloqueaba "Crear versión"; se
+descartó). Instalado desde Play en la tablet (`installerPackageName=
+com.android.vending`). Verificado por adb:
+
+- **El bug de la hoja está arreglado.** Se reprodujo el escenario exacto:
+  resumen → "Cambiar" el punto de recogida → elegir un lugar de Amalfi →
+  volver. Antes la hoja quedaba corta con el mapa asomando; ahora sale
+  completa, con la tarifa real (`$4.000`, "600 m · 2 min") y el botón naranja
+  activo. Plegar a asa y desplegar: limpio, sin fugas del mapa.
+  - Costo cosmético conocido: en la tablet (pantalla muy alta) queda algo de
+    hoja vacía bajo el botón, porque `0.8` fijo sobra. En teléfono se nota
+    mucho menos. No es un bug.
+- **Las tildes en notificaciones SÍ salen bien.** Se llamó
+  `send_push_notification` con "Tu motorratón llegó" / "Te está esperando...
+  áéíóúñ" y llegó al dispositivo **con todos los acentos intactos**. Confirmado:
+  el `�` de antes era solo de la herramienta de prueba.
+- Token push se registra desde vc 5, login y permisos OK.
+
+**Pendiente inmediato:** añadir testers y arrancar la **prueba cerrada** (12
+testers / 14 días); antes de producción, `purge_qa_accounts.sql`.
+
+**Nota de disco:** el disco C: estuvo al 100 % (8-12 GB libres). Bloqueó el
+segundo emulador y, junto con la restricción "Instalar vía USB" de Xiaomi,
+impidió probar el APK local (por eso se probó vc 5 desde Play). Conviene que el
+usuario libere espacio.
 
 ---
 
