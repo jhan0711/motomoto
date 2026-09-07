@@ -177,11 +177,13 @@ writeFileSync(
 
 // assetlinks.json y el icono.
 //
-// `co.amalfigo.app` con DOS huellas SHA-256: la del keystore de depuración
-// (`FA:C6:...`, para los APK de prueba locales) y la del keystore de subida de
-// EAS (`8C:59:...`, para el build de producción). Cuando se suba el primer AAB
-// a Google Play y se active Play App Signing, Google da una TERCERA huella -la
-// de su propia clave de firma- que hay que añadir aquí tambien.
+// `co.amalfigo.app` con TRES huellas SHA-256:
+//   - `FA:C6:...` keystore de depuración, para los APK de prueba locales.
+//   - `8C:59:...` keystore de subida de EAS, para los builds que se suben a Play.
+//   - `A1:C8:...` clave de firma de Play App Signing -la que Google da al subir
+//     el primer AAB (2026-09-07)-. Es con la que van firmadas las apps que
+//     instalan los usuarios desde Play, así que sin ella los App Links no
+//     verifican para nadie que la baje de la tienda.
 // La entrada vieja `com.motomoto.app` se quitó al verificar el rename (paso 1).
 mkdirSync(resolve(DIST, '.well-known'), { recursive: true });
 cpSync(resolve(AQUI, '.well-known/assetlinks.json'), resolve(DIST, '.well-known/assetlinks.json'));

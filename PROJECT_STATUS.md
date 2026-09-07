@@ -7626,12 +7626,12 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | # | Paso | Estado |
 |---|---|---|
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
-| 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
+| 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **HECHO.** EAS (2026-09-03). Play Console: cuenta personal creada y pagada (2026-09-03); **identidad verificada por Google el 2026-09-06** (el rechazo real era el comprobante de domicilio, no el nombre: se resolvió con un extracto de Bancolombia a nombre del titular). App `AmalfiGoApp` / `co.amalfigo.app` creada en Play (2026-09-07) |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **HECHO** (2026-09-07). Código verificado en la tablet (2026-09-04). **Textos legales revisados por abogado y definitivos** (2026-09-07): sin `[REVISAR]`, sin `noindex` ni aviso de borrador. `docs/legal/*.md` actualizados, `site/build.mjs` limpiado. Falta desplegar el sitio (push → Cloudflare) para que `amalfigo.app/privacidad` sea la versión definitiva |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03). **4b HECHO** (2026-09-04): `.aab` de producción construido por EAS (build `428cd943`, versionCode 3), firmado con el keystore de EAS. Falta subirlo a Play (espera la verificación de la cuenta) |
-| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB). La SHA-1 a Google Maps ya no aplica: se eliminó esa clave por no usarse (ver más abajo) |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **HECHO.** 4a (2026-09-03). 4b: primer `.aab` (build `428cd943`, vc 3, 2026-09-04). **Rehecho el 2026-09-07** con el arreglo de la hoja: build `c1fea3ee`, versionCode 4, `AmalfiGoApp-produccion.aab`. **Subido a la pista de prueba interna de Play** (2026-09-07) |
+| 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **HECHO** (2026-09-07). `assetlinks.json` con las TRES huellas de `co.amalfigo.app`: depuración (`FA:C6:...`), keystore de subida de EAS (`8C:59:...`) y **Play App Signing (`A1:C8:8F:5D:...:16:20`)**, esta última la dio Google al subir el primer AAB. Falta el push para que Cloudflare lo publique. La SHA-1 a Google Maps ya no aplica (clave eliminada) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
-| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **Redactada** (2026-09-03) en `docs/operaciones/ficha-play-store.md`: nombre, descripciones, categoría, cuestionario de clasificación, tabla de Data Safety, permisos, plan de lanzamiento. **Destapó dos bloqueadores** (ver 7b y la política de privacidad). Feature graphic hecho; 4 de 7 capturas hechas con datos limpios (2026-09-04). Faltan 3 que necesitan un viaje simulado completo |
+| 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **HECHO en Play Console el 2026-09-07** (borrador en `docs/operaciones/ficha-play-store.md`). Las 11 tareas de "Termina de configurar tu app" completas: política de privacidad (`amalfigo.app/privacidad`), detalles de acceso (cuenta de pasajero de prueba), anuncios (no), clasificación IARC (interacción entre usuarios sí, ubicación compartida sí; sin chat), público 18+, Data Safety (nada compartido con terceros, sin analítica ni reporte de errores), categoría "Mapas y navegación". Ficha con icono 512×512 (`assets/store/play-icon.png`, nuevo — el `icon.png` sale 1024×1020), feature graphic y 4 capturas. Estado: "Lista para enviar a revisión". Faltan 3 capturas que necesitan un viaje simulado completo |
 | 7b | Eliminación de cuenta: opción en la app + página web + función de Supabase | **HECHO Y VERIFICADO EN LA TABLET** (2026-09-04). Migración `20260904000000` (`delete_my_account` + perfil marcador), `deleteAccount` en `auth-service`, botón en `passenger/profile`, `amalfigo.app/eliminar-cuenta` (en vivo). `prueba_eliminar_cuenta.sql` 10/10. En el dispositivo: crear cuenta → confirmar → Perfil → Eliminar → la cuenta desaparece de `auth.users` y vuelve a bienvenida |
 | 8 | Limpieza (`purge_qa_accounts.sql`), envío a revisión y verificación final | Pendiente. Los 3 asuntos de correo ya se tradujeron (2026-09-04) |
 
@@ -7961,6 +7961,53 @@ bloqueo intermitente del menu del panel, no se volvio a dar y queda sin tocar):
      el 2026-09-06** con el APK de pruebas: el resumen muestra todo incluido el
      boton; aguanta abrir/cerrar teclado y plegar/desplegar la hoja sin cortarse
      ni dejar ver el mapa; los modos sin scroll (busqueda) siguen igual.
+
+### Lo que se hizo: pasos 2, 4b, 5 y 7 en Play Console (2026-09-07)
+
+Con la cuenta ya verificada, se hizo todo el trabajo dentro de Play Console
+(guiado, el usuario hace los clics):
+
+- **App creada:** `AmalfiGoApp`, paquete `co.amalfigo.app`, es-419, gratis, con
+  "protección automática" activada.
+- **Las 11 tareas de contenido** ("Termina de configurar tu app"):
+  - Política de privacidad: `https://amalfigo.app/privacidad` (ya definitiva).
+  - Detalles de acceso: cuenta de pasajero de prueba
+    (`pasajero.prueba@motomoto-qa.co`) con instrucciones; la casilla de "acceso
+    completo" queda SIN marcar porque no da acceso al lado del conductor.
+  - Anuncios: no. Apps gubernamentales: no. Funciones financieras: ninguna.
+    Salud: no.
+  - **Clasificación IARC:** "todos los demás tipos de app". Interacción entre
+    usuarios: **sí** (calificaciones con comentario y reportes). Compartir
+    contenido por mensajes/imágenes/audio: **no** (la app no tiene chat; los
+    comentarios de calificación no se muestran de un usuario a otro).
+    Ubicación compartida con otros usuarios: **sí** (durante el viaje).
+  - Público objetivo: **18+**, no dirigida a menores.
+  - **Data Safety:** todo cifrado en tránsito; método de cuenta correo+contraseña
+    (sin OAuth); URL de borrado `amalfigo.app/eliminar-cuenta`. Se recopilan
+    nombre, correo, teléfono, ubicación aprox. y precisa, fotos, "otras acciones"
+    (historial de viajes), "otro contenido del usuario" (calificaciones) e "ID
+    del dispositivo" (token push). **Nada se comparte con terceros. Sin
+    analítica ni reporte de errores** (se verificó: no hay Sentry, Crashlytics
+    ni SDK de métricas). El documento del conductor lo recoge el panel web, no
+    la app, así que no va aquí.
+  - Categoría **"Mapas y navegación"**, contacto `soporte@amalfigo.app`.
+- **Ficha de Play Store:** descripción breve y completa (de
+  `ficha-play-store.md`); **icono nuevo 512×512** (`assets/store/play-icon.png`,
+  lo genera `assets/brand/play-icon.mjs` -el `icon.png` del proyecto sale
+  1024×1020 y Play exige cuadrado exacto-); feature graphic 1024×500 y las 4
+  capturas. Estado: **"Lista para enviar a revisión"**.
+- **AAB `c1fea3ee` (versionCode 4) subido a la pista de prueba interna.** Al
+  subir el primer AAB, Google activó **Play App Signing** y dio la huella
+  SHA-256 de su clave de firma:
+  `A1:C8:8F:5D:A6:93:AC:10:3B:AC:9F:61:38:85:FE:86:06:68:B0:DC:BD:04:5B:04:0F:0D:E5:F2:AA:AD:16:20`.
+  Añadida a `site/.well-known/assetlinks.json` como tercera huella (es con la
+  que van firmadas las apps que se instalan desde Play; sin ella los App Links
+  no verifican para quien la baje de la tienda). Falta el push.
+
+**Pendiente inmediato:** empujar el sitio (assetlinks nuevo) → Cloudflare;
+terminar el lanzamiento de la prueba interna (añadir testers, iniciar
+despliegue); instalar desde Play y verificar el ciclo; luego prueba cerrada
+(12 testers / 14 días) y, antes de producción, `purge_qa_accounts.sql`.
 
 ---
 
