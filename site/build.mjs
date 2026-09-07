@@ -2,9 +2,10 @@
 //
 //   node site/build.mjs
 //
-// Los textos legales salen de `docs/legal/*.md`. Mientras esos sean borradores
-// con marcas [REVISAR], el HTML también lo es: no publicar hasta la revisión
-// legal y hasta tener el dominio y el correo de contacto definitivos.
+// Los textos legales salen de `docs/legal/*.md`. Revisados por abogado y
+// definitivos desde el 2026-09-07 (Fase 26): sin `noindex` ni aviso de
+// borrador, para que Google pueda rastrear la política de privacidad -requisito
+// para publicar en Play-.
 
 import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -24,7 +25,7 @@ const BRAND = {
 };
 
 /** Envuelve el cuerpo HTML en la plantilla del sitio. */
-function pagina({ titulo, cuerpo, esLegal = false, noindex = esLegal }) {
+function pagina({ titulo, cuerpo, noindex = false }) {
   return `<!doctype html>
 <html lang="es">
 <head>
@@ -51,10 +52,6 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
   th, td { border: 1px solid #3a434e; padding: 8px 10px; text-align: left; vertical-align: top; }
   th { background: ${BRAND.bgAlt}; }
   code { background: ${BRAND.bgAlt}; padding: 1px 5px; border-radius: 4px; font-size: 90%; }
-  .aviso {
-    background: #3a2f1c; border: 1px solid #6b5327; border-radius: 8px;
-    padding: 12px 16px; margin: 24px 0; color: #f0d9a8;
-  }
   footer { margin-top: 56px; color: ${BRAND.muted}; font-size: 13px; }
   .overflow { overflow-x: auto; }
 </style>
@@ -65,11 +62,6 @@ ${noindex ? '<meta name="robots" content="noindex">' : ''}
     <img src="/icon.png" alt="">
     <b>AmalfiGoApp</b>
   </header>
-  ${
-    esLegal
-      ? `<div class="aviso"><strong>Borrador.</strong> Este texto es una versión preliminar y está pendiente de revisión legal. No constituye el documento definitivo.</div>`
-      : ''
-  }
   ${cuerpo}
   <footer>AmalfiGoApp · Amalfi, Antioquia, Colombia</footer>
 </main>
@@ -95,7 +87,6 @@ writeFileSync(
   pagina({
     titulo: 'Política de privacidad',
     cuerpo: `<div class="overflow">${legalAHtml('politica-de-privacidad.md')}</div>`,
-    esLegal: true,
   }),
 );
 writeFileSync(
@@ -103,7 +94,6 @@ writeFileSync(
   pagina({
     titulo: 'Términos de uso',
     cuerpo: `<div class="overflow">${legalAHtml('terminos-de-uso.md')}</div>`,
-    esLegal: true,
   }),
 );
 

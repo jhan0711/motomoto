@@ -7627,7 +7627,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 |---|---|---|
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **EAS hecho** (2026-09-03): `eas-cli` con sesión, proyecto `@jhan160711/motomoto` enlazado, `eas.json` creado. **Play Console: cuenta personal creada y pagada** (2026-09-03); pendiente la verificación de identidad de Google (unos días) — hasta entonces no se pueden crear apps |
-| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **Código hecho y verificado en la tablet** (2026-09-04): los enlaces abren `terminos`/`privacidad` sin tocar la casilla, sin marcar no deja crear, marcando sí. **Falta la revisión de abogado** (quitar `[REVISAR]` y `noindex`) |
+| 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **HECHO** (2026-09-07). Código verificado en la tablet (2026-09-04). **Textos legales revisados por abogado y definitivos** (2026-09-07): sin `[REVISAR]`, sin `noindex` ni aviso de borrador. `docs/legal/*.md` actualizados, `site/build.mjs` limpiado. Falta desplegar el sitio (push → Cloudflare) para que `amalfigo.app/privacidad` sea la versión definitiva |
 | 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **4a hecho** (2026-09-03). **4b HECHO** (2026-09-04): `.aab` de producción construido por EAS (build `428cd943`, versionCode 3), firmado con el keystore de EAS. Falta subirlo a Play (espera la verificación de la cuenta) |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **Parcial** (2026-09-04). `assetlinks.json` ya lleva DOS huellas para `co.amalfigo.app`: la de depuración (`FA:C6:...`) y la del keystore de subida de EAS (`8C:59:...`). Se quitó la entrada vieja `com.motomoto.app`. **Falta la de Play App Signing** (la da Google al subir el primer AAB). La SHA-1 a Google Maps ya no aplica: se eliminó esa clave por no usarse (ver más abajo) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
@@ -7792,10 +7792,17 @@ Consentimiento explícito en el registro, requisito de Google Play y de la Ley
 - `tsc`, `lint`, Prettier y Jest 67/67 en verde. Pruebas nuevas: `checkbox`
   (3) y "exige aceptar los términos" en `schemas`.
 
-**No se tocó el `noindex` de las páginas legales.** Sigue pendiente la revisión
-de abogado (`[REVISAR]` en `docs/legal/`). La verificación en el dispositivo -que
-tocar un enlace abra el navegador sin marcar/desmarcar la casilla- va con el
-build del paso 5.
+**El `noindex` de las páginas legales se quitó el 2026-09-07**, cuando el abogado
+entregó el texto definitivo. `docs/legal/politica-de-privacidad.md` y
+`terminos-de-uso.md` sin una sola marca `[REVISAR]`: fecha de publicación (7 de
+septiembre de 2026), responsable (Jhan Carlo Roldán Sepúlveda, persona natural),
+correo `privacidad@amalfigo.app`, cláusula de transferencia internacional,
+plazos de conservación concretos (30 días para datos identificables al eliminar
+la cuenta; 12 meses para el documento del conductor), datos de menores, RNBD, y
+jurisdicción (circuito judicial de Amalfi). `site/build.mjs` limpiado: se quitó
+el `noindex` de las legales -Google tiene que rastrear
+`amalfigo.app/privacidad`- y el aviso de "Borrador". `/auth` conserva su
+`noindex`. Falta el `git push` para que Cloudflare redespliegue.
 
 ### Lo que se preparó: paso 6, el despliegue del panel (2026-09-03)
 

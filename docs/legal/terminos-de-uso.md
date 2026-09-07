@@ -1,20 +1,11 @@
-<!--
-  BORRADOR — Fase 25, paso 4. NO revisado por abogado. NO publicar tal cual.
-  Marcas [REVISAR] = decisiones que necesitan revisión legal.
--->
-
 # Términos y Condiciones de Uso — AmalfiGoApp
 
-**Última actualización:** [fecha de publicación]
+**Última actualización:** 7 de septiembre de 2026
 
 Al crear una cuenta o usar la aplicación **AmalfiGoApp** ("la aplicación"), la
 persona acepta estos términos. Si no está de acuerdo, no debe usar la aplicación.
 
 ## 1. Qué es AmalfiGoApp
-
-**[REVISAR: naturaleza del servicio.** La redacción de esta sección determina la
-responsabilidad de la plataforma y los seguros exigibles. El mototaxismo tiene un
-tratamiento legal particular en Colombia.]
 
 AmalfiGoApp es una aplicación que **conecta** a personas que necesitan un
 transporte en motorratón (mototaxi) dentro del municipio de Amalfi, Antioquia,
@@ -22,8 +13,9 @@ con conductores de motorratón disponibles. La aplicación:
 
 - Permite solicitar un servicio, ver el valor estimado **antes** de confirmarlo,
   y seguir al conductor en el mapa mientras llega.
-- **No presta directamente el servicio de transporte** ni emplea a los
-  conductores. **[REVISAR.]**
+- No presta directamente el servicio de transporte ni emplea a los conductores:
+  actúa como intermediaria tecnológica entre pasajeros y conductores
+  independientes.
 - **No procesa pagos.** El pasajero paga en efectivo, directamente al conductor,
   al finalizar el servicio.
 
@@ -42,8 +34,10 @@ con conductores de motorratón disponibles. La aplicación:
 - El valor lo calcula la aplicación según las tarifas definidas por la operación
   del servicio (urbanas, rurales y nocturnas) y **se muestra al pasajero antes de
   que confirme la solicitud**.
-- El valor mostrado es el que el pasajero debe pagar al conductor en efectivo al
-  finalizar. **[REVISAR: qué pasa si el trayecto real difiere del solicitado.]**
+- El valor mostrado corresponde al trayecto solicitado (origen y destino
+  indicados por el pasajero) y es el que debe pagarse al conductor en efectivo al
+  finalizar. Si durante el servicio el trayecto cambia por solicitud del
+  pasajero, el valor se ajusta en la aplicación antes de terminar el servicio.
 - Las tarifas pueden cambiar. El cambio no afecta a los servicios ya
   confirmados.
 
@@ -58,14 +52,19 @@ con conductores de motorratón disponibles. La aplicación:
 ### Encomiendas
 
 La aplicación permite pedir el envío de una encomienda (sin pasajero a bordo).
-El remitente es responsable del contenido de la encomienda y de que sea legal
-transportarla. **[REVISAR: responsabilidad por pérdida o daño de la encomienda.]**
+El remitente es responsable del contenido de la encomienda, de que sea legal
+transportarla y de declarar si se trata de un objeto frágil o de valor especial.
+AmalfiGoApp no garantiza el estado de la encomienda durante el trayecto; la
+responsabilidad por su cuidado corresponde al conductor que la transporta,
+conforme a las reglas generales del contrato de transporte.
 
 ## 5. Cancelaciones
 
-- El pasajero puede cancelar mientras la solicitud está buscando conductor o
-  recién asignada, sin costo. **[REVISAR: política de cancelación tardía o
-  reiterada.]**
+- El pasajero puede cancelar sin costo mientras la solicitud está buscando
+  conductor o recién asignada.
+- Las cancelaciones reiteradas o tardías (con el conductor ya en camino o cerca
+  del punto de recogida) pueden generar una advertencia en la cuenta y, en caso
+  de reincidencia, la suspensión temporal de la cuenta.
 - El conductor puede cancelar antes de iniciar el recorrido; en ese caso la
   solicitud se vuelve a ofrecer a otros conductores.
 - Si el conductor cancela con el pasajero ya a bordo, se registra el motivo.
@@ -87,25 +86,22 @@ perjuicio de las acciones legales que correspondan.
 
 ## 7. Obligaciones y responsabilidad del conductor
 
-**[REVISAR toda esta sección con un abogado.]**
-
-- El conductor es el único responsable de la conducción, del estado del vehículo,
-  del cumplimiento de las normas de tránsito y de contar con los documentos y
-  seguros que exija la ley.
-- El conductor declara estar autorizado para prestar el servicio de transporte en
-  motorratón en las condiciones en que lo hace.
+- El conductor es el único responsable de la conducción, del estado del
+  vehículo, del cumplimiento de las normas de tránsito y de contar con los
+  documentos y seguros que exija la ley para prestar el servicio.
+- El conductor declara estar autorizado para prestar el servicio de transporte
+  en motorratón en las condiciones en que lo hace, incluyendo el cumplimiento de
+  la normativa municipal de movilidad aplicable en Amalfi.
 
 ## 8. Limitación de responsabilidad
 
-**[REVISAR toda esta sección con un abogado. La redacción de una cláusula de
-limitación de responsabilidad en Colombia tiene límites legales; no se puede
-excluir la responsabilidad por dolo o culpa grave, ni la derivada de normas de
-protección al consumidor.]**
-
-En la medida en que la ley lo permita, AmalfiGoApp y su titular:
+En la medida en que la ley colombiana lo permita —sin que esto excluya la
+responsabilidad por dolo, culpa grave, ni la derivada de normas de protección al
+consumidor— AmalfiGoApp y su titular:
 
 - No responden por los daños derivados de la conducción, del comportamiento del
-  conductor o del pasajero, ni por accidentes ocurridos durante el servicio.
+  conductor o del pasajero, ni por accidentes ocurridos durante el servicio, por
+  tratarse de hechos ajenos a la operación de la plataforma.
 - No garantizan la disponibilidad permanente de conductores ni de la aplicación.
 - No responden por la exactitud absoluta del mapa, de las rutas estimadas ni de
   los tiempos mostrados, que son aproximados.
@@ -134,8 +130,9 @@ siempre estará disponible en https://amalfigo.app/terminos.
 ## 12. Ley aplicable y jurisdicción
 
 Estos términos se rigen por las leyes de la República de Colombia. Cualquier
-controversia se someterá a los jueces competentes de Colombia. **[REVISAR:
-municipio o circuito judicial concreto.]**
+controversia se someterá a los jueces competentes del circuito judicial de
+Amalfi, Antioquia, o a los que correspondan según las reglas generales de
+competencia si dicho circuito no la tuviera.
 
 ## 13. Contacto
 

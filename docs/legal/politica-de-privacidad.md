@@ -1,11 +1,6 @@
-<!--
-  BORRADOR — Fase 25, paso 4. NO revisado por abogado. NO publicar tal cual.
-  Marcas [REVISAR] = decisiones que necesitan revisión legal.
--->
-
 # Política de Tratamiento de Datos Personales — AmalfiGoApp
 
-**Última actualización:** [fecha de publicación]
+**Última actualización:** 7 de septiembre de 2026
 
 Esta política explica cómo se recogen, usan, almacenan y protegen los datos
 personales de las personas que usan la aplicación **AmalfiGoApp** ("la
@@ -14,11 +9,8 @@ demás normas colombianas sobre protección de datos personales.
 
 ## 1. Responsable del tratamiento
 
-**[REVISAR: confirmar quién es el responsable — persona natural o empresa.]**
-
 - **Responsable:** Jhan Carlo Roldán Sepúlveda (persona natural).
-- **Correo de contacto:** privacidad@amalfigo.app (por crear con enrutamiento de correo de Cloudflare)
-- **Dirección:** [definir si la ley lo exige]
+- **Correo de contacto:** privacidad@amalfigo.app
 - **Ciudad:** Amalfi, Antioquia, Colombia.
 
 Toda solicitud relacionada con datos personales se atiende por el correo de
@@ -43,11 +35,11 @@ contacto.
 
 ### 2.2. Datos adicionales de los conductores
 
-| Dato                                         | Para qué                                                                   |
-| -------------------------------------------- | -------------------------------------------------------------------------- |
-| Documento de identidad                       | Verificar la identidad del conductor **[REVISAR: retención y base legal]** |
-| Matrícula del vehículo (motorratón)          | Identificar el vehículo asignado al servicio                               |
-| Ubicación durante la jornada / los servicios | Ofrecer servicios cercanos y permitir el seguimiento en tiempo real        |
+| Dato                                         | Para qué                                                            |
+| --------------------------------------------- | -------------------------------------------------------------------- |
+| Documento de identidad                       | Verificar la identidad del conductor. Se conserva mientras la cuenta esté activa como conductor y hasta doce (12) meses después de su inactivación, salvo que la ley exija un plazo mayor |
+| Matrícula del vehículo (motorratón)          | Identificar el vehículo asignado al servicio                         |
+| Ubicación durante la jornada / los servicios | Ofrecer servicios cercanos y permitir el seguimiento en tiempo real  |
 
 ### 2.3. Datos que NO se recogen
 
@@ -86,19 +78,21 @@ dejarán de estar disponibles).
 
 Para operar, la aplicación se apoya en proveedores que actúan como **encargados
 del tratamiento** y solo tratan los datos según las instrucciones del
-responsable:
+responsable. Algunos de estos proveedores procesan o almacenan datos fuera de
+Colombia, en el marco de sus propias infraestructuras internacionales:
 
-| Proveedor                               | Para qué                                                       | Dónde procesa **[REVISAR]** |
-| --------------------------------------- | -------------------------------------------------------------- | --------------------------- |
-| Supabase                                | Base de datos, autenticación y almacenamiento de la aplicación | Fuera de Colombia           |
-| Mapbox                                  | Mapas, cálculo de rutas y búsqueda de direcciones              | Fuera de Colombia           |
-| Google (Maps, Firebase Cloud Messaging) | Mapa base y entrega de notificaciones                          | Fuera de Colombia           |
-| Resend                                  | Envío de los correos de la cuenta (confirmación, recuperación) | Fuera de Colombia           |
-| Expo                                    | Servicio de notificaciones push                                | Fuera de Colombia           |
+| Proveedor                               | Para qué                                                        |
+| ---------------------------------------- | ----------------------------------------------------------------- |
+| Supabase                                 | Base de datos, autenticación y almacenamiento de la aplicación   |
+| Mapbox                                   | Mapas, cálculo de rutas y búsqueda de direcciones                |
+| Google (Maps, Firebase Cloud Messaging)  | Mapa base y entrega de notificaciones                            |
+| Resend                                   | Envío de los correos de la cuenta (confirmación, recuperación)   |
+| Expo                                     | Servicio de notificaciones push                                  |
 
-**[REVISAR: transferencia internacional de datos.** Varios de estos proveedores
-almacenan o procesan datos fuera de Colombia. Hay que declarar la transferencia
-internacional y su base legal conforme a la Ley 1581 y a la doctrina de la SIC.]
+Cuando el tratamiento implica una transferencia internacional de datos, esta se
+realiza con fundamento en la autorización otorgada por el titular al aceptar
+esta política, conforme a lo previsto en la Ley 1581 de 2012 para este tipo de
+transferencias.
 
 ## 6. Derechos del titular
 
@@ -141,22 +135,29 @@ notificación a la SIC y a los titulares cuando corresponda.
 
 ## 8. Conservación
 
-Los datos se conservan mientras la cuenta esté activa y durante el tiempo
-adicional que exija la ley (por ejemplo, para atender reclamos o cumplir
-obligaciones tributarias o de seguridad). Cumplido ese tiempo, se eliminan o se
-anonimizan. **[REVISAR: plazos concretos de conservación por tipo de dato.]**
+Los datos de la cuenta se conservan mientras esta permanezca activa. Al
+eliminarse una cuenta, los datos personales identificables se eliminan o
+anonimizan en un plazo de treinta (30) días, salvo la información que deba
+conservarse por más tiempo para cumplir obligaciones legales (por ejemplo,
+tributarias o de atención de reclamos), en cuyo caso se conserva únicamente por
+el plazo que la norma respectiva exija.
 
 ## 9. Datos de menores de edad
 
-La aplicación **no está dirigida a menores de edad**. Si un menor necesita usar el
-servicio, debe hacerlo a través de la cuenta de su representante legal, quien
-asume la responsabilidad del uso. **[REVISAR: tratamiento de datos de menores,
-Decreto 1377 art. 12.]**
+La aplicación **no está dirigida a menores de edad** y el registro está reservado
+a personas mayores de edad. Si un menor necesita usar el servicio, debe hacerlo
+exclusivamente a través de la cuenta de su representante legal, quien asume la
+responsabilidad del uso y cuyos datos —no los del menor— son los que se
+registran en la aplicación. AmalfiGoApp no recoge de forma directa ni
+intencional datos personales de menores de edad.
 
 ## 10. Registro Nacional de Bases de Datos
 
-**[REVISAR: si la operación alcanza el umbral que obliga a inscribir las bases de
-datos en el RNBD de la SIC, hacerlo antes de operar a escala.]**
+En caso de que la operación de la aplicación alcance el umbral de ingresos o
+activos que la normativa vigente establece para la inscripción obligatoria de
+bases de datos ante la Superintendencia de Industria y Comercio (SIC), dicha
+inscripción se realizará en el Registro Nacional de Bases de Datos (RNBD) antes
+de superar dicho umbral.
 
 ## 11. Vigencia y cambios
 
