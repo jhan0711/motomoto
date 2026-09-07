@@ -7921,6 +7921,40 @@ la cuenta y los datos, y una URL web equivalente.
   intacto, y la app vuelve a bienvenida. La pagina `amalfigo.app/eliminar-cuenta`
   esta en vivo. De paso se verifico el paso 3 (la casilla de terminos).
 
+### Ajustes pedidos tras la verificacion de Google (2026-09-06)
+
+**Google verifico la cuenta de Play Console.** Antes de retomar la publicacion,
+el usuario pidio tres cosas probando la app; se hicieron dos (la tercera, un
+bloqueo intermitente del menu del panel, no se volvio a dar y queda sin tocar):
+
+1. **Ventana para aceptar la oferta: de 20 a 30 segundos.** Es un parametro de
+   `app_settings` (`offer_response_seconds`), no codigo. Cambiado por SQL a `30`
+   (dentro del rango 5-300 que valida el trigger `bound_operational_settings`).
+   Aplica a las ofertas nuevas. Tambien se puede cambiar desde el panel
+   (Tarifas).
+
+2. **La hoja de "Tu viaje" se cortaba: el destino, la tarifa y el boton
+   "Confirmar servicio" quedaban por debajo del borde sin forma de bajar.** El
+   `BottomSheet` no tenia scroll a proposito ("la parte dificil... nada del MVP
+   lo necesita") y topaba en el 85 % de la pantalla. El resumen crecio -tipo de
+   servicio, recogida, referencia, destino, pasajeros, carga, tarifa, recorrido,
+   boton- mas de lo que cabe en un telefono.
+   - **`components/ui/bottom-sheet.tsx`**: prop nueva `scroll`. Con ella el
+     cuerpo va en un `ScrollView` y el arrastre de la hoja se restringe al asa y
+     la cabecera (un `GestureDetector` propio) para que deslizar dentro del
+     cuerpo no pelee con el scroll. La medida del alto natural para 'content'
+     ahora suma cabecera + un `View` sin estirar dentro del `contentContainer`
+     -su `onLayout`-, no el `onContentSizeChange` del `ScrollView`, que en
+     Android no siempre vuelve a disparar cuando la tarifa y el recorrido llegan
+     tarde y dejaba la hoja corta con el mapa asomando por debajo. Se anadio
+     `activeOffsetY([-8, 8])` al gesto. El camino sin `scroll` -las otras 5
+     caras de la hoja- queda igual byte a byte.
+   - **`app/passenger/index.tsx`**: `scroll={modo === 'resumen'}`.
+   - `tsc`, `lint`, Jest 10/10 de `src/components`. **Verificado en la tablet
+     el 2026-09-06** con el APK de pruebas: el resumen muestra todo incluido el
+     boton; aguanta abrir/cerrar teclado y plegar/desplegar la hoja sin cortarse
+     ni dejar ver el mapa; los modos sin scroll (busqueda) siguen igual.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS

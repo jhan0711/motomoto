@@ -11,9 +11,10 @@
  * in the project the rule stays on.
  */
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Keyboard,
+  ScrollView,
   StyleSheet,
   useWindowDimensions,
   View,
@@ -59,6 +60,12 @@ export interface BottomSheetProps {
   onIndexChange?: (index: number) => void;
   /** Content pinned above the scrollable area, such as a title. */
   header?: ReactNode;
+  /**
+   * Pone el cuerpo en un `ScrollView`. Off por defecto: casi todas las caras de
+   * la hoja caben de sobra y no quieren un area que se desplace por accidente.
+   * Con esto, el arrastre de la hoja solo funciona desde el asa y la cabecera.
+   */
+  scroll?: boolean;
   style?: StyleProp<ViewStyle>;
 }
 
@@ -94,9 +101,13 @@ const SPRING_CONFIG = {
  * the UI thread, and the component keeps working when the map behind it is
  * being panned.
  *
- * Deliberately out of scope: scrollable lists nested inside the sheet. That is
- * the genuinely hard part of a bottom sheet and nothing in the MVP needs it.
- * If that changes, the implementation swaps out behind this same API.
+ * Con `scroll` el cuerpo va en un `ScrollView` y el arrastre de la hoja se
+ * queda solo en el asa y la cabecera, para que deslizar dentro del cuerpo no
+ * pelee con el gesto de la hoja. Se anadio cuando el resumen del viaje -tipo de
+ * servicio, recogida, referencia, destino, pasajeros, carga, tarifa y el boton
+ * de confirmar- crecio mas de lo que cabe en el 85 % de un telefono: 'content'
+ * topaba en ese limite y lo de mas abajo, el boton incluido, quedaba cortado
+ * sin forma de llegar a el.
  */
 export function BottomSheet({
   children,
@@ -104,6 +115,7 @@ export function BottomSheet({
   index = 0,
   onIndexChange,
   header,
+  scroll = false,
   style,
 }: BottomSheetProps) {
   const { colors } = useTheme();
@@ -170,6 +182,23 @@ export function BottomSheet({
       Math.abs(anterior - height) < 2 ? anterior : Math.round(height),
     );
   }, []);
+
+  /**
+   * En modo `scroll`, cabecera y cuerpo se miden por separado y se suman.
+   *
+   * Sin scroll, un solo `onLayout` sobre el bloque que los envuelve basta. Con
+   * scroll el cuerpo va dentro de un `ScrollView` y hay que medir la cabecera
+   * (fuera del scroll) y el contenido (un `View` sin estirar dentro del
+   * `contentContainer`, que reporta su alto natural) por separado. Cada pieza
+   * guarda su ultima medida en una ref; `remeasure` -llamada desde los
+   * `onLayout`, nunca desde un efecto ni desde el render- pasa la suma a `medir`.
+   */
+  const headerHeightRef = useRef(0);
+  const contentHeightRef = useRef(0);
+
+  const remeasure = useCallback(() => {
+    medir(headerHeightRef.current + contentHeightRef.current);
+  }, [medir]);
 
   /** Cada punto de anclaje resuelto a pixeles, de menor a mayor. */
   const heights = useMemo(() => {
@@ -268,6 +297,11 @@ export function BottomSheet({
     // sheet's normal height, which is not the height it has right now, so a drag
     // would land somewhere that does not correspond to any snap point.
     .enabled(!isKeyboardVisible)
+    // Ocho pixeles de intencion antes de que la hoja siga al dedo. Sin esto, un
+    // toque en el aspa de la cabecera o en el asa la movia un pelo; y en modo
+    // `scroll`, donde el gesto vive en esa franja estrecha, un toque para
+    // desplazar el cuerpo la arrancaba sin querer.
+    .activeOffsetY([-8, 8])
     .onStart(() => {
       dragStart.value = translateY.value;
     })
@@ -302,53 +336,121 @@ export function BottomSheet({
     transform: [{ translateY: translateY.value }],
   }));
 
-  return (
-    <GestureDetector gesture={panGesture}>
-      <Animated.View
-        style={[
-          styles.sheet,
-          shadows.lg,
-          {
-            backgroundColor: colors.surface,
-            // Sits on top of the keyboard instead of behind it.
-            bottom: keyboardHeight,
-            borderTopLeftRadius: radius.xxl,
-            borderTopRightRadius: radius.xxl,
-            height: visibleHeight,
-            // The gesture bar inset only applies when nothing else is down there.
-            paddingBottom: isKeyboardVisible ? spacing.sm : insets.bottom,
-          },
-          animatedStyle,
-          style,
-        ]}
-      >
-        <View style={styles.grabberArea}>
-          <View style={[styles.grabber, { backgroundColor: colors.border }]} />
-        </View>
-
-        {/* The sheet surface spans the full width, because it is anchored to the
-            bottom edge of the display. Its contents do not: on a tablet an
-            800dp-wide row of controls is as unusable inside a sheet as anywhere
-            else. */}
-        <View style={styles.inner}>
-          {/* Este bloque es el que se mide, y por eso NO se estira. Con `flex: 1`
-              siempre reportaria el alto de la hoja en vez del que pide su
-              contenido, que es justo el dato que hace falta para 'content'. */}
-          <View onLayout={(event) => medir(event.nativeEvent.layout.height)}>
-            {header !== undefined && <View style={styles.header}>{header}</View>}
-
-            <View style={styles.content}>{children}</View>
-          </View>
-        </View>
-      </Animated.View>
-    </GestureDetector>
+  const grabber = (
+    <View style={styles.grabberArea}>
+      <View style={[styles.grabber, { backgroundColor: colors.border }]} />
+    </View>
   );
+
+  const sheet = (
+    <Animated.View
+      style={[
+        styles.sheet,
+        shadows.lg,
+        {
+          backgroundColor: colors.surface,
+          // Sits on top of the keyboard instead of behind it.
+          bottom: keyboardHeight,
+          borderTopLeftRadius: radius.xxl,
+          borderTopRightRadius: radius.xxl,
+          height: visibleHeight,
+          // The gesture bar inset only applies when nothing else is down there.
+          paddingBottom: isKeyboardVisible ? spacing.sm : insets.bottom,
+        },
+        animatedStyle,
+        style,
+      ]}
+    >
+      {/* The sheet surface spans the full width, because it is anchored to the
+          bottom edge of the display. Its contents do not: on a tablet an
+          800dp-wide row of controls is as unusable inside a sheet as anywhere
+          else. */}
+      {scroll ? (
+        <>
+          {/* En modo scroll el arrastre de la hoja vive SOLO aqui -asa y
+              cabecera-. El cuerpo, abajo, es un `ScrollView` que se queda con
+              los gestos verticales que ocurran dentro de el. */}
+          <GestureDetector gesture={panGesture}>
+            <View>
+              {grabber}
+              {header !== undefined && (
+                <View style={styles.column}>
+                  <View
+                    style={styles.header}
+                    onLayout={(event) => {
+                      headerHeightRef.current = event.nativeEvent.layout.height;
+                      remeasure();
+                    }}
+                  >
+                    {header}
+                  </View>
+                </View>
+              )}
+            </View>
+          </GestureDetector>
+
+          <View style={styles.inner}>
+            <ScrollView
+              style={styles.fill}
+              contentContainerStyle={styles.scrollOuter}
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {/* El alto natural del cuerpo sale del `onLayout` de este `View`
+                  -sin estirar, dentro del `contentContainer`, asi que reporta lo
+                  que pide su contenido-, no del `onContentSizeChange` del
+                  `ScrollView`, que en Android no siempre vuelve a disparar
+                  cuando el contenido crece (la tarifa y el recorrido llegan
+                  tarde) y dejaba la hoja corta con el mapa asomando por debajo. */}
+              <View
+                style={styles.content}
+                onLayout={(event) => {
+                  contentHeightRef.current = event.nativeEvent.layout.height;
+                  remeasure();
+                }}
+              >
+                {children}
+              </View>
+            </ScrollView>
+          </View>
+        </>
+      ) : (
+        <>
+          {grabber}
+          <View style={styles.inner}>
+            {/* Este bloque es el que se mide, y por eso NO se estira. Con
+                `flex: 1` siempre reportaria el alto de la hoja en vez del que
+                pide su contenido, que es el dato que hace falta para 'content'. */}
+            <View onLayout={(event) => medir(event.nativeEvent.layout.height)}>
+              {header !== undefined && <View style={styles.header}>{header}</View>}
+
+              <View style={styles.content}>{children}</View>
+            </View>
+          </View>
+        </>
+      )}
+    </Animated.View>
+  );
+
+  // Sin scroll, el arrastre funciona desde toda la superficie de la hoja. Con
+  // scroll, solo desde el asa y la cabecera (el `GestureDetector` de arriba).
+  return scroll ? sheet : <GestureDetector gesture={panGesture}>{sheet}</GestureDetector>;
 }
 
 const styles = StyleSheet.create({
+  /** El ancho maximo compartido, sin estirar en vertical. */
+  column: {
+    alignSelf: 'center',
+    maxWidth: MAX_CONTENT_WIDTH,
+    width: '100%',
+  },
   content: {
     gap: spacing.md,
     paddingHorizontal: spacing.lg,
+  },
+  fill: {
+    flex: 1,
   },
   grabber: {
     borderRadius: radius.full,
@@ -370,6 +472,13 @@ const styles = StyleSheet.create({
     flex: 1,
     maxWidth: MAX_CONTENT_WIDTH,
     width: '100%',
+  },
+  // El `contentContainer` del ScrollView: solo un respiro al final para que el
+  // ultimo control no quede pegado al borde al desplazarse hasta abajo. El
+  // `gap` y el `paddingHorizontal` los pone el `View` interior (`content`).
+  scrollOuter: {
+    flexGrow: 1,
+    paddingBottom: spacing.md,
   },
   sheet: {
     bottom: 0,

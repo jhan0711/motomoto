@@ -1020,6 +1020,11 @@ export default function PassengerHome() {
         //                misma cifra sobraba en la tablet y cortaba el boton
         //                "Continuar" en el telefono.
         snapPoints={modo === 'destino' ? [PEEK, 0.3, 0.72] : [PEEK, 'content']}
+        // El resumen es la unica cara que crece mas de lo que cabe -tipo de
+        // servicio, recogida, referencia, destino, pasajeros, carga, tarifa y el
+        // boton de confirmar-. Con scroll, lo que pase del 85 % de la pantalla
+        // se desplaza en vez de quedar cortado por debajo del borde.
+        scroll={modo === 'resumen'}
         index={sheetIndex}
         onIndexChange={setSheetIndex}
         header={
