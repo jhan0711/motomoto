@@ -8004,10 +8004,56 @@ Con la cuenta ya verificada, se hizo todo el trabajo dentro de Play Console
   que van firmadas las apps que se instalan desde Play; sin ella los App Links
   no verifican para quien la baje de la tienda). Falta el push.
 
-**Pendiente inmediato:** empujar el sitio (assetlinks nuevo) → Cloudflare;
-terminar el lanzamiento de la prueba interna (añadir testers, iniciar
-despliegue); instalar desde Play y verificar el ciclo; luego prueba cerrada
-(12 testers / 14 días) y, antes de producción, `purge_qa_accounts.sql`.
+### Lo que se verificó y arregló en la tablet (2026-09-07, prueba interna)
+
+Con el AAB `c1fea3ee` (vc 4) instalado **desde Play** (`installerPackageName=
+com.android.vending`, firma de Play App Signing), en la tablet física:
+
+**Funciona:**
+- Arranque, login, mapa con calles (Mapbox), cálculo de ruta dentro de Amalfi.
+- **Push de punta a punta.** El token se registró desde el build de Play
+  (`profiles.push_token` de "Ana Gomez", `ExponentPushToken[xtJ0...]`). Una
+  push de prueba a ese token (Expo → FCM V1 de producción de `co.amalfigo.app`)
+  llegó al dispositivo. Recibo de Expo `ok`.
+- Firebase inicializa (`FirebaseInitProvider: initialization successful`),
+  permisos de ubicación y notificaciones concedidos.
+- La hoja "Tu viaje" en el caso normal (abrir resumen, plegar a asa,
+  desplegar): completa, con "Confirmar servicio", sin fugas del mapa.
+
+**Bug encontrado y arreglado (commit `57bb84c`).** Al cambiar el punto de
+recogida con "Cambiar" -que abre `/passenger/destination?for=origin` y vuelve-,
+al regresar la hoja del resumen quedaba corta y el mapa asomaba por debajo del
+destino. Causa: el `'content'` del `BottomSheet` mide el alto con `onLayout`, y
+esa medida no sobrevive el salto de navegación (react-native-screens
+desengancha la pantalla tapada). **Arreglo:** el resumen usa una fracción fija
+(`[PEEK, 0.8]`) con `scroll` en vez de `'content'`. Sin medición, no hay forma
+de que se rompa; lo que pase de 0,8 se desplaza. `tsc`/`lint`/`prettier` en
+verde. **Falta verificar en dispositivo** (la instalación local está trabada
+por la restricción "Instalar vía USB" de Xiaomi; se verificará con el AAB vc 5).
+
+**"Las notificaciones no muestran las tildes": NO es un bug de la app.** El
+`�` que se vio era de la **herramienta de prueba** (curl en Git Bash sobre
+Windows manda el `ó` como byte CP1252, JSON UTF-8 inválido). El camino real
+(`send_push_notification` → `net.http_post` de `pg_net` 0.20.4) manda UTF-8
+bien: se comprobó con un POST a `httpbin.org/post` cuyo eco devolvió
+`"Tu motorratón llegó"` intacto.
+
+### Runbook: actualizar la app (2026-09-07)
+
+`docs/operaciones/actualizar-la-app.md` (NUEVO). Qué se hace en cada tipo de
+cambio: código de la app (commit → EAS build → subir a Play), parámetro de
+operación (SQL/panel, sin build), migración de Supabase (sin build), ficha de
+Play (editar en consola, sin build), textos legales (push → Cloudflare), panel
+(push → Vercel). Tiempos de revisión por pista. Qué NO cambia con cada build
+(`assetlinks.json`, credenciales de EAS).
+
+**Pendiente inmediato:** build de EAS **vc 5** con los dos arreglos de la hoja
+(`82b74f4` + `57bb84c`) y subirlo a la prueba interna; verificar en la tablet
+desde Play; añadir testers y arrancar la prueba cerrada (12 testers / 14 días);
+antes de producción, `purge_qa_accounts.sql`.
+
+**Nota de disco:** el disco C: estuvo al 100 % (8-11 GB libres). Bloqueó el
+segundo emulador. Conviene que el usuario libere espacio.
 
 ---
 
