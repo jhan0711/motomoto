@@ -7628,7 +7628,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **HECHO.** EAS (2026-09-03). Play Console: cuenta personal creada y pagada (2026-09-03); **identidad verificada por Google el 2026-09-06** (el rechazo real era el comprobante de domicilio, no el nombre: se resolvió con un extracto de Bancolombia a nombre del titular). App `AmalfiGoApp` / `co.amalfigo.app` creada en Play (2026-09-07) |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **HECHO** (2026-09-07). Código verificado en la tablet (2026-09-04). **Textos legales revisados por abogado y definitivos** (2026-09-07): sin `[REVISAR]`, sin `noindex` ni aviso de borrador. `docs/legal/*.md` actualizados, `site/build.mjs` limpiado. Falta desplegar el sitio (push → Cloudflare) para que `amalfigo.app/privacidad` sea la versión definitiva |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **HECHO.** 4a (2026-09-03). 4b: primer `.aab` (build `428cd943`, vc 3, 2026-09-04). **Rehecho el 2026-09-07** con el arreglo de la hoja: build `c1fea3ee`, versionCode 4, `AmalfiGoApp-produccion.aab`. **Subido a la pista de prueba interna de Play** (2026-09-07) |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **HECHO.** 4a (2026-09-03). 4b: primer `.aab` (build `428cd943`, vc 3, 2026-09-04). Rehechos: `c1fea3ee` (vc 4, 2026-09-07); `64e30d94` (vc 5, 2026-09-07, en prueba interna). **`e858699f` (vc 6, 2026-09-08)** con el mapa en TextureView (`018f829`), horneándose. Al terminar: subir y promover |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **HECHO** (2026-09-07). `assetlinks.json` con las TRES huellas de `co.amalfigo.app`: depuración (`FA:C6:...`), keystore de subida de EAS (`8C:59:...`) y **Play App Signing (`A1:C8:8F:5D:...:16:20`)**, esta última la dio Google al subir el primer AAB. Falta el push para que Cloudflare lo publique. La SHA-1 a Google Maps ya no aplica (clave eliminada) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **HECHO en Play Console el 2026-09-07** (borrador en `docs/operaciones/ficha-play-store.md`). Las 11 tareas de "Termina de configurar tu app" completas: política de privacidad (`amalfigo.app/privacidad`), detalles de acceso (cuenta de pasajero de prueba), anuncios (no), clasificación IARC (interacción entre usuarios sí, ubicación compartida sí; sin chat), público 18+, Data Safety (nada compartido con terceros, sin analítica ni reporte de errores), categoría "Mapas y navegación". Ficha con icono 512×512 (`assets/store/play-icon.png`, nuevo — el `icon.png` sale 1024×1020), feature graphic y 4 capturas. Estado: "Lista para enviar a revisión". Faltan 3 capturas que necesitan un viaje simulado completo |
@@ -8075,6 +8075,39 @@ testers / 14 días); antes de producción, `purge_qa_accounts.sql`.
 segundo emulador y, junto con la restricción "Instalar vía USB" de Xiaomi,
 impidió probar el APK local (por eso se probó vc 5 desde Play). Conviene que el
 usuario libere espacio.
+
+### La hoja SÍ se cortaba: era el mapa, no la medición (vc 6, 2026-09-08)
+
+Al re-probar vc 5 en la tablet (prueba cerrada, instalada desde Play) el bug de
+"la hoja se corta" **volvió a salir**, y de forma reproducible: resumen →
+"Cambiar" recogida → volver → el botón "Confirmar servicio" queda tapado por el
+mapa. El `uiautomator dump` lo dejó claro: el botón **está en su sitio y es
+pulsable** (`[251,1784][1349,1892]`, dentro del sheet que llega a 2560) — no es
+un problema de layout ni de medición. Es de **composición**: el mapa se dibuja
+por encima de la parte baja del sheet.
+
+**Causa.** `@rnmapbox/maps` 10.3.5 monta el `MapView` sobre un **GLSurfaceView**
+por defecto (`surfaceView: true` en sus `defaultProps`). Un SurfaceView vive en
+su propia capa de la ventana; tras la transición de volver del selector, esa
+capa se recomponía por encima del sheet y no se corregía hasta que algo forzaba
+un redibujado (cambiar de app, mover el mapa). El arreglo `57bb84c` de ayer
+(fracción fija `[PEEK, 0.8]`) tocó la medición del sheet, que no era el
+problema; la verificación de ayer fue un falso positivo (seguramente hubo un
+cambio de foco que recompuso la capa).
+
+**Arreglo (commit `018f829`).** `surfaceView={false}` en el `<MapView>` de
+`src/features/map/map.tsx` → **TextureView**, que se compone en la jerarquía
+normal de vistas y no puede taparse con nada dibujado encima. Coste: una copia
+de GPU extra por fotograma, asumible para un mapa casi estático con UI siempre
+encima. `tsc`/`lint`/`prettier`/`jest` (67) en verde. APK local (`AmalfiGoApp.apk`,
+arm64) regenerado.
+
+**Build de EAS `e858699f`, versionCode 6.** Lanzado el 2026-09-08. **Falta
+verificar en dispositivo** (la instalación local sigue bloqueada por Xiaomi; al
+uninstalar vc 5 para intentarlo, la tablet quedó sin app y se reinstaló vc 5
+desde Play mientras se hornea vc 6). Cuando vc 6 termine: subir a la prueba
+interna, promover a la cerrada, reinstalar en la tablet y confirmar que el botón
+ya no se tapa.
 
 ---
 
