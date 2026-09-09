@@ -8123,11 +8123,23 @@ claras). `standard`/night salía demasiado cargado y claro, y su soporte en
 
 **Build de EAS `29f2db0f`, versionCode 7.** Lanzado el 2026-09-08. Lleva las
 DOS cosas: mapa en TextureView (`018f829`) + estilo oscuro nuevo (`ceabf4c`).
-APK local (`AmalfiGoApp.apk`, arm64) regenerado. **Falta verificar en
-dispositivo** (instalación local bloqueada por Xiaomi → se verifica con vc 7 en
-Play). Al terminar: subir a la prueba interna, promover a la cerrada, reinstalar
-en la tablet y confirmar (a) que el botón "Confirmar servicio" ya no se tapa y
-(b) que el mapa oscuro se lee bien.
+APK local (`AmalfiGoApp.apk`, arm64) regenerado.
+
+**Ruta de vc 7 a la tablet (2026-09-08 22:30):** se subió el AAB a la prueba
+interna, pero la tablet (tester de la pista **cerrada**, no de la interna) no
+veía la vc 7 — Play sirve al dispositivo la versión de la pista en la que está
+inscrito. Así que **vc 7 se promovió de interna a "Prueba cerrada - Alpha"**
+("Iniciar lanzamiento completo"). En "Descripción general de la publicación":
+verificaciones rápidas (~11 min) y luego se envía **solo** a revisión de Google
+(publicación gestionada desactivada → se publica al aprobarse, sin botón). La
+revisión de esta mañana (los 14 cambios que activaron la prueba cerrada) ya
+había pasado. El cambio de versión **no afecta** el reloj de 14 días de la
+prueba cerrada: los testers solo reciben un build más nuevo.
+
+**Falta:** que Google apruebe vc 7 en la pista cerrada (horas a 1-2 días) →
+entonces la tablet y los testers reciben la actualización → instalar en la
+tablet y confirmar (a) que el botón "Confirmar servicio" ya no se tapa y (b)
+que el mapa oscuro se lee bien.
 
 ---
 
