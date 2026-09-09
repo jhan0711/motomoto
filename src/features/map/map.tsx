@@ -159,7 +159,12 @@ export interface MapProps {
  * y si estorban se hace un estilo propio en Mapbox Studio.
  */
 const ESTILO_CLARO = 'mapbox://styles/mapbox/streets-v12';
-const ESTILO_OSCURO = 'mapbox://styles/mapbox/dark-v11';
+// `navigation-night-v1` y no `dark-v11`: el oscuro estandar de Mapbox es un
+// fondo, no un mapa para orientarse -las calles quedan gris sobre gris y no se
+// distinguen-. El de navegacion nocturna esta hecho para conducir de noche: las
+// vias resaltan y tienen jerarquia (las principales mas claras). Se comparo en
+// pantalla sobre Amalfi. El claro sigue en `streets-v12`, que se ve bien.
+const ESTILO_OSCURO = 'mapbox://styles/mapbox/navigation-night-v1';
 
 /** De nuestras coordenadas al orden que quiere Mapbox. */
 function aPosicion(c: Coordinates): [number, number] {

@@ -72,3 +72,6 @@ fcm-service-account.json
 
 # Salida del sitio estatico (Fase 25)
 site/dist/
+
+# scratch de sesion (comparativas, no se comitea)
+_scratch/
