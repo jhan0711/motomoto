@@ -1016,22 +1016,20 @@ export default function PassengerHome() {
         //   Destino/Buscando -> una fraccion, porque la lista de lugares no
         //                tiene un alto natural: cuantos se vean es una decision
         //                de diseno, no del contenido.
-        //   Resumen   -> una fraccion FIJA (0,8) con `scroll`. Se probo con
-        //                'content' -medir el alto real- y se cortaba: al volver
-        //                del selector de "Cambiar" el punto de recogida, la
-        //                medida quedaba obsoleta y la hoja salia corta con el
-        //                mapa asomando por debajo del destino. Una fraccion no
-        //                depende de ninguna medida; lo que pase de 0,8 se
-        //                desplaza. El unico costo es algo de hoja vacia cuando
-        //                el resumen es corto (un pasajero, sin carga).
+        //   Resumen   -> 'content' con `scroll`: la hoja mide justo lo que ocupa
+        //                la tarjeta y el boton de confirmar, y el resto es mapa
+        //                con la ruta a la vista. En reposo se pliega solo hasta
+        //                el boton, no hasta el borde. (Se probo con `0,8` fijo y
+        //                el usuario lo rechazo: o tapaba media pantalla o se
+        //                escondia, sin punto medio.) El `mapa asomando por
+        //                debajo` que se veia al volver del selector de "Cambiar"
+        //                NO era la medida: era el mapa dibujandose sobre la hoja
+        //                con GLSurfaceView; se arreglo pasando el `MapView` a
+        //                TextureView (`018f829`). `scroll` cubre el unico caso
+        //                que 'content' no puede: un resumen mas alto que el 85 %
+        //                de un telefono (carga + direcciones largas + error).
         //   El resto  -> 'content'; son cortos y estables, sin scroll.
-        snapPoints={
-          modo === 'destino'
-            ? [PEEK, 0.3, 0.72]
-            : modo === 'resumen'
-              ? [PEEK, 0.8]
-              : [PEEK, 'content']
-        }
+        snapPoints={modo === 'destino' ? [PEEK, 0.3, 0.72] : [PEEK, 'content']}
         scroll={modo === 'resumen'}
         index={sheetIndex}
         onIndexChange={setSheetIndex}
