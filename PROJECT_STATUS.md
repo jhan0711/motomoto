@@ -7628,7 +7628,7 @@ administrativo desplegado. Lanzamiento completo en Amalfi.
 | 1 | Renombrar el paquete `com.motomoto.app` → `co.amalfigo.app` (antes de la primera subida a Play) | **Hecho y verificado en la tablet** (2026-09-03). Firebase y la clave de Maps ajustados. El push se arregló en el paso 4a |
 | 2 | Cuentas: Google Play Console ($25) y EAS/Expo | **HECHO.** EAS (2026-09-03). Play Console: cuenta personal creada y pagada (2026-09-03); **identidad verificada por Google el 2026-09-06** (el rechazo real era el comprobante de domicilio, no el nombre: se resolvió con un extracto de Bancolombia a nombre del titular). App `AmalfiGoApp` / `co.amalfigo.app` creada en Play (2026-09-07) |
 | 3 | Casilla "acepto términos" en el registro + revisión legal de `docs/legal/` | **HECHO** (2026-09-07). Código verificado en la tablet (2026-09-04). **Textos legales revisados por abogado y definitivos** (2026-09-07): sin `[REVISAR]`, sin `noindex` ni aviso de borrador. `docs/legal/*.md` actualizados, `site/build.mjs` limpiado. Falta desplegar el sitio (push → Cloudflare) para que `amalfigo.app/privacidad` sea la versión definitiva |
-| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **HECHO.** 4a (2026-09-03). 4b: primer `.aab` (build `428cd943`, vc 3, 2026-09-04). Rehechos: `c1fea3ee` (vc 4, 2026-09-07); `64e30d94` (vc 5, 2026-09-07, en prueba interna). **`e858699f` (vc 6, 2026-09-08)** con el mapa en TextureView (`018f829`), horneándose. Al terminar: subir y promover |
+| 4 | Build de producción con EAS: keystore real (Play App Signing) + AAB + clave de FCM V1 para `co.amalfigo.app` | **HECHO.** 4a (2026-09-03). 4b: primer `.aab` (build `428cd943`, vc 3, 2026-09-04). Rehechos: `c1fea3ee` (vc 4); `64e30d94` (vc 5, en prueba interna); `e858699f` (vc 6, descartado — terminó antes del cambio de estilo). **`29f2db0f` (vc 7, 2026-09-08)** = mapa en TextureView (`018f829`) + oscuro `navigation-night-v1` (`ceabf4c`), horneándose. Al terminar: subir y promover |
 | 5 | Huellas SHA en su sitio: SHA-256 (keystore + Play App Signing) a `assetlinks.json` | **HECHO** (2026-09-07). `assetlinks.json` con las TRES huellas de `co.amalfigo.app`: depuración (`FA:C6:...`), keystore de subida de EAS (`8C:59:...`) y **Play App Signing (`A1:C8:8F:5D:...:16:20`)**, esta última la dio Google al subir el primer AAB. Falta el push para que Cloudflare lo publique. La SHA-1 a Google Maps ya no aplica (clave eliminada) |
 | 6 | Desplegar el panel administrativo (`admin/`, Next.js) | **HECHO** (2026-09-03). En vivo en **`https://panel.amalfigo.app`** (Vercel, HTTPS, CNAME en Cloudflare). Super admin entra, las listas cargan. Runbook en `docs/operaciones/despliegue-panel.md` |
 | 7 | Ficha de Play Store: textos, capturas, Data Safety, permisos, clasificación | **HECHO en Play Console el 2026-09-07** (borrador en `docs/operaciones/ficha-play-store.md`). Las 11 tareas de "Termina de configurar tu app" completas: política de privacidad (`amalfigo.app/privacidad`), detalles de acceso (cuenta de pasajero de prueba), anuncios (no), clasificación IARC (interacción entre usuarios sí, ubicación compartida sí; sin chat), público 18+, Data Safety (nada compartido con terceros, sin analítica ni reporte de errores), categoría "Mapas y navegación". Ficha con icono 512×512 (`assets/store/play-icon.png`, nuevo — el `icon.png` sale 1024×1020), feature graphic y 4 capturas. Estado: "Lista para enviar a revisión". Faltan 3 capturas que necesitan un viaje simulado completo |
@@ -8102,12 +8102,32 @@ de GPU extra por fotograma, asumible para un mapa casi estático con UI siempre
 encima. `tsc`/`lint`/`prettier`/`jest` (67) en verde. APK local (`AmalfiGoApp.apk`,
 arm64) regenerado.
 
-**Build de EAS `e858699f`, versionCode 6.** Lanzado el 2026-09-08. **Falta
-verificar en dispositivo** (la instalación local sigue bloqueada por Xiaomi; al
-uninstalar vc 5 para intentarlo, la tablet quedó sin app y se reinstaló vc 5
-desde Play mientras se hornea vc 6). Cuando vc 6 termine: subir a la prueba
-interna, promover a la cerrada, reinstalar en la tablet y confirmar que el botón
-ya no se tapa.
+**Build de EAS `e858699f`, versionCode 6.** Terminó a las 21:26 del 2026-09-08,
+justo antes del cambio de estilo del mapa (abajo), así que **queda descartado**:
+todo lo suyo va también en vc 7.
+
+### Mapa oscuro: `navigation-night-v1` (commit `ceabf4c`, 2026-09-08)
+
+El usuario reportó que en modo oscuro no se distinguen las calles ni los
+objetos. `dark-v11` (el que había) es un estilo de fondo: deja las vías gris
+sobre gris. Se compararon 4 opciones sobre Amalfi en Mapbox GL JS
+(`_scratch/map-dark-compare.html`, no se comitea): `dark-v11` actual,
+`navigation-night-v1`, `standard` con preset night, y `dark-v11` con las calles
+realzadas a mano en tiempo de ejecución.
+
+**Elegido `navigation-night-v1`:** estilo estándar de Mapbox, hecho para
+conducir de noche — las vías resaltan y tienen jerarquía (principales más
+claras). `standard`/night salía demasiado cargado y claro, y su soporte en
+`@rnmapbox/maps` 10.3.5 es dudoso; el realce a mano mejora poco y es frágil
+(depende de nombres internos de capas). El modo claro sigue en `streets-v12`.
+
+**Build de EAS `29f2db0f`, versionCode 7.** Lanzado el 2026-09-08. Lleva las
+DOS cosas: mapa en TextureView (`018f829`) + estilo oscuro nuevo (`ceabf4c`).
+APK local (`AmalfiGoApp.apk`, arm64) regenerado. **Falta verificar en
+dispositivo** (instalación local bloqueada por Xiaomi → se verifica con vc 7 en
+Play). Al terminar: subir a la prueba interna, promover a la cerrada, reinstalar
+en la tablet y confirmar (a) que el botón "Confirmar servicio" ya no se tapa y
+(b) que el mapa oscuro se lee bien.
 
 ---
 
