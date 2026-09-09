@@ -8137,9 +8137,31 @@ había pasado. El cambio de versión **no afecta** el reloj de 14 días de la
 prueba cerrada: los testers solo reciben un build más nuevo.
 
 **Falta:** que Google apruebe vc 7 en la pista cerrada (horas a 1-2 días) →
-entonces la tablet y los testers reciben la actualización → instalar en la
-tablet y confirmar (a) que el botón "Confirmar servicio" ya no se tapa y (b)
-que el mapa oscuro se lee bien.
+entonces la tablet y los testers reciben la actualización.
+
+### vc 7 verificado en el emulador (2026-09-08 23:00)
+
+La tablet Xiaomi no deja instalar el APK local (bloqueo "Instalar vía USB" +
+firma de depuración + versionCode 1 < 5). Se hizo un build local **x86_64**
+(`./gradlew.bat assembleRelease -PreactNativeArchitectures=x86_64`) y se instaló
+en el emulador `motomoto_phone` (Android, x86_64). **No crashea** — el crash de
+la New Architecture era del APK arm64 bajo traducción, no del código.
+
+- **La hoja del resumen YA NO se corta.** Se reprodujo el escenario exacto:
+  resumen → "Cambiar" la recogida → elegir "Alto de la Virgen" → volver. La hoja
+  sale completa, con la tarifa (`$7.000`, "Tarifa nocturna", "600 m · 2 min") y
+  el botón "Confirmar servicio" **entero, con la hoja pintada por debajo**. Se
+  pulsó "Confirmar" y, aun con el aviso "No hay motorratones disponibles"
+  añadido —el estado en el que se vio el corte en la tablet—, la hoja sigue
+  completa. El mapa ya no se dibuja por encima (TextureView).
+- **El mapa oscuro se lee.** Con el emulador en modo noche, `navigation-night-v1`
+  muestra las calles como líneas claras sobre el fondo azul-gris — se traza la
+  cuadrícula sin esfuerzo. Parques en verde, marcadores y la línea de ruta
+  visibles. Claramente mejor que el gris-sobre-gris de `dark-v11`.
+
+Queda confirmarlo también en la tablet cuando llegue vc 7 desde Play (por si
+TextureView se comporta distinto en el hardware de Xiaomi), pero el arreglo
+funciona.
 
 ---
 
