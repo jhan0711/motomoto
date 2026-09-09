@@ -277,6 +277,15 @@ export function Map({
     <MapView
       style={StyleSheet.absoluteFill}
       styleURL={isDark ? ESTILO_OSCURO : ESTILO_CLARO}
+      // TextureView y no el GLSurfaceView por defecto de @rnmapbox/maps. En estas
+      // pantallas el bottom sheet SIEMPRE tapa la parte baja del mapa, y un
+      // SurfaceView vive en su propia capa: tras la transicion de volver del
+      // selector de "Cambiar" la recogida, el mapa se recomponia por encima del
+      // sheet y dejaba el boton "Confirmar servicio" tapado hasta que algo
+      // forzaba un redibujado (cambiar de app, mover el mapa). Un TextureView se
+      // compone en la jerarquia normal y no puede taparlo. El costo es una copia
+      // de GPU extra por fotograma, asumible para un mapa casi estatico.
+      surfaceView={false}
       onDidFinishLoadingMap={onReady}
       onMapIdle={alQuedarQuieto}
       scrollEnabled={interactive}
