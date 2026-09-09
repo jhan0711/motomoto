@@ -68,14 +68,19 @@ AmalfiGoApp es para Amalfi, Antioquia. Hoy no funciona en otros municipios.
 | -------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Icono                                  | 512 × 512 PNG, 32 bits                                         | **Existe:** `assets/images/icon.png`                                                                                                                                                                |
 | Gráfico de funciones (feature graphic) | 1024 × 500 PNG/JPG, sin texto crítico en los bordes            | **HECHO:** `assets/store/feature-graphic.png` (lo genera `assets/brand/feature-graphic.mjs`)                                                                                                        |
-| Capturas de teléfono                   | 2 a 8, PNG/JPG, lado mín. 320 px, máx. 3840, ratio 16:9 o 9:16 | **4 hechas** en `assets/store/capturas/` (1080×2340): bienvenida, inicio, perfil, historial. Con datos de prueba — **rehacerlas con datos limpios y GPS en Amalfi** cuando esté el build del paso 5 |
+| Capturas de teléfono                   | 2 a 8, PNG/JPG, lado mín. 320 px, máx. 3840, ratio 16:9 o 9:16 | **7 hechas** en `assets/store/capturas/` (1080×2340). 1-4 (bienvenida, inicio, perfil, historial): datos de prueba, mapa en Amalfi. 5-7 (tarifa, conductor en camino, solicitud del conductor): del viaje simulado del 2026-09-09, sin barra de estado. Falta rehacer 1-4 con la barra de estado quitada para que todo el set sea uniforme |
 | Capturas de tablet 7" / 10"            | Opcionales                                                     | —                                                                                                                                                                                                   |
 
-**Capturas que faltan (necesitan un viaje montado, build del paso 5):**
+**Las 3 capturas que faltaban — HECHAS (2026-09-09).** Viaje simulado
+pasajero (tablet, vc 8) ↔ conductor (emulador), cuentas QA
+`pasajero.prueba@` / `conductor.prueba@`, ruta Alto de la Virgen → El parque
+($4.000):
 
-1. Pantalla con la tarifa antes de confirmar
-2. Conductor en camino, siguiéndolo en el mapa
-3. (Conductor) lista de solicitudes entrantes
+1. `5-tarifa.png` — el resumen con la tarifa y "Confirmar servicio".
+2. `6-conductor-en-camino.png` — "Un motorratón tomó tu servicio", con el
+   motorratón en el mapa acercándose a la recogida.
+3. `7-solicitud-conductor.png` — la tarjeta "Nueva solicitud" del conductor
+   (Aceptar / Rechazar).
 
 ---
 
