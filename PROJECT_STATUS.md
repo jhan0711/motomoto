@@ -8163,6 +8163,24 @@ Queda confirmarlo también en la tablet cuando llegue vc 7 desde Play (por si
 TextureView se comporta distinto en el hardware de Xiaomi), pero el arreglo
 funciona.
 
+### La hoja del resumen vuelve a `'content'` (commit `be65b86`, 2026-09-08)
+
+Con vc 7 en la tablet, el usuario rechazó el `[PEEK, 0.8]` fijo: "o está arriba
+del todo o escondido, no hay un punto medio como antes, que se ocultara solo
+hasta el botón de confirmar para ver la ruta". Tenía razón — el `0.8` se puso
+para tapar el corte, y el corte NO era la medida (era el `MapView` sobre
+GLSurfaceView, ya arreglado con TextureView). Así que el resumen **vuelve a
+`[PEEK, 'content']`**: la hoja mide justo la tarjeta + el botón, y lo de arriba
+es mapa con la ruta. `scroll` se queda para el único caso que `'content'` no
+cubre (un resumen más alto que el 85 % de un teléfono: carga + direcciones
+largas + error).
+
+Verificado en el emulador (x86_64): la hoja mide su contenido, **sobrevive el
+round-trip de "Cambiar" la recogida** (la medida obsoleta de antes era, otra
+vez, el SurfaceView), crece al añadirse el aviso "No hay motorratones", y el
+PEEK sigue plegándola hasta el asa. Falta reconfirmar en la tablet con el
+siguiente build.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
