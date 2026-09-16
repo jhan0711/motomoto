@@ -2,7 +2,8 @@
 
 import { useEffect, useRef } from 'react';
 import mapboxgl from 'mapbox-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
+// El CSS de mapbox-gl se importa una sola vez, desde app/layout.tsx: Next solo
+// empaqueta con fiabilidad el CSS global importado desde el layout raiz.
 import type { DriverLocation } from './use-driver-locations';
 
 /** Parque principal de Amalfi. Misma coordenada que `AMALFI_CENTER` en la app

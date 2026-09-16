@@ -1,5 +1,11 @@
 import type { Metadata } from 'next';
 import './globals.css';
+// El mapa de la flota (D272) necesita este CSS para posicionar bien su canvas
+// y sus controles. Importado desde una pantalla (`fleet-map.tsx`) nunca llego
+// a incluirse en la pagina -Next solo empaqueta con fiabilidad el CSS global
+// que se importa desde el layout raiz-, y sin el el contenedor del mapa se
+// queda en `position: static` en vez del `absolute` que mapbox-gl necesita.
+import 'mapbox-gl/dist/mapbox-gl.css';
 
 export const metadata: Metadata = {
   title: 'Panel administrativo - AmalfiGoApp',
