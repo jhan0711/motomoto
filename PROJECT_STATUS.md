@@ -8229,6 +8229,14 @@ normal- solo se puede comprobar en un dispositivo Android físico, con un viaje
 real y un turno completo; no se puede validar desde aquí. El valor es facil de
 retocar despues (`app_settings`, sin build ni Play) si hace falta ajustarlo.
 
+**Actualización del 2026-09-16:** a pedido directo (fuera del plan original),
+`location_interval_in_ride_seconds` se bajó de `7` a `3` -el mínimo que admite
+`bound_operational_settings`-, también por SQL, sin build ni release. Sigue
+pendiente el mismo criterio de aceptación de arriba: confirmar en un turno
+real que la batería y el volumen de escrituras en `driver_locations` no
+resultan notorios a este ritmo; si lo son, es igual de fácil subirlo de nuevo
+por `app_settings`.
+
 **2. Ubicación en segundo plano (D271).** Se validó con el dueño del producto
 antes de programar nada: vale la pena el permiso y la batería, se acepta la
 notificación fija, y el alcance queda **solo "disponible sin viaje"** -"en
