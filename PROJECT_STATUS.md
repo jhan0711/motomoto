@@ -6715,6 +6715,7 @@ liquidacion mensual sigue aplazada (D267).
 | D268 | **`accept_ride_offer` recupera las tres guardias que perdio en la Fase 20 paso 11** | La reescritura de `20260902150000` partio de una version vieja (patron E30) y borro el `and is_available` (D164), el `exception when unique_violation` de la carrera y el cierre de las demas ofertas `pending`. Migracion `20260903000000` las devuelve sin tocar el corte al bloqueado. Lo destapo `prueba_transiciones.sql` en la Fase 23 |
 | D269 | **El panel (`admin/`) no lleva Jest** | En el CI se cubre con `typecheck` + `lint` + `format:check` + `build` de Next, que atrapa los errores de tipos, de rutas y de compilacion. Montar `jest` + testing-library para React Server Components de Next 16 es fragil y caro, y el valor esta sobre todo en la logica de servidor, que ya la prueban los `prueba_*.sql` a nivel de base de datos. Si el panel crece en logica de cliente, se reabre |
 | D270 | **Motivo al desconectarse, por una funcion (`set_driver_unavailable`) y no por un disparador** | Pedido de la empresa (plan de ajustes, 2026-09-15): catalogo cerrado (`almuerzo`, `descanso`, `combustible`, `fin_de_turno`, `otro`, con detalle libre solo en `otro`). Se descarto un disparador `before update` que exigiera el motivo en cualquier fila que pasara de disponible a no disponible: `accept_ride_offer` (D161), `admin_assign_driver` y el bloqueo de cuentas apagan `is_available` sin motivo, como parte de otra cosa, y un disparador generico las habria roto -dos de las tres tocan `accept_ride_offer`, que ya se rompio una vez por una reescritura descuidada (D268)-. `set_driver_unavailable` es la unica via que exige el motivo; las demas siguen escribiendo `is_available` directo, sin cambiar una linea. Reactivarse (`is_available = true`, sea quien sea quien lo active) si limpia el motivo con un disparador, porque ahi no hay ningun caso legitimo que quiera conservarlo. Migracion `20260916004026`, prueba `prueba_motivo_no_disponible.sql` |
+| D271 | **Ubicacion en segundo plano, solo mientras "disponible sin viaje"** | Pedido de la empresa (plan de ajustes, 2026-09-15), validado con el dueno del producto ANTES de programar: vale la pena el permiso y la bateria, se acepta la notificacion fija, y el alcance queda fuera de "en viaje" a proposito -ahi D116 pesa mas fuerte, un pasajero viendo a su conductor "congelado" es peor que no verlo-. Revierte D116 solo para "disponible". Hook nuevo y separado (`useBackgroundLocation`) que no toca `useLocationReporting`, asi el limite del alcance es imposible de cruzar por accidente. `TaskManager.defineTask` en un archivo aparte, importado por efecto secundario desde `app/_layout.tsx` porque Android puede entregar una posicion sin pasar por ninguna pantalla; el conductor a reportar se guarda en `AsyncStorage`, no en una variable de modulo, porque esa entrega puede llegar a una instancia de JavaScript reciclada sin memoria de nada. Nueva dependencia `expo-task-manager`. Es la unica de las cuatro peticiones que necesita verificarse en Android fisico con un turno completo -el matado de procesos en segundo plano varia mucho entre fabricantes y no se ve en el emulador- y la unica que probablemente exija una declaracion nueva en Play Console antes de publicarse |
 
 ---
 
@@ -8228,17 +8229,53 @@ normal- solo se puede comprobar en un dispositivo Android físico, con un viaje
 real y un turno completo; no se puede validar desde aquí. El valor es facil de
 retocar despues (`app_settings`, sin build ni Play) si hace falta ajustarlo.
 
-**2. Ubicación en segundo plano: pendiente de validar con el dueño del
-producto**, no programada. Revierte D116 a propósito. Antes de tocar nada hace
-falta que el usuario responda tres preguntas -ver el pedido original-: si vale
-la pena el permiso "en todo momento" de Android y el consumo de batería, si se
-acepta la notificación fija que Android exige mientras el foreground service
-esté activo, y si esto aplica solo a "disponible" o también a "en viaje" -ahí
-el argumento de D116 pesa más: un pasajero viendo a su conductor "congelado"
-en el mapa es peor que no verlo-. Si se aprueba, el alcance recomendado es
-empezar solo por "disponible" y probarlo en dispositivo físico Android: el
+**2. Ubicación en segundo plano (D271).** Se validó con el dueño del producto
+antes de programar nada: vale la pena el permiso y la batería, se acepta la
+notificación fija, y el alcance queda **solo "disponible sin viaje"** -"en
+viaje" se descartó a propósito, porque ahí el argumento de D116 pesa más: un
+pasajero viendo a su conductor "congelado" en el mapa es peor que no verlo-.
+
+Programado como un hook nuevo y separado, `useBackgroundLocation`
+(`use-background-location.ts`), que **no toca** `useLocationReporting`: ese
+sigue exactamente igual, en primer plano, para "disponible" y "en viaje" los
+dos. El límite del alcance queda así imposible de cruzar sin querer, porque
+`useBackgroundLocation` nunca recibe "en viaje" como motivo para arrancar.
+
+- `background-location-task.ts` define la tarea con `TaskManager.defineTask`
+  -tiene que existir antes de que cargue cualquier pantalla, por eso se
+  importa por su efecto secundario desde `app/_layout.tsx`- y guarda el
+  conductor a reportar en `AsyncStorage`, no en una variable del módulo:
+  Android puede reciclar el motor de JavaScript solo para entregar una
+  posición, sin memoria de nada anterior.
+- El intervalo es el mismo que ya usa el envío en primer plano estando
+  disponible (`location_interval_available_seconds`, hoy `7` s tras el pedido
+  3): no se inventó un segundo número de batería que ajustar aparte.
+- `app.config.ts`: se activaron `isAndroidBackgroundLocationEnabled` e
+  `isAndroidForegroundServiceEnabled` en el plugin `expo-location`, que ya
+  tenían el comentario "es de la Fase 14" desde que se apagaron a propósito
+  -D116-. Nueva dependencia: `expo-task-manager`.
+- La pantalla de aviso al conductor (`app/driver/(tabs)/index.tsx`) ofrece
+  "Activar" mientras el permiso no esté concedido, y dejó de mostrar "Mantén
+  la aplicación abierta" en cuanto el segundo plano queda activo -pero sigue
+  mostrándolo sin excepción mientras hay un viaje encima, que es donde
+  siempre fue cierto.
+
+**Pendiente real, y grande:** esto es la única pieza de las cuatro que
+**necesita verificarse en un Android físico, con un turno completo**. El
 comportamiento de los foreground services y el matado de procesos en segundo
-plano varía mucho entre fabricantes y no se detecta en el emulador.
+plano varía mucho entre fabricantes -la tablet Xiaomi de pruebas de este
+proyecto es justo de las agresivas con esto- y no se detecta en el emulador.
+Falta comprobar: que la notificación persistente aparece y se mantiene, que
+`driver_locations.updated_at` sigue avanzando con la app minimizada varios
+minutos, y que la batería de un turno normal no se resiente de forma notoria.
+
+**Y una consecuencia para Play Store que no estaba en el pedido original**:
+`ACCESS_BACKGROUND_LOCATION` es un permiso que Google Play revisa con lupa.
+Antes de subir un build con esto, Play Console va a pedir una declaración
+aparte -"Uso de la ubicación en segundo plano"-, normalmente con un video
+mostrando por qué la app la necesita, parecido a lo que ya se hizo con el ID
+de publicidad en la Fase 26. Eso puede alargar la revisión de la próxima
+versión que se suba.
 
 ---
 

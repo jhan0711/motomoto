@@ -48,6 +48,15 @@ import { reportLocation } from './driver-service';
  * Consecuencia que la pantalla tiene que contar: con la aplicacion en segundo
  * plano deja de recibir solicitudes a los dos minutos, aunque su interruptor
  * siga diciendo "disponible".
+ *
+ * ESTO SIGUE SIENDO CIERTO TAL CUAL PARA "EN VIAJE". Para "disponible sin
+ * viaje" ya no es toda la historia desde el pedido de la empresa del
+ * 2026-09-15 (validado con el dueno del producto): `useBackgroundLocation`,
+ * en `use-background-location.ts`, cubre ese caso por su cuenta, con su
+ * propia tarea en segundo plano. Este hook no sabe nada de eso ni tenia que
+ * saberlo -sigue enviando en primer plano exactamente igual que siempre,
+ * disponible o en viaje-, y las dos pantallas de aviso al conductor viven
+ * juntas en `app/driver/(tabs)/index.tsx`, no aqui.
  */
 
 /** Valores de reserva si no se puede leer el parametro. Son los de la regla R9. */

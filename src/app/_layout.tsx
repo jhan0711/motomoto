@@ -5,6 +5,14 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { SessionProvider, useSession } from '@/features/auth/session';
+// Por su efecto secundario: registra la tarea de ubicacion en segundo plano
+// del conductor (pedido de la empresa, 2026-09-15) en cuanto se carga el
+// modulo de JavaScript, antes de que exista ninguna pantalla. Sin importarla
+// aqui -lo mas temprano del arranque- Android no tendria donde entregar una
+// posicion recibida con la aplicacion minimizada. No hace nada por si sola
+// para un pasajero o un conductor no disponible: solo queda registrada, a la
+// espera de que use-background-location.ts la arranque de verdad.
+import '@/features/driver/background-location-task';
 import { usePushRegistration } from '@/features/notifications/use-push-registration';
 import { useTheme } from '@/theme';
 

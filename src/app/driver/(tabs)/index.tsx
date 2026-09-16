@@ -32,6 +32,7 @@ import { ActiveRideCard, type RideAction } from '@/features/driver/active-ride-c
 import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
 import { UnavailableReasonModal } from '@/features/driver/unavailable-reason-modal';
+import { useBackgroundLocation } from '@/features/driver/use-background-location';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
 import { useTrackRecording } from '@/features/driver/use-track-recording';
@@ -97,6 +98,13 @@ export default function DriverHome() {
     // lleno, que es justo cuando hay pasajeros esperando verlo llegar.
     riding: viajes.length > 0,
   });
+
+  // Segundo plano: solo "disponible sin viaje" (pedido de la empresa,
+  // 2026-09-15). Con un servicio encima -aunque `disponible` siga encendido
+  // por quedarle sitio, D161- se apaga igual que si el interruptor estuviera
+  // apagado: es la misma frontera que ya traza `riding` arriba, y aqui
+  // importa mas todavia, porque D116 pesa mas fuerte en viaje.
+  const segundoPlano = useBackgroundLocation(driverId, disponible && viajes.length === 0);
 
   // El rastro se graba solo mientras hay pasajero a bordo. Un viaje aceptado o de
   // camino no cuenta: eso es la aproximacion, no el recorrido.
@@ -550,13 +558,36 @@ export default function DriverHome() {
           />
         )}
 
-        {disponible && !sinUbicacion && (
-          <Aviso
-            icon={TriangleAlert}
-            titulo="Mantén la aplicación abierta"
-            detalle="Si sales de la aplicación dejamos de enviar tu ubicación, y a los dos minutos los pasajeros dejan de verte."
-          />
-        )}
+        {/* Este aviso deja de ser cierto en cuanto el segundo plano queda
+          activo -pedido de la empresa, 2026-09-15-: con un servicio encima
+          (`riding`) sigue siendo verdad sin excepcion, porque ahi el segundo
+          plano nunca se enciende (D116 pesa mas fuerte con un pasajero a
+          bordo, ver use-background-location.ts). */}
+        {disponible &&
+          !sinUbicacion &&
+          !(viajes.length === 0 && segundoPlano.state.kind === 'active') && (
+            <Aviso
+              icon={TriangleAlert}
+              titulo="Mantén la aplicación abierta"
+              detalle="Si sales de la aplicación dejamos de enviar tu ubicación, y a los dos minutos los pasajeros dejan de verte."
+            />
+          )}
+
+        {disponible &&
+          !sinUbicacion &&
+          viajes.length === 0 &&
+          segundoPlano.state.kind === 'permission-required' && (
+            <Aviso
+              icon={MapPinOff}
+              titulo="Sigue recibiendo servicios con la app minimizada"
+              detalle="Activa la ubicación en segundo plano para no dejar de recibir solicitudes mientras estás disponible, aunque minimices la aplicación. Android pedirá un permiso extra."
+              accion={
+                segundoPlano.state.canAsk
+                  ? { etiqueta: 'Activar', onPress: () => void segundoPlano.requestPermission() }
+                  : { etiqueta: 'Abrir ajustes', onPress: () => void segundoPlano.openSettings() }
+              }
+            />
+          )}
 
         {disponible && envio.error !== null && (
           <Aviso

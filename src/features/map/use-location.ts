@@ -53,9 +53,11 @@ export interface UseLocationResult {
 /**
  * Foreground location for the passenger's map.
  *
- * Foreground only, deliberately. Background location is Phase 14 and belongs to
- * the driver; declaring it now would add a permission Google Play requires us to
- * justify, for a capability nothing uses yet.
+ * Foreground only, deliberately: the passenger's own position never needs to
+ * be known while the app is minimized, there is no screen to show it on. The
+ * driver's location has a background counterpart since 2026-09-15
+ * (`useBackgroundLocation`, `features/driver/use-background-location.ts`),
+ * scoped to the driver's own "available" state and not shared with this hook.
  */
 export function useLocation(): UseLocationResult {
   const [state, setState] = useState<LocationState>({ kind: 'checking' });

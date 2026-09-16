@@ -169,13 +169,22 @@ const config: ExpoConfig = {
     [
       'expo-location',
       {
-        // Solo primer plano. La ubicación en segundo plano es de la Fase 14, y
-        // pedirla antes de tiempo añadiría un permiso que Google Play exige
-        // justificar y que hoy no usamos para nada.
         locationWhenInUsePermission:
           'MotoMoto usa tu ubicación para mostrarte en el mapa y saber dónde recogerte.',
-        isAndroidBackgroundLocationEnabled: false,
-        isAndroidForegroundServiceEnabled: false,
+        // Pedido de la empresa, validado con el dueño del producto
+        // (2026-09-15): un conductor "disponible" con la aplicación
+        // minimizada dejaba de recibir ofertas a los dos minutos (D116, R10).
+        // Solo aplica mientras esta "disponible" -no en viaje, ver
+        // background-location-task.ts-, y exige el permiso "en todo momento"
+        // de Android mas el servicio en primer plano con su notificacion fija,
+        // los dos activados aqui. La pantalla de justificacion que Android
+        // 10+ exige antes de pedir el permiso vive en
+        // background-location-permission-screen.tsx: este texto de abajo es
+        // el que ve el sistema operativo, no el que ve el conductor.
+        locationAlwaysPermission:
+          'MotoMoto usa tu ubicación en segundo plano para seguir ofreciéndote servicios mientras estás disponible, aunque minimices la aplicación.',
+        isAndroidBackgroundLocationEnabled: true,
+        isAndroidForegroundServiceEnabled: true,
       },
     ],
     [
