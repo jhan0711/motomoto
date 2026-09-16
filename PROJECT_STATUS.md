@@ -8308,6 +8308,20 @@ mostrando por qué la app la necesita, parecido a lo que ya se hizo con el ID
 de publicidad en la Fase 26. Eso puede alargar la revisión de la próxima
 versión que se suba.
 
+**Cerrado el 2026-09-16: build `8e1fa0fd` (vc 9, 1.0.0) subido a la prueba
+cerrada (segmento Alpha) y enviado a revisión.** Confirmado exactamente lo
+anterior: Play Console rechazó guardar la versión hasta declarar los dos
+permisos nuevos -"Permisos sensibles de la app" (ubicación en segundo plano) y
+"Permisos de servicios en primer plano" (`FOREGROUND_SERVICE_LOCATION`,
+marcado como "Uso de la ubicación en segundo plano iniciado por el usuario")-,
+las dos con el mismo video de YouTube mostrando al conductor activando
+"disponible", concediendo "Permitir todo el tiempo" y minimizando la app.
+Con eso guardado, el envío a revisión paso primero por las "verificaciones
+rápidas" automáticas de Google (~10 min) antes de entrar a la cola de revisión
+humana. Incluye los cuatro pedidos (D270-D271, pedido 3 y el bug del selector
+de carga) mas el arreglo del bug real de D271 y el barrido de marca a
+AmalfiGoApp.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
