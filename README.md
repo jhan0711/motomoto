@@ -1,11 +1,14 @@
-# MotoMoto
+# AmalfiGoApp
 
 Plataforma movil para solicitar servicios de transporte en motorratones, vehiculos de tres
 ruedas tipo tuk-tuk con capacidad para hasta tres pasajeros.
 
 Prueba piloto en el municipio de Amalfi, Antioquia, Colombia.
 
-> **Nombre provisional.** El nombre comercial definitivo esta pendiente de decision.
+> **Nombre comercial: AmalfiGoApp** (`co.amalfigo.app`), decidido el 2026-09-02. El
+> repositorio y el paquete npm conservan el nombre de trabajo original, "MotoMoto" -no
+> vale la pena el costo de renombrarlos-, pero ese nombre no debe aparecer en ningun
+> texto de cara al usuario.
 
 La plataforma **no procesa pagos** y **no calcula tarifas**. El pago se acuerda y se realiza
 fuera de la aplicacion. La arquitectura permite incorporar pagos mas adelante sin

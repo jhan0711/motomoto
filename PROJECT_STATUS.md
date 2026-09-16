@@ -3,7 +3,7 @@
 Documento de continuidad del proyecto. Si se pierde el contexto de una conversacion,
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
-- **Proyecto:** MotoMoto (nombre provisional)
+- **Proyecto:** AmalfiGoApp (antes MotoMoto, nombre provisional; decidido el 2026-09-02)
 - **Ultima actualizacion:** 2026-09-02
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
@@ -503,7 +503,7 @@ aplicacion sigue sin tocar dinero.
 
 | # | Decision | Valor |
 |---|---|---|
-| D1 | Nombre provisional | MotoMoto. Nombre comercial pendiente (Fase 25) |
+| D1 | Nombre comercial | Provisional "MotoMoto" hasta decidirlo (Fase 25). Decidido el 2026-09-02: **AmalfiGoApp** (`co.amalfigo.app`). Es el unico nombre que debe verse en cualquier texto de cara al usuario -pantallas, notificaciones, permisos del sistema, panel-; "MotoMoto" solo sigue vivo donde no lo ve nadie fuera del equipo (nombre del repositorio, del paquete npm, nombres de archivo) |
 | D2 | Plataforma del MVP | Android unicamente. iOS fuera del MVP |
 | D3 | Arquitectura movil | Una sola aplicacion con navegacion segun rol |
 | D4 | Tipo de vehiculo | Motorraton tipo tuk-tuk, hasta 3 pasajeros sin contar al conductor |
@@ -8277,6 +8277,28 @@ proyecto es justo de las agresivas con esto- y no se detecta en el emulador.
 Falta comprobar: que la notificación persistente aparece y se mantiene, que
 `driver_locations.updated_at` sigue avanzando con la app minimizada varios
 minutos, y que la batería de un turno normal no se resiente de forma notoria.
+
+**Bug real, encontrado en la tablet el 2026-09-16, no en el emulador.** La
+primera verificación parecía ir bien -tres minutos con la app minimizada y la
+posición seguía llegando-, pero a los 25 minutos había dejado de avanzar por
+completo, con la notificación persistente todavía encendida. `adb logcat`
+mostró la causa exacta: `FusedLocation: ... blocked - too fast` / `blocked -
+too close`, repitiéndose cada ~30 s sin entregar nunca la posición.
+`backgroundLocationOptions` (`background-location-task.ts`) traía
+`distanceInterval: 25`, copiado por analogía de R9 sin pensar que aquí se
+traduce distinto: en foreground (`use-location-reporting.ts`) el intervalo lo
+maneja un `setInterval` en JavaScript y la distancia es un adelanto que se
+calcula aparte -las dos condiciones son un O-, pero `expo-location` traduce
+`distanceInterval` de `startLocationUpdatesAsync` al `setMinUpdateDistanceMeters`
+nativo de Android, que el sistema operativo aplica como una condición
+OBLIGATORIA junto al intervalo -un Y-. Con la tablet quieta, esa distancia
+nunca se cumplía y ninguna posición volvía a entregarse, por mucho tiempo que
+pasara. Se verificó contra el código fuente de `expo-location`
+(`LocationHelpers.kt`) antes de tocar nada, no por prueba y error. **Arreglo:**
+se quitó `distanceInterval` de la tarea de segundo plano -R9 no pide distancia
+para "disponible", solo para "en viaje", y esa tarea nunca cubre "en viaje"-.
+Reverificado en la tablet tras el arreglo: posición actualizada a los 2 min 19 s
+de minimizar la app, sin ningún `blocked` en el log.
 
 **Y una consecuencia para Play Store que no estaba en el pedido original**:
 `ACCESS_BACKGROUND_LOCATION` es un permiso que Google Play revisa con lupa.

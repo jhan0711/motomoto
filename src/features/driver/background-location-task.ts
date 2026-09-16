@@ -60,12 +60,19 @@ export function backgroundLocationOptions(intervaloSegundos: number): LocationTa
     // este pedido pidio vigilar.
     accuracy: Location.Accuracy.Balanced,
     timeInterval: intervaloSegundos * 1000,
-    // La mitad de los 50 m que usa el recorrido en viaje (D189/R9): adelanta el
-    // envio si el motorraton avanza deprisa, sin llegar a disparar uno por cada
-    // lectura del GPS.
-    distanceInterval: 25,
+    // SIN `distanceInterval`, y a proposito -no es un olvido-. En Android,
+    // `expo-location` lo traduce a `setMinUpdateDistanceMeters` de
+    // `LocationRequest`, que en el sistema operativo actua como filtro
+    // OBLIGATORIO junto al intervalo, no como un adelanto: una posicion solo
+    // se entrega si YA paso el intervalo *Y ADEMAS* el aparato se movio esa
+    // distancia. Con 25 m puestos aqui, `driver_locations.updated_at` dejaba
+    // de avanzar en cuanto el motorraton se quedaba quieto -verificado en la
+    // tablet fisica el 2026-09-15 con `adb logcat`, que mostraba
+    // `FusedLocation: ... blocked - too close` cada ~30 s sin fin-. R9 solo
+    // pide distancia para "en viaje" (D189), nunca para "disponible": este
+    // campo no pertenece aqui.
     foregroundService: {
-      notificationTitle: 'MotoMoto',
+      notificationTitle: 'AmalfiGoApp',
       notificationBody: 'Buscando servicios cerca de ti.',
       notificationColor: '#F27127',
       // Sin esto la notificacion podria quedar huerfana -encendida, diciendo

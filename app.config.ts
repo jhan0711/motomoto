@@ -170,7 +170,7 @@ const config: ExpoConfig = {
       'expo-location',
       {
         locationWhenInUsePermission:
-          'MotoMoto usa tu ubicación para mostrarte en el mapa y saber dónde recogerte.',
+          'AmalfiGoApp usa tu ubicación para mostrarte en el mapa y saber dónde recogerte.',
         // Pedido de la empresa, validado con el dueño del producto
         // (2026-09-15): un conductor "disponible" con la aplicación
         // minimizada dejaba de recibir ofertas a los dos minutos (D116, R10).
@@ -182,7 +182,7 @@ const config: ExpoConfig = {
         // background-location-permission-screen.tsx: este texto de abajo es
         // el que ve el sistema operativo, no el que ve el conductor.
         locationAlwaysPermission:
-          'MotoMoto usa tu ubicación en segundo plano para seguir ofreciéndote servicios mientras estás disponible, aunque minimices la aplicación.',
+          'AmalfiGoApp usa tu ubicación en segundo plano para seguir ofreciéndote servicios mientras estás disponible, aunque minimices la aplicación.',
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
       },
