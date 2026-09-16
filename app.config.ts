@@ -174,15 +174,16 @@ const config: ExpoConfig = {
         // Pedido de la empresa, validado con el dueño del producto
         // (2026-09-15): un conductor "disponible" con la aplicación
         // minimizada dejaba de recibir ofertas a los dos minutos (D116, R10).
-        // Solo aplica mientras esta "disponible" -no en viaje, ver
-        // background-location-task.ts-, y exige el permiso "en todo momento"
-        // de Android mas el servicio en primer plano con su notificacion fija,
-        // los dos activados aqui. La pantalla de justificacion que Android
-        // 10+ exige antes de pedir el permiso vive en
-        // background-location-permission-screen.tsx: este texto de abajo es
+        // Ampliado a "en viaje" el 2026-09-16 -ver la cabecera de
+        // use-background-location.ts para el porque-. Exige el permiso "en
+        // todo momento" de Android mas el servicio en primer plano con su
+        // notificacion fija, los dos activados aqui. La pantalla de
+        // justificacion que Android 10+ exige antes de pedir el permiso vive
+        // inline en app/driver/(tabs)/index.tsx (el Aviso de "Sigue enviando
+        // tu ubicación..."), no en un archivo aparte: este texto de abajo es
         // el que ve el sistema operativo, no el que ve el conductor.
         locationAlwaysPermission:
-          'AmalfiGoApp usa tu ubicación en segundo plano para seguir ofreciéndote servicios mientras estás disponible, aunque minimices la aplicación.',
+          'AmalfiGoApp usa tu ubicación en segundo plano para que los pasajeros sigan viéndote mientras estás disponible o llevando un servicio, aunque minimices la aplicación.',
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
       },

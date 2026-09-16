@@ -1,5 +1,5 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { CircleCheck, Inbox, MapPinOff, TriangleAlert } from 'lucide-react-native';
+import { BatteryWarning, CircleCheck, Inbox, MapPinOff, TriangleAlert } from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 
@@ -32,6 +32,7 @@ import { ActiveRideCard, type RideAction } from '@/features/driver/active-ride-c
 import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
 import { UnavailableReasonModal } from '@/features/driver/unavailable-reason-modal';
+import { useBatteryOptimizationNotice } from '@/features/driver/battery-optimization-notice';
 import { useBackgroundLocation } from '@/features/driver/use-background-location';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
@@ -99,12 +100,12 @@ export default function DriverHome() {
     riding: viajes.length > 0,
   });
 
-  // Segundo plano: solo "disponible sin viaje" (pedido de la empresa,
-  // 2026-09-15). Con un servicio encima -aunque `disponible` siga encendido
-  // por quedarle sitio, D161- se apaga igual que si el interruptor estuviera
-  // apagado: es la misma frontera que ya traza `riding` arriba, y aqui
-  // importa mas todavia, porque D116 pesa mas fuerte en viaje.
-  const segundoPlano = useBackgroundLocation(driverId, disponible && viajes.length === 0);
+  // Segundo plano: "disponible" y "en viaje" (pedido de la empresa,
+  // 2026-09-15, ampliado a "en viaje" el 2026-09-16 -ver la cabecera de
+  // use-background-location.ts-). Mismo "riding" que ya calcula `envio` en
+  // primer plano, sin recalcularlo aparte.
+  const segundoPlano = useBackgroundLocation(driverId, disponible, viajes.length > 0);
+  const avisoBateria = useBatteryOptimizationNotice(segundoPlano.state.kind === 'active');
 
   // El rastro se graba solo mientras hay pasajero a bordo. Un viaje aceptado o de
   // camino no cuenta: eso es la aproximacion, no el recorrido.
@@ -559,13 +560,12 @@ export default function DriverHome() {
         )}
 
         {/* Este aviso deja de ser cierto en cuanto el segundo plano queda
-          activo -pedido de la empresa, 2026-09-15-: con un servicio encima
-          (`riding`) sigue siendo verdad sin excepcion, porque ahi el segundo
-          plano nunca se enciende (D116 pesa mas fuerte con un pasajero a
-          bordo, ver use-background-location.ts). */}
-        {disponible &&
+          activo -pedido de la empresa, 2026-09-15, ampliado a "en viaje" el
+          2026-09-16-: ahora cubre los dos estados, asi que solo hace falta
+          mirar si el segundo plano esta activo, sin distinguir cual es. */}
+        {(disponible || viajes.length > 0) &&
           !sinUbicacion &&
-          !(viajes.length === 0 && segundoPlano.state.kind === 'active') && (
+          segundoPlano.state.kind !== 'active' && (
             <Aviso
               icon={TriangleAlert}
               titulo="Mantén la aplicación abierta"
@@ -573,14 +573,13 @@ export default function DriverHome() {
             />
           )}
 
-        {disponible &&
+        {(disponible || viajes.length > 0) &&
           !sinUbicacion &&
-          viajes.length === 0 &&
           segundoPlano.state.kind === 'permission-required' && (
             <Aviso
               icon={MapPinOff}
-              titulo="Sigue recibiendo servicios con la app minimizada"
-              detalle="Activa la ubicación en segundo plano para no dejar de recibir solicitudes mientras estás disponible, aunque minimices la aplicación. Android pedirá un permiso extra."
+              titulo="Sigue enviando tu ubicación con la app minimizada"
+              detalle="Activa la ubicación en segundo plano para que los pasajeros no dejen de verte al minimizar la aplicación. Android pedirá un permiso extra."
               accion={
                 segundoPlano.state.canAsk
                   ? { etiqueta: 'Activar', onPress: () => void segundoPlano.requestPermission() }
@@ -588,6 +587,19 @@ export default function DriverHome() {
               }
             />
           )}
+
+        {avisoBateria.mostrar && (
+          <Aviso
+            icon={BatteryWarning}
+            titulo="Revisa el ahorro de batería"
+            detalle="En algunos teléfonos (Xiaomi entre ellos) el sistema puede limitar el envío en segundo plano con el tiempo. Además de quitarla de la lista de ahorro de batería, en Xiaomi conviene abrir la app, mantener pulsado su ícono en 'Apps recientes' y elegir 'Bloquear' para que el sistema no la cierre sola."
+            accion={{
+              etiqueta: 'Abrir ajustes de batería',
+              onPress: () => void avisoBateria.abrirAjustes(),
+            }}
+            accionSecundaria={{ etiqueta: 'Ya lo hice', onPress: avisoBateria.descartar }}
+          />
+        )}
 
         {disponible && envio.error !== null && (
           <Aviso
@@ -714,6 +726,9 @@ interface AvisoProps {
   titulo: string;
   detalle: string;
   accion?: { etiqueta: string; onPress: () => void };
+  /** Segundo boton, mas discreto -pensado para "descartar" sin alarmar,
+   * no para una segunda accion del mismo peso que la primera-. */
+  accionSecundaria?: { etiqueta: string; onPress: () => void };
 }
 
 /**
@@ -723,7 +738,7 @@ interface AvisoProps {
  * que el conductor tiene que saber. Pintar de rojo "mantén la aplicación
  * abierta" haria que pareciera un fallo cuando es una instruccion.
  */
-function Aviso({ icon: Icon, titulo, detalle, accion }: AvisoProps) {
+function Aviso({ icon: Icon, titulo, detalle, accion, accionSecundaria }: AvisoProps) {
   const { colors } = useTheme();
 
   return (
@@ -734,8 +749,25 @@ function Aviso({ icon: Icon, titulo, detalle, accion }: AvisoProps) {
         <Text variant="caption" color="textSecondary">
           {detalle}
         </Text>
-        {accion !== undefined && (
-          <Button label={accion.etiqueta} variant="secondary" size="sm" onPress={accion.onPress} />
+        {(accion !== undefined || accionSecundaria !== undefined) && (
+          <View style={styles.avisoBotones}>
+            {accion !== undefined && (
+              <Button
+                label={accion.etiqueta}
+                variant="secondary"
+                size="sm"
+                onPress={accion.onPress}
+              />
+            )}
+            {accionSecundaria !== undefined && (
+              <Button
+                label={accionSecundaria.etiqueta}
+                variant="ghost"
+                size="sm"
+                onPress={accionSecundaria.onPress}
+              />
+            )}
+          </View>
         )}
       </View>
     </View>
@@ -794,6 +826,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginTop: spacing.md,
     padding: spacing.md,
+  },
+  avisoBotones: {
+    flexDirection: 'row',
+    gap: spacing.xs,
   },
   avisoTextos: {
     alignItems: 'flex-start',

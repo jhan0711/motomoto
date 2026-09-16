@@ -7,8 +7,9 @@ import { reportLocation } from './driver-service';
 
 /**
  * Ubicacion del conductor con la aplicacion minimizada (pedido de la empresa,
- * validado con el dueno del producto el 2026-09-15; revierte D116 solo para
- * el estado "disponible", nunca "en viaje" -ver use-background-location.ts).
+ * validado con el dueno del producto el 2026-09-15; revierte D116 para
+ * "disponible" y, desde el 2026-09-16, tambien para "en viaje" -ver la
+ * cabecera de use-background-location.ts para el porque del cambio-).
  *
  * POR QUE UN ARCHIVO APARTE Y NO DENTRO DEL HOOK. `TaskManager.defineTask`
  * tiene que llamarse UNA VEZ, en cuanto se carga el modulo de JavaScript, y
@@ -48,11 +49,14 @@ export async function setBackgroundLocationDriverId(driverId: string | null): Pr
   }
 }
 
-/** Opciones de arranque. El intervalo es el mismo que ya usa el reporte en
- * primer plano (`location_interval_available_seconds`, R9): no se inventa un
- * segundo numero de bateria que ajustar por separado, y ese parametro ya se
- * puede retocar desde el panel sin publicar una version nueva. */
-export function backgroundLocationOptions(intervaloSegundos: number): LocationTaskOptions {
+/** Opciones de arranque. El intervalo lo elige quien llama -30 s "disponible",
+ * el corto de "en viaje" (R9, hoy 3 s)-, leido de `app_settings` en los dos
+ * casos: no se inventa un numero de bateria propio de aqui, y esos parametros
+ * ya se pueden retocar desde el panel sin publicar una version nueva. */
+export function backgroundLocationOptions(
+  intervaloSegundos: number,
+  riding: boolean,
+): LocationTaskOptions {
   return {
     // La misma que ya usa el mapa del pasajero en foreground (use-location.ts):
     // unos metros de error no importan aqui, y la de mayor precision mantendria
@@ -68,12 +72,17 @@ export function backgroundLocationOptions(intervaloSegundos: number): LocationTa
     // distancia. Con 25 m puestos aqui, `driver_locations.updated_at` dejaba
     // de avanzar en cuanto el motorraton se quedaba quieto -verificado en la
     // tablet fisica el 2026-09-15 con `adb logcat`, que mostraba
-    // `FusedLocation: ... blocked - too close` cada ~30 s sin fin-. R9 solo
-    // pide distancia para "en viaje" (D189), nunca para "disponible": este
-    // campo no pertenece aqui.
+    // `FusedLocation: ... blocked - too close` cada ~30 s sin fin-. Vale para
+    // los dos estados, "disponible" y "en viaje": este campo no pertenece
+    // aqui en ninguno de los dos.
     foregroundService: {
       notificationTitle: 'AmalfiGoApp',
-      notificationBody: 'Buscando servicios cerca de ti.',
+      // El texto dice la verdad segun el estado: "buscando" cuando en
+      // realidad ya lleva un pasajero encima seria confuso, y es justo el
+      // caso que un conductor puede leer mientras conduce.
+      notificationBody: riding
+        ? 'Llevando un servicio en curso.'
+        : 'Buscando servicios cerca de ti.',
       notificationColor: '#F27127',
       // Sin esto la notificacion podria quedar huerfana -encendida, diciendo
       // "buscando servicios"- si Android mata el proceso entero en vez de solo
