@@ -1,3 +1,5 @@
+import type { PostgrestError } from '@supabase/supabase-js';
+
 import { toRideFailure, type RideFailure } from '@/features/ride/errors';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
@@ -111,35 +113,89 @@ export async function fetchDriverState(driverId: string): Promise<Result<DriverS
   });
 }
 
+export type UnavailableReasonCode = Database['public']['Enums']['driver_unavailable_reason_code'];
+
+/** Lo que pide `unavailableReasonModal` antes de dejar apagar el interruptor. */
+export interface UnavailableReason {
+  code: UnavailableReasonCode;
+  /** Solo tiene sentido -y solo lo guarda el servidor- junto a code = 'otro'. */
+  detail?: string;
+}
+
 /**
  * Enciende o apaga la disponibilidad.
  *
- * Es una de las seis excepciones acotadas de D83: el cliente escribe directo en
- * lugar de pasar por una funcion. Puede permitirselo porque la politica
- * `drivers_update_own` lo limita a su propia fila y el disparador
- * `drivers_protect_columns` impide que de paso se apruebe a si mismo o se suba
- * la calificacion.
+ * ENCENDER sigue siendo una de las seis excepciones acotadas de D83: el
+ * cliente escribe directo en lugar de pasar por una funcion. Puede
+ * permitirselo porque la politica `drivers_update_own` lo limita a su propia
+ * fila y el disparador `drivers_protect_columns` impide que de paso se
+ * apruebe a si mismo o se suba la calificacion.
+ *
+ * APAGAR pasa por `set_driver_unavailable` desde D270: es la unica via que
+ * exige el motivo del catalogo, y exigirlo con un UPDATE directo habria hecho
+ * falta comprobarlo en el cliente, que es justo lo que D15 no permite para una
+ * regla de negocio. Ver la cabecera de la migracion `20260916004026` para por
+ * que esto no es un disparador -rompe `accept_ride_offer`, entre otras cosas.
  *
  * Si intenta ponerse disponible sin estar aprobado, la restriccion
  * `drivers_available_only_when_approved` lo rechaza en la base de datos. La
  * pantalla no deberia dejarle llegar ahi, pero la comprobacion de verdad esta
  * donde no se puede saltar.
  */
-export async function setAvailability(driverId: string, available: boolean): Promise<Result> {
-  const { error } = await supabase
-    .from('drivers')
-    .update({ is_available: available })
-    .eq('id', driverId);
+export async function setAvailability(
+  driverId: string,
+  available: boolean,
+  reason?: UnavailableReason,
+): Promise<Result> {
+  let error: PostgrestError | null;
+
+  if (available) {
+    error = (await supabase.from('drivers').update({ is_available: true }).eq('id', driverId))
+      .error;
+  } else if (reason === undefined) {
+    // Sin motivo no hay ni parametros validos que mandarle a la funcion: D270
+    // lo pide obligatorio, no opcional. Se corta aqui, sin red de por medio, en
+    // vez de mandar un valor inventado solo para que el tipo cuadre; la
+    // pantalla real nunca deberia llegar a este punto porque abre el modal
+    // antes de intentar apagarse.
+    return {
+      ok: false,
+      failure: {
+        code: 'UNAVAILABLE_REASON_REQUIRED',
+        message: 'Elige un motivo antes de desconectarte.',
+      },
+    };
+  } else {
+    error = (
+      await supabase.rpc('set_driver_unavailable', {
+        p_reason_code: reason.code,
+        p_reason_detail: reason.detail?.trim() || undefined,
+      })
+    ).error;
+  }
 
   if (error) {
-    // 23514 es una violacion de restriccion CHECK. Aqui solo puede ser una: que
-    // no este aprobado. El mensaje generico de PostgreSQL no le sirve de nada.
+    // 23514 es una violacion de restriccion CHECK. Solo puede pasar al
+    // encender: que no este aprobado. El mensaje generico de PostgreSQL no le
+    // sirve de nada.
     if (error.code === '23514') {
       return {
         ok: false,
         failure: {
           code: 'DRIVER_NOT_APPROVED',
           message: 'Tu cuenta todavía no está aprobada por la empresa.',
+        },
+      };
+    }
+
+    // El motivo no llego -la pantalla deberia impedir esto con el modal, pero
+    // set_driver_unavailable comprueba de todas formas (D15).
+    if (error.hint?.trim() === 'UNAVAILABLE_REASON_REQUIRED') {
+      return {
+        ok: false,
+        failure: {
+          code: 'UNAVAILABLE_REASON_REQUIRED',
+          message: 'Elige un motivo antes de desconectarte.',
         },
       };
     }

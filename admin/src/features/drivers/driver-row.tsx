@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { BlockDialog } from '@/features/shared/block-dialog';
 import type { Driver } from './types';
-import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
+import { ESTILO_APROBACION, ETIQUETA_APROBACION, ETIQUETA_MOTIVO_NO_DISPONIBLE } from './types';
 import {
   cambiarAprobacion,
   cambiarEstadoCuenta,
@@ -72,6 +72,39 @@ export function DriverRow({ conductor, onCambio }: Props) {
               className={`rounded-md px-2 py-0.5 text-xs ${ESTILO_APROBACION[conductor.approval_status]}`}
             >
               {ETIQUETA_APROBACION[conductor.approval_status]}
+            </span>
+            {/*
+             * D270: el motivo de la ultima desconexion. Puede faltar aun
+             * estando apagado -si lo apago accept_ride_offer al llenarse el
+             * motorraton, o un administrador, ninguno de los dos deja motivo,
+             * ver la cabecera de la migracion 20260916004026- y por eso el
+             * texto cambia segun haya uno o no, en vez de dar por hecho que
+             * siempre lo hay.
+             *
+             * El generador de tipos declara `unavailable_reason_code` como no
+             * nulo -mismo defecto ya documentado del lado del conductor con
+             * `distance_m`/`seconds_remaining`, el generador no ve que una
+             * funcion `returns table` admite null en una columna-, asi que la
+             * comprobacion de aqui abajo es real aunque el tipo diga que
+             * nunca hace falta.
+             */}
+            <span
+              className={`rounded-md px-2 py-0.5 text-xs ${
+                conductor.is_available
+                  ? 'bg-success-subtle text-success'
+                  : 'bg-surface-subtle text-text-secondary'
+              }`}
+            >
+              {conductor.is_available
+                ? 'Disponible'
+                : conductor.unavailable_reason_code === null
+                  ? 'No disponible'
+                  : `No disponible: ${ETIQUETA_MOTIVO_NO_DISPONIBLE[conductor.unavailable_reason_code]}${
+                      conductor.unavailable_reason_code === 'otro' &&
+                      conductor.unavailable_reason !== null
+                        ? ` (${conductor.unavailable_reason})`
+                        : ''
+                    }`}
             </span>
             {bloqueada && (
               <span className="rounded-md bg-danger-subtle px-2 py-0.5 text-xs text-on-danger-subtle">

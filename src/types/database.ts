@@ -354,6 +354,9 @@ export type Database = {
           is_available: boolean;
           rating_average: number;
           rating_count: number;
+          unavailable_reason: string | null;
+          unavailable_reason_code:
+            Database['public']['Enums']['driver_unavailable_reason_code'] | null;
           updated_at: string;
         };
         Insert: {
@@ -365,6 +368,9 @@ export type Database = {
           is_available?: boolean;
           rating_average?: number;
           rating_count?: number;
+          unavailable_reason?: string | null;
+          unavailable_reason_code?:
+            Database['public']['Enums']['driver_unavailable_reason_code'] | null;
           updated_at?: string;
         };
         Update: {
@@ -376,6 +382,9 @@ export type Database = {
           is_available?: boolean;
           rating_average?: number;
           rating_count?: number;
+          unavailable_reason?: string | null;
+          unavailable_reason_code?:
+            Database['public']['Enums']['driver_unavailable_reason_code'] | null;
           updated_at?: string;
         };
         Relationships: [
@@ -1344,6 +1353,8 @@ export type Database = {
           plate: string;
           rating_average: number;
           rating_count: number;
+          unavailable_reason: string;
+          unavailable_reason_code: Database['public']['Enums']['driver_unavailable_reason_code'];
           unit_number: number;
           vehicle_id: string;
         }[];
@@ -2047,6 +2058,13 @@ export type Database = {
         };
         Returns: undefined;
       };
+      set_driver_unavailable: {
+        Args: {
+          p_reason_code: Database['public']['Enums']['driver_unavailable_reason_code'];
+          p_reason_detail?: string;
+        };
+        Returns: undefined;
+      };
       shares_ride_with: { Args: { p_other_id: string }; Returns: boolean };
       start_driving_to_pickup: {
         Args: { p_ride_id: string };
@@ -2058,6 +2076,8 @@ export type Database = {
       actor_type: 'passenger' | 'driver' | 'admin' | 'system';
       document_owner: 'driver' | 'vehicle';
       driver_approval_status: 'pending' | 'approved' | 'blocked';
+      driver_unavailable_reason_code:
+        'almuerzo' | 'descanso' | 'combustible' | 'fin_de_turno' | 'otro';
       report_status: 'open' | 'in_review' | 'resolved';
       ride_offer_response: 'pending' | 'accepted' | 'rejected' | 'expired';
       ride_request_status:
@@ -2200,6 +2220,13 @@ export const Constants = {
       actor_type: ['passenger', 'driver', 'admin', 'system'],
       document_owner: ['driver', 'vehicle'],
       driver_approval_status: ['pending', 'approved', 'blocked'],
+      driver_unavailable_reason_code: [
+        'almuerzo',
+        'descanso',
+        'combustible',
+        'fin_de_turno',
+        'otro',
+      ],
       report_status: ['open', 'in_review', 'resolved'],
       ride_offer_response: ['pending', 'accepted', 'rejected', 'expired'],
       ride_request_status: [

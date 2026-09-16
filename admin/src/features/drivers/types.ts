@@ -4,6 +4,19 @@ export type Driver = Database['public']['Functions']['admin_list_drivers']['Retu
 
 export type ApprovalStatus = Database['public']['Enums']['driver_approval_status'];
 export type AccountStatus = Database['public']['Enums']['user_status'];
+export type UnavailableReasonCode = Database['public']['Enums']['driver_unavailable_reason_code'];
+
+/** Mismo catalogo que `src/features/driver/unavailable-reason.ts` del lado
+ * del conductor (D270). Los dos proyectos generan sus tipos del mismo
+ * esquema pero no comparten codigo entre si, asi que la lista vive por
+ * duplicado en cada uno -igual que ya pasa con ETIQUETA_APROBACION. */
+export const ETIQUETA_MOTIVO_NO_DISPONIBLE: Record<UnavailableReasonCode, string> = {
+  almuerzo: 'Almuerzo',
+  descanso: 'Descanso',
+  combustible: 'Cargando combustible',
+  fin_de_turno: 'Fin de turno',
+  otro: 'Otro',
+};
 
 export const ETIQUETA_APROBACION: Record<ApprovalStatus, string> = {
   pending: 'Pendiente de aprobar',

@@ -26,10 +26,12 @@ import {
   startRide,
   type DriverRide,
   type DriverState,
+  type UnavailableReason,
 } from '@/features/driver/driver-service';
 import { ActiveRideCard, type RideAction } from '@/features/driver/active-ride-card';
 import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
+import { UnavailableReasonModal } from '@/features/driver/unavailable-reason-modal';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
 import { useTrackRecording } from '@/features/driver/use-track-recording';
@@ -386,7 +388,7 @@ export default function DriverHome() {
   useRequestRealtime(driverId !== null, alCambiarUnaSolicitud, 'conductor-sus-solicitudes');
 
   const cambiarDisponibilidad = useCallback(
-    async (valor: boolean) => {
+    async (valor: boolean, motivo?: UnavailableReason) => {
       if (driverId === null || estado === null) return;
 
       // Se pinta el cambio antes de que el servidor conteste. Un interruptor que
@@ -397,7 +399,7 @@ export default function DriverHome() {
       setCambiando(true);
       setError(null);
 
-      const resultado = await setAvailability(driverId, valor);
+      const resultado = await setAvailability(driverId, valor, motivo);
       setCambiando(false);
 
       if (!resultado.ok) {
@@ -407,6 +409,13 @@ export default function DriverHome() {
     },
     [driverId, estado],
   );
+
+  // El modal de D270 se abre ANTES de apagar, no despues: pintar el
+  // interruptor en "apagado" para luego, si el conductor cancela el modal,
+  // devolverlo a "encendido" se veia como un parpadeo sin sentido. Encender no
+  // pasa por aqui -sigue siendo el toque directo de siempre (D83)-, porque
+  // encender nunca pide motivo.
+  const [pidiendoMotivo, setPidiendoMotivo] = useState(false);
 
   if (cargando) {
     return (
@@ -440,208 +449,232 @@ export default function DriverHome() {
   }));
 
   return (
-    <Screen scroll header={<Header title={`Hola, ${user?.fullName ?? 'conductor'}`} />}>
-      <View style={styles.panels}>
-        <Card
-          variant="elevated"
-          style={
-            disponible
-              ? { backgroundColor: colors.brandSubtle, borderColor: colors.brand, borderWidth: 1 }
-              : undefined
-          }
-        >
-          <View style={styles.statusRow}>
-            <View style={styles.statusCopy}>
-              <Text variant="title">{disponible ? 'Disponible' : 'No disponible'}</Text>
-              <Text variant="caption" color="textSecondary">
-                {/* Desde D161 el interruptor puede apagarse solo, sin que el
+    <>
+      <Screen scroll header={<Header title={`Hola, ${user?.fullName ?? 'conductor'}`} />}>
+        <View style={styles.panels}>
+          <Card
+            variant="elevated"
+            style={
+              disponible
+                ? { backgroundColor: colors.brandSubtle, borderColor: colors.brand, borderWidth: 1 }
+                : undefined
+            }
+          >
+            <View style={styles.statusRow}>
+              <View style={styles.statusCopy}>
+                <Text variant="title">{disponible ? 'Disponible' : 'No disponible'}</Text>
+                <Text variant="caption" color="textSecondary">
+                  {/* Desde D161 el interruptor puede apagarse solo, sin que el
                     conductor lo toque: ocurre en cuanto acepta el servicio que
                     llena el motorraton. Decirle ahi "no recibirás solicitudes
                     mientras estés en este estado" le haria buscar que hizo mal,
                     cuando no hizo nada. */}
-                {disponible
-                  ? 'Estás recibiendo solicitudes de servicio.'
-                  : aBordo > 0 && libres === 0
-                    ? 'Tu motorratón está completo. Volverás a recibir solicitudes cuando termines un servicio.'
-                    : 'No recibirás solicitudes mientras estés en este estado.'}
-              </Text>
+                  {disponible
+                    ? 'Estás recibiendo solicitudes de servicio.'
+                    : aBordo > 0 && libres === 0
+                      ? 'Tu motorratón está completo. Volverás a recibir solicitudes cuando termines un servicio.'
+                      : 'No recibirás solicitudes mientras estés en este estado.'}
+                </Text>
+              </View>
+              <Switch
+                value={disponible}
+                onValueChange={(valor) => {
+                  if (valor) {
+                    void cambiarDisponibilidad(true);
+                  } else {
+                    setPidiendoMotivo(true);
+                  }
+                }}
+                disabled={cambiando || estado === null}
+                accessibilityLabel="Cambiar disponibilidad"
+                trackColor={{ false: colors.border, true: colors.brand }}
+                thumbColor={colors.surface}
+              />
             </View>
-            <Switch
-              value={disponible}
-              onValueChange={(valor) => void cambiarDisponibilidad(valor)}
-              disabled={cambiando || estado === null}
-              accessibilityLabel="Cambiar disponibilidad"
-              trackColor={{ false: colors.border, true: colors.brand }}
-              thumbColor={colors.surface}
-            />
-          </View>
-        </Card>
+          </Card>
 
-        <Card variant="outlined" padding="md" style={styles.vehicle}>
-          <Text variant="caption" color="textTertiary">
-            MOTORRATÓN ASIGNADO
-          </Text>
-          {estado?.vehicle === null || estado === null ? (
-            <>
-              <Text variant="subheading">Sin asignar</Text>
-              <Text variant="caption" color="textSecondary">
-                La empresa todavía no te asignó un motorratón. Sin él no podrás tomar servicios.
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text variant="subheading">Motorratón {estado.vehicle.unitNumber}</Text>
-              <Text variant="caption" color="textSecondary">
-                Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
-              </Text>
-              {/* Los asientos libres solo aparecen cuando lleva a alguien. Con el
+          <Card variant="outlined" padding="md" style={styles.vehicle}>
+            <Text variant="caption" color="textTertiary">
+              MOTORRATÓN ASIGNADO
+            </Text>
+            {estado?.vehicle === null || estado === null ? (
+              <>
+                <Text variant="subheading">Sin asignar</Text>
+                <Text variant="caption" color="textSecondary">
+                  La empresa todavía no te asignó un motorratón. Sin él no podrás tomar servicios.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Text variant="subheading">Motorratón {estado.vehicle.unitNumber}</Text>
+                <Text variant="caption" color="textSecondary">
+                  Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
+                </Text>
+                {/* Los asientos libres solo aparecen cuando lleva a alguien. Con el
                   motorraton vacio seria repetir la capacidad con otras palabras, y
                   la linea de arriba ya la dice. */}
-              {aBordo > 0 && (
-                <Text variant="bodyStrong" color={libres === 0 ? 'textSecondary' : 'brand'}>
-                  {libres === 0
-                    ? `Completo · ${aBordo} a bordo`
-                    : `${libres === 1 ? 'Un asiento libre' : `${libres} asientos libres`} · ${aBordo} a bordo`}
-                </Text>
-              )}
-            </>
-          )}
-        </Card>
-      </View>
+                {aBordo > 0 && (
+                  <Text variant="bodyStrong" color={libres === 0 ? 'textSecondary' : 'brand'}>
+                    {libres === 0
+                      ? `Completo · ${aBordo} a bordo`
+                      : `${libres === 1 ? 'Un asiento libre' : `${libres} asientos libres`} · ${aBordo} a bordo`}
+                  </Text>
+                )}
+              </>
+            )}
+          </Card>
+        </View>
 
-      <FormError message={error} />
+        <FormError message={error} />
 
-      {/* Avisos que solo importan mientras esta disponible. Ensenarlos siempre
+        {/* Avisos que solo importan mientras esta disponible. Ensenarlos siempre
           seria ruido permanente para advertir de algo que solo aplica cuando el
           interruptor esta encendido. */}
-      {sinUbicacion && (
-        <Aviso
-          icon={MapPinOff}
-          titulo="No sabemos dónde estás"
-          detalle="Sin tu ubicación no podemos ofrecerte servicios cercanos. Revisa el permiso de ubicación."
-          accion={
-            location.state.kind === 'permission-required' && location.state.canAsk
-              ? { etiqueta: 'Dar permiso', onPress: () => void location.requestPermission() }
-              : location.state.kind === 'permission-required'
-                ? { etiqueta: 'Abrir ajustes', onPress: () => void location.openSettings() }
-                : location.state.kind === 'services-disabled'
-                  ? { etiqueta: 'Activar ubicación', onPress: () => void location.enableServices() }
-                  : { etiqueta: 'Reintentar', onPress: location.retry }
-          }
-        />
-      )}
-
-      {disponible && !sinUbicacion && (
-        <Aviso
-          icon={TriangleAlert}
-          titulo="Mantén la aplicación abierta"
-          detalle="Si sales de la aplicación dejamos de enviar tu ubicación, y a los dos minutos los pasajeros dejan de verte."
-        />
-      )}
-
-      {disponible && envio.error !== null && (
-        <Aviso icon={TriangleAlert} titulo="No pudimos enviar tu ubicación" detalle={envio.error} />
-      )}
-
-      <View style={styles.feed}>
-        {ofertas.error !== null && <FormError message={ofertas.error} />}
-
-        {/* Lo primero de la hoja, y solo justo despues de terminar: es lo ultimo
-            que ha pasado y lo unico que pide una respuesta suya. Se va en cuanto
-            califica o toca "Ahora no". */}
-        {recienTerminado !== null && (
-          <ServicioTerminado
-            passengerName={recienTerminado.passengerName}
-            onCalificar={() =>
-              router.push({
-                pathname: '/driver/rate/[id]',
-                params: {
-                  id: recienTerminado.rideId,
-                  name: recienTerminado.passengerName,
-                },
-              })
+        {sinUbicacion && (
+          <Aviso
+            icon={MapPinOff}
+            titulo="No sabemos dónde estás"
+            detalle="Sin tu ubicación no podemos ofrecerte servicios cercanos. Revisa el permiso de ubicación."
+            accion={
+              location.state.kind === 'permission-required' && location.state.canAsk
+                ? { etiqueta: 'Dar permiso', onPress: () => void location.requestPermission() }
+                : location.state.kind === 'permission-required'
+                  ? { etiqueta: 'Abrir ajustes', onPress: () => void location.openSettings() }
+                  : location.state.kind === 'services-disabled'
+                    ? {
+                        etiqueta: 'Activar ubicación',
+                        onPress: () => void location.enableServices(),
+                      }
+                    : { etiqueta: 'Reintentar', onPress: location.retry }
             }
-            onCerrar={() => setRecienTerminado(null)}
           />
         )}
 
-        {/* Los encabezados solo aparecen cuando hay las dos cosas a la vez. Con
+        {disponible && !sinUbicacion && (
+          <Aviso
+            icon={TriangleAlert}
+            titulo="Mantén la aplicación abierta"
+            detalle="Si sales de la aplicación dejamos de enviar tu ubicación, y a los dos minutos los pasajeros dejan de verte."
+          />
+        )}
+
+        {disponible && envio.error !== null && (
+          <Aviso
+            icon={TriangleAlert}
+            titulo="No pudimos enviar tu ubicación"
+            detalle={envio.error}
+          />
+        )}
+
+        <View style={styles.feed}>
+          {ofertas.error !== null && <FormError message={ofertas.error} />}
+
+          {/* Lo primero de la hoja, y solo justo despues de terminar: es lo ultimo
+            que ha pasado y lo unico que pide una respuesta suya. Se va en cuanto
+            califica o toca "Ahora no". */}
+          {recienTerminado !== null && (
+            <ServicioTerminado
+              passengerName={recienTerminado.passengerName}
+              onCalificar={() =>
+                router.push({
+                  pathname: '/driver/rate/[id]',
+                  params: {
+                    id: recienTerminado.rideId,
+                    name: recienTerminado.passengerName,
+                  },
+                })
+              }
+              onCerrar={() => setRecienTerminado(null)}
+            />
+          )}
+
+          {/* Los encabezados solo aparecen cuando hay las dos cosas a la vez. Con
             una sola lista serian una etiqueta sobre lo evidente; con las dos,
             son lo que impide que se lean como un unico monton de tarjetas.
             Antes de D161 esta situacion no podia darse. */}
-        {viajes.length > 0 && ofertas.offers.length > 0 && (
-          <Text variant="caption" color="textTertiary" style={styles.seccion}>
-            {viajes.length === 1 ? 'TU SERVICIO' : `TUS ${viajes.length} SERVICIOS`}
-          </Text>
-        )}
+          {viajes.length > 0 && ofertas.offers.length > 0 && (
+            <Text variant="caption" color="textTertiary" style={styles.seccion}>
+              {viajes.length === 1 ? 'TU SERVICIO' : `TUS ${viajes.length} SERVICIOS`}
+            </Text>
+          )}
 
-        {/* La vista de conjunto va ANTES de las tarjetas: con dos o tres
+          {/* La vista de conjunto va ANTES de las tarjetas: con dos o tres
             servicios abiertos, lo primero que necesita el conductor es saber
             que le falta en total, no leer tres tarjetas completas para
             reconstruirlo. Con un solo servicio no aparece. */}
-        <PendingStops rides={viajes} />
+          <PendingStops rides={viajes} />
 
-        {viajes.map((viaje) => (
-          <ActiveRideCard
-            key={viaje.rideId}
-            ride={viaje}
-            onAdvance={(r, accion) => void avanzarViaje(r, accion)}
-            advancing={avanzando === viaje.rideId}
-            error={errorViaje?.rideId === viaje.rideId ? errorViaje.message : null}
-            onCancel={(r) => void cancelarViaje(r)}
-            cancelling={cancelandoViaje === viaje.rideId}
-          />
-        ))}
-
-        {viajes.length > 0 && ofertas.offers.length > 0 && (
-          <Text variant="caption" color="textTertiary" style={styles.seccion}>
-            {ofertas.offers.length === 1 ? 'NUEVA SOLICITUD' : 'NUEVAS SOLICITUDES'}
-          </Text>
-        )}
-
-        {ofertas.offers.map((oferta) => (
-          <OfferCard
-            key={oferta.offerId}
-            offer={oferta}
-            aceptando={respondiendo === oferta.offerId}
-            rechazando={rechazando === oferta.offerId}
-            onAceptar={() => void aceptar(oferta.offerId)}
-            onRechazar={() => void rechazar(oferta.offerId)}
-            onExpirar={() => ofertas.removeOffer(oferta.offerId)}
-            enCurso={rutasEnCurso}
-          />
-        ))}
-
-        {/* Con un servicio encima y sitio de sobra, el conductor sigue en la cola
-            y conviene decirselo: si no, un hueco debajo de su servicio parece que
-            la aplicacion dejo de buscarle nada. */}
-        {ofertas.offers.length === 0 && viajes.length > 0 && disponible && libres > 0 && (
-          <Spinner
-            label={
-              libres === 1
-                ? 'Esperando otra solicitud, te queda un asiento'
-                : `Esperando otra solicitud, te quedan ${libres} asientos`
-            }
-          />
-        )}
-
-        {ofertas.offers.length === 0 &&
-          viajes.length === 0 &&
-          (disponible && !sinVehiculo ? (
-            <Spinner label="Esperando solicitudes cercanas" />
-          ) : (
-            <EmptyState
-              icon={Inbox}
-              title="Sin solicitudes"
-              description={
-                sinVehiculo
-                  ? 'Necesitas un motorratón asignado para recibir servicios.'
-                  : 'Cambia tu estado a disponible para empezar a recibir servicios.'
-              }
+          {viajes.map((viaje) => (
+            <ActiveRideCard
+              key={viaje.rideId}
+              ride={viaje}
+              onAdvance={(r, accion) => void avanzarViaje(r, accion)}
+              advancing={avanzando === viaje.rideId}
+              error={errorViaje?.rideId === viaje.rideId ? errorViaje.message : null}
+              onCancel={(r) => void cancelarViaje(r)}
+              cancelling={cancelandoViaje === viaje.rideId}
             />
           ))}
-      </View>
-    </Screen>
+
+          {viajes.length > 0 && ofertas.offers.length > 0 && (
+            <Text variant="caption" color="textTertiary" style={styles.seccion}>
+              {ofertas.offers.length === 1 ? 'NUEVA SOLICITUD' : 'NUEVAS SOLICITUDES'}
+            </Text>
+          )}
+
+          {ofertas.offers.map((oferta) => (
+            <OfferCard
+              key={oferta.offerId}
+              offer={oferta}
+              aceptando={respondiendo === oferta.offerId}
+              rechazando={rechazando === oferta.offerId}
+              onAceptar={() => void aceptar(oferta.offerId)}
+              onRechazar={() => void rechazar(oferta.offerId)}
+              onExpirar={() => ofertas.removeOffer(oferta.offerId)}
+              enCurso={rutasEnCurso}
+            />
+          ))}
+
+          {/* Con un servicio encima y sitio de sobra, el conductor sigue en la cola
+            y conviene decirselo: si no, un hueco debajo de su servicio parece que
+            la aplicacion dejo de buscarle nada. */}
+          {ofertas.offers.length === 0 && viajes.length > 0 && disponible && libres > 0 && (
+            <Spinner
+              label={
+                libres === 1
+                  ? 'Esperando otra solicitud, te queda un asiento'
+                  : `Esperando otra solicitud, te quedan ${libres} asientos`
+              }
+            />
+          )}
+
+          {ofertas.offers.length === 0 &&
+            viajes.length === 0 &&
+            (disponible && !sinVehiculo ? (
+              <Spinner label="Esperando solicitudes cercanas" />
+            ) : (
+              <EmptyState
+                icon={Inbox}
+                title="Sin solicitudes"
+                description={
+                  sinVehiculo
+                    ? 'Necesitas un motorratón asignado para recibir servicios.'
+                    : 'Cambia tu estado a disponible para empezar a recibir servicios.'
+                }
+              />
+            ))}
+        </View>
+      </Screen>
+      <UnavailableReasonModal
+        visible={pidiendoMotivo}
+        confirming={cambiando}
+        onCancel={() => setPidiendoMotivo(false)}
+        onConfirm={(motivo) => {
+          setPidiendoMotivo(false);
+          void cambiarDisponibilidad(false, motivo);
+        }}
+      />
+    </>
   );
 }
 
