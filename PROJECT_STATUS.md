@@ -8182,6 +8182,64 @@ vez, el SurfaceView), crece al añadirse el aviso "No hay motorratones", y el
 PEEK sigue plegándola hasta el asa. Falta reconfirmar en la tablet con el
 siguiente build.
 
+### Plan de ajustes pedido por la empresa (2026-09-15)
+
+Con los 12 testers ya sumados a la prueba cerrada, la empresa pidió cuatro
+ajustes con prioridad y riesgo distintos, con este orden sugerido: 4 (bug,
+bajo riesgo) → 1 (feature acotada) → 3 (config, bajo riesgo) → 2 (el más
+grande, necesita validar con el dueño del producto antes de programar nada).
+
+**4. Bug: el selector de carga se veía vacío al abrir "Agregar carga" justo
+después de tocar "Encomienda".** `useCargoTypes()` pide el catálogo la primera
+vez que hace falta, y `CargoPicker` no recibía `loading`/`error` -los tenía el
+hook, solo faltaba pasarlos-, así que mientras la petición estaba en el aire el
+diálogo se veía con la lista vacía y sin explicación. Ahora `CargoPicker`
+muestra un `Spinner` mientras carga o un `ErrorState` con "Reintentar" si
+falló -mismo patrón que ya usa `usePlaces` en `destination.tsx` para el mismo
+tipo de catálogo perezoso-. `use-cargo-types.ts` ganó un `reload()`, igual que
+ya tiene `usePlaces`. Prueba nueva en `cargo-picker.test.tsx`. Commit `639ca30`.
+
+**1. Motivo al desconectarse (D270).** El conductor elige un motivo del
+catálogo (almuerzo, descanso, combustible, fin de turno, otro con detalle
+libre) antes de apagar su disponibilidad; el panel lo ve en la ficha del
+conductor. La pieza que hizo falta investigar antes de programar: un
+disparador genérico que exigiera el motivo en cualquier fila que pasara de
+disponible a no disponible habría roto `accept_ride_offer` (D161, apaga sola
+la disponibilidad al llenar el motorratón), `admin_assign_driver` y el bloqueo
+de cuentas, que hacen exactamente eso sin motivo. `set_driver_unavailable` es
+la única vía que lo exige; esas tres funciones no cambiaron ni una línea.
+Migración `20260916004026`, prueba `prueba_motivo_no_disponible.sql` (7
+comprobaciones, incluida que `accept_ride_offer` sigue funcionando con un viaje
+real). No necesitó dispositivo físico: es UI y base de datos, sin GPS ni
+segundo plano de por medio. Commit `98c41bf`. Detalle completo en la fila D270
+de la tabla de decisiones.
+
+**3. Bajar el intervalo de ubicación durante el viaje.** No hizo falta tocar
+código: `location_interval_in_ride_seconds` y `location_min_distance_m` son
+parámetros de `app_settings`, y el panel (`/tarifas`, grupo "Operación") ya
+tiene una pantalla para editarlos -se confirmó antes de suponer que hacía
+falta una migración-. Al revisar los valores en vivo, `location_interval_in_ride_seconds`
+ya estaba en `7` (alguien lo había ajustado antes); solo `location_min_distance_m`
+seguía en el original, `50`. Se bajó a `25` por SQL (`admin_set_setting`),
+dentro del rango 10-500 que valida `bound_operational_settings`. **Pendiente
+real:** el criterio de aceptación de la empresa -que el punto del conductor se
+vea más seguido y que la batería no note un impacto notorio en un turno
+normal- solo se puede comprobar en un dispositivo Android físico, con un viaje
+real y un turno completo; no se puede validar desde aquí. El valor es facil de
+retocar despues (`app_settings`, sin build ni Play) si hace falta ajustarlo.
+
+**2. Ubicación en segundo plano: pendiente de validar con el dueño del
+producto**, no programada. Revierte D116 a propósito. Antes de tocar nada hace
+falta que el usuario responda tres preguntas -ver el pedido original-: si vale
+la pena el permiso "en todo momento" de Android y el consumo de batería, si se
+acepta la notificación fija que Android exige mientras el foreground service
+esté activo, y si esto aplica solo a "disponible" o también a "en viaje" -ahí
+el argumento de D116 pesa más: un pasajero viendo a su conductor "congelado"
+en el mapa es peor que no verlo-. Si se aprueba, el alcance recomendado es
+empezar solo por "disponible" y probarlo en dispositivo físico Android: el
+comportamiento de los foreground services y el matado de procesos en segundo
+plano varía mucho entre fabricantes y no se detecta en el emulador.
+
 ---
 
 ## 16. PENDIENTES CONOCIDOS
