@@ -22,6 +22,7 @@ export interface UseCargoTypesResult {
   cargoTypes: CargoType[];
   loading: boolean;
   error: string | null;
+  reload: () => void;
 }
 
 export function useCargoTypes(enabled = true): UseCargoTypesResult {
@@ -54,5 +55,13 @@ export function useCargoTypes(enabled = true): UseCargoTypesResult {
     return () => clearTimeout(id);
   }, [cargar, enabled]);
 
-  return { cargoTypes, loading, error };
+  // Mismo botón "Reintentar" que ya usa `usePlaces`: sin esto, el único remedio
+  // a un catálogo que fallo al pedirse era cerrar y volver a abrir la pantalla.
+  const reload = useCallback(() => {
+    cache = null;
+    setLoading(true);
+    void cargar();
+  }, [cargar]);
+
+  return { cargoTypes, loading, error, reload };
 }

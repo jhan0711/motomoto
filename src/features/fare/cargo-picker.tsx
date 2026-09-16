@@ -2,7 +2,9 @@ import { Minus, PackagePlus, Plus } from 'lucide-react-native';
 import { useCallback } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { ErrorState } from '@/components/ui/error-state';
 import { Modal } from '@/components/ui/modal';
+import { Spinner } from '@/components/ui/spinner';
 import { Text } from '@/components/ui/text';
 import { MIN_TOUCH_TARGET, iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
@@ -15,6 +17,19 @@ export interface CargoPickerProps {
   cargoTypes: CargoType[];
   items: CargoItem[];
   onChangeQuantity: (cargoTypeId: string, quantity: number) => void;
+  /**
+   * El catalogo (`cargoTypes`) se pide perezosamente y en la primera vez de la
+   * sesion puede no haber llegado todavia cuando el pasajero abre este dialogo
+   * justo despues de tocar "Encomienda". Sin esto la lista se veia vacia y sin
+   * explicacion -parecia rota- hasta que, ya en cache, la segunda vez aparecia
+   * de golpe. Mismo `Spinner` que ya usa `usePlaces` para este mismo tipo de
+   * catalogo perezoso en `passenger/destination.tsx`, no un `Skeleton`: es una
+   * espera corta de un puñado de filas, no una lista paginada cuya forma valga
+   * la pena anticipar.
+   */
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
 }
 
 /**
@@ -34,6 +49,9 @@ export function CargoPicker({
   cargoTypes,
   items,
   onChangeQuantity,
+  loading,
+  error,
+  onRetry,
 }: CargoPickerProps) {
   const cantidadDe = useCallback(
     (cargoTypeId: string) => items.find((item) => item.cargoTypeId === cargoTypeId)?.quantity ?? 0,
@@ -48,16 +66,24 @@ export function CargoPicker({
       icon={PackagePlus}
       cancelLabel="Listo"
     >
-      <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
-        {cargoTypes.map((tipo) => (
-          <FilaTipoDeCarga
-            key={tipo.id}
-            tipo={tipo}
-            cantidad={cantidadDe(tipo.id)}
-            onChange={(cantidad) => onChangeQuantity(tipo.id, cantidad)}
-          />
-        ))}
-      </ScrollView>
+      {loading ? (
+        <Spinner centered label="Cargando tipos de carga" />
+      ) : error !== null ? (
+        // Sin `offline`: un catalogo que no carga no es necesariamente por falta
+        // de datos moviles, y el mensaje generico de ErrorState no lo supone.
+        <ErrorState description={error} onRetry={onRetry} />
+      ) : (
+        <ScrollView style={styles.lista} contentContainerStyle={styles.listaContenido}>
+          {cargoTypes.map((tipo) => (
+            <FilaTipoDeCarga
+              key={tipo.id}
+              tipo={tipo}
+              cantidad={cantidadDe(tipo.id)}
+              onChange={(cantidad) => onChangeQuantity(tipo.id, cantidad)}
+            />
+          ))}
+        </ScrollView>
+      )}
     </Modal>
   );
 }

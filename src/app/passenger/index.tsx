@@ -140,7 +140,22 @@ export default function PassengerHome() {
   // El catalogo de carga solo hace falta cuando el pasajero elige "encomienda".
   // Pedirlo en el primer pintado era una llamada de red compitiendo con las que
   // si pintan la pantalla (Fase 24 paso 4).
-  const { cargoTypes } = useCargoTypes(serviceType === 'parcel');
+  //
+  // Se evaluo adelantar el pedido a "resumen" en lugar de a "encomienda" (asi
+  // el catalogo ya estaria listo para cuando el pasajero llegue a tocarlo) y se
+  // descarto para este arreglo: en "resumen" ya compiten la tarifa y la ruta, el
+  // mismo problema que motivo la carga perezosa, solo que un paso mas tarde. La
+  // solucion de fondo -que el dialogo nunca muestre una lista vacia sin avisar,
+  // sea cual sea el momento en que se pida- no depende de cuando se dispare el
+  // pedido, y es la que se hizo aqui. Adelantar el disparador sigue siendo una
+  // mejora valida, pero es una decision de rendimiento aparte, no parte de este
+  // arreglo.
+  const {
+    cargoTypes,
+    loading: cargandoTiposDeCarga,
+    error: errorTiposDeCarga,
+    reload: reintentarTiposDeCarga,
+  } = useCargoTypes(serviceType === 'parcel');
 
   /** Cuantos van de verdad. En una encomienda son cero, sin importar lo que
    * quedara guardado en el borrador de la ultima vez que fue un viaje de
@@ -1099,6 +1114,9 @@ export default function PassengerHome() {
             descripcionEncomienda={parcelDescription}
             onCambiarDescripcionEncomienda={setParcelDescription}
             tiposDeCarga={cargoTypes}
+            cargandoTiposDeCarga={cargandoTiposDeCarga}
+            errorTiposDeCarga={errorTiposDeCarga}
+            onReintentarTiposDeCarga={reintentarTiposDeCarga}
             carga={cargoItems}
             onCambiarCantidadDeCarga={setCargoItemQuantity}
             tarifa={tarifa.quote}
@@ -1396,6 +1414,9 @@ interface ResumenDelViajeProps {
   descripcionEncomienda: string;
   onCambiarDescripcionEncomienda: (valor: string) => void;
   tiposDeCarga: CargoType[];
+  cargandoTiposDeCarga: boolean;
+  errorTiposDeCarga: string | null;
+  onReintentarTiposDeCarga: () => void;
   carga: CargoItem[];
   onCambiarCantidadDeCarga: (cargoTypeId: string, cantidad: number) => void;
   tarifa: FareQuote | null;
@@ -1431,6 +1452,9 @@ function ResumenDelViaje({
   descripcionEncomienda,
   onCambiarDescripcionEncomienda,
   tiposDeCarga,
+  cargandoTiposDeCarga,
+  errorTiposDeCarga,
+  onReintentarTiposDeCarga,
   carga,
   onCambiarCantidadDeCarga,
   tarifa,
@@ -1590,6 +1614,9 @@ function ResumenDelViaje({
         visible={selectorDeCargaVisible}
         onRequestClose={() => setSelectorDeCargaVisible(false)}
         cargoTypes={tiposDeCarga}
+        loading={cargandoTiposDeCarga}
+        error={errorTiposDeCarga}
+        onRetry={onReintentarTiposDeCarga}
         items={carga}
         onChangeQuantity={onCambiarCantidadDeCarga}
       />
