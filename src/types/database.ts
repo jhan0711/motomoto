@@ -1338,6 +1338,22 @@ export type Database = {
           uploaded_by_name: string;
         }[];
       };
+      admin_list_driver_locations: {
+        Args: never;
+        Returns: {
+          age_seconds: number;
+          driver_id: string;
+          full_name: string;
+          has_active_ride: boolean;
+          heading: number;
+          is_available: boolean;
+          latitude: number;
+          longitude: number;
+          plate: string;
+          unit_number: number;
+          updated_at: string;
+        }[];
+      };
       admin_list_drivers: {
         Args: never;
         Returns: {

@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Panel administrativo - MotoMoto',
-  description: 'Panel de administracion de la plataforma MotoMoto',
+  title: 'Panel administrativo - AmalfiGoApp',
+  description: 'Panel de administracion de la plataforma AmalfiGoApp',
 };
 
 /*

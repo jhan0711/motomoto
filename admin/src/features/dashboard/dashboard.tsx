@@ -1,15 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertCircle, Inbox, LoaderCircle, RefreshCw, SignalZero } from 'lucide-react';
+import { AlertCircle, Inbox, LoaderCircle, RefreshCw, SignalZero, Users } from 'lucide-react';
 import { useActiveServices } from './use-active-services';
+import { useAvailableDrivers } from './use-available-drivers';
+import { useDriverLocations } from './use-driver-locations';
 import { ServiceCard } from './service-card';
 import { AssignDialog } from './assign-dialog';
+import { FleetMap } from './fleet-map';
 import { ESTADOS_VIVOS, ETIQUETA_ESTADO } from './types';
 import type { ActiveService } from './types';
 
 export function Dashboard() {
   const { servicios, cargando, error, actualizadoEn, recargar } = useActiveServices();
+  const disponibles = useAvailableDrivers();
+  const { ubicaciones } = useDriverLocations();
 
   /*
    * Se guarda el servicio entero y no solo su identificador. El tablero se
@@ -53,13 +58,27 @@ export function Dashboard() {
         </button>
       </header>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-4">
         {porEstado.map(({ estado, cuantos }) => (
           <div key={estado} className="rounded-xl border border-border bg-surface px-4 py-3">
             <p className="text-2xl font-semibold text-text-primary">{cuantos}</p>
             <p className="mt-0.5 text-sm text-text-secondary">{ETIQUETA_ESTADO[estado]}</p>
           </div>
         ))}
+
+        {/*
+         * Aparte de los estados de un servicio: esto cuenta conductores, no
+         * servicios, y mezclarlo en `porEstado` habria hecho pasar por lo
+         * mismo dos cosas que no lo son -un conductor disponible puede no
+         * tener ningun servicio esperandolo-.
+         */}
+        <div className="rounded-xl border border-border bg-surface px-4 py-3">
+          <p className="flex items-center gap-1.5 text-2xl font-semibold text-text-primary">
+            <Users size={18} className="text-text-tertiary" />
+            {disponibles.cargando ? '…' : disponibles.cuantos}
+          </p>
+          <p className="mt-0.5 text-sm text-text-secondary">Conductores disponibles</p>
+        </div>
       </div>
 
       {error !== null && (
@@ -132,6 +151,9 @@ export function Dashboard() {
           }}
         />
       )}
+
+      <h2 className="mt-8 text-lg font-semibold text-text-primary">Mapa de la flota</h2>
+      <FleetMap ubicaciones={ubicaciones} />
     </section>
   );
 }
