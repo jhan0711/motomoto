@@ -9,22 +9,22 @@ import type { Vehicle, VehicleStatus } from './types';
  */
 const MENSAJES: Record<string, string> = {
   NOT_AN_ADMIN: 'Tu cuenta ya no tiene permiso para hacer esto. Vuelve a entrar.',
-  VEHICLE_NOT_FOUND: 'No encontramos ese motorratón.',
+  VEHICLE_NOT_FOUND: 'No encontramos ese motocarro.',
   DRIVER_NOT_FOUND: 'No encontramos a ese conductor.',
-  INVALID_UNIT_NUMBER: 'El número de motorratón debe ser mayor que cero.',
+  INVALID_UNIT_NUMBER: 'El número de motocarro debe ser mayor que cero.',
   INVALID_PLATE: 'La placa debe tener entre 5 y 10 caracteres.',
   INVALID_CAPACITY: 'La capacidad debe estar entre 1 y 10 pasajeros.',
-  UNIT_NUMBER_TAKEN: 'Ya existe un motorratón con ese número.',
-  PLATE_TAKEN: 'Ya existe un motorratón con esa placa.',
-  VEHICLE_NOT_ACTIVE: 'Ese motorratón no está activo, así que no se puede asignar.',
+  UNIT_NUMBER_TAKEN: 'Ya existe un motocarro con ese número.',
+  PLATE_TAKEN: 'Ya existe un motocarro con esa placa.',
+  VEHICLE_NOT_ACTIVE: 'Ese motocarro no está activo, así que no se puede asignar.',
   VEHICLE_HAS_ACTIVE_RIDE:
-    'Ese motorratón tiene un servicio en curso. Resuélvelo antes de cambiarle el estado.',
+    'Ese motocarro tiene un servicio en curso. Resuélvelo antes de cambiarle el estado.',
   CAPACITY_BELOW_CURRENT_LOAD:
-    'Ese motorratón lleva más pasajeros ahora mismo de los que quieres dejarle.',
+    'Ese motocarro lleva más pasajeros ahora mismo de los que quieres dejarle.',
   ASSIGNMENT_HAS_ACTIVE_RIDE:
-    'Hay un servicio en curso con ese conductor o ese motorratón. Resuélvelo primero.',
-  ASSIGNMENT_UNCHANGED: 'Ese conductor ya lleva ese motorratón.',
-  NO_ASSIGNMENT: 'Ese conductor no tiene ningún motorratón asignado.',
+    'Hay un servicio en curso con ese conductor o ese motocarro. Resuélvelo primero.',
+  ASSIGNMENT_UNCHANGED: 'Ese conductor ya lleva ese motocarro.',
+  NO_ASSIGNMENT: 'Ese conductor no tiene ningún motocarro asignado.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {

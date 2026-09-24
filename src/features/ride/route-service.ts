@@ -26,7 +26,7 @@ import type { Coordinates } from '@/features/map/region';
  * mucho menos que una peticion entera.
  *
  * AVISO SOBRE EL TIEMPO: el perfil `driving` calcula para un coche. Un
- * motorraton va mas despacio, asi que el tiempo saldra optimista. No se le
+ * motocarro va mas despacio, asi que el tiempo saldra optimista. No se le
  * aplica ningun factor de correccion porque seria inventarse otro numero; con
  * viajes reales encima se podra calibrar de verdad (Fase 24).
  *

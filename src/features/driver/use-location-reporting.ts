@@ -22,20 +22,20 @@ import { reportLocation } from './driver-service';
  * mientras lleva a alguien. La diferencia no es capricho: en el primer caso la
  * posicion sirve para decidir a quien se le ofrece un viaje, y treinta segundos
  * de desfase no cambian esa decision; en el segundo hay un pasajero mirando el
- * mapa para saber si el motorraton ya viene, y ahi treinta segundos son una
+ * mapa para saber si el motocarro ya viene, y ahi treinta segundos son una
  * eternidad. Los dos valores viven en `app_settings`, no aqui.
  *
  * "Diez segundos O cincuenta metros" es literal: manda el que llegue antes. El
- * temporizador sostiene la marca de tiempo aunque el motorraton este parado en
+ * temporizador sostiene la marca de tiempo aunque el motocarro este parado en
  * un semaforo, que es lo que evita que caduque su posicion y desaparezca de las
  * busquedas; y el desplazamiento adelanta el envio cuando avanza deprisa, que es
  * cuando el marcador del pasajero se quedaria mas atras.
  *
  * La segunda es CUANDO se envia, y era un fallo de verdad. Antes solo se enviaba
  * con el interruptor encendido. Pero desde D164 aceptar una oferta puede apagar
- * la disponibilidad, porque el motorraton se lleno: el conductor se quedaba sin
+ * la disponibilidad, porque el motocarro se lleno: el conductor se quedaba sin
  * enviar posicion justo mientras iba a recoger a tres personas, y el pasajero
- * habria visto su motorraton congelado en el sitio donde estaba al aceptar. Un
+ * habria visto su motocarro congelado en el sitio donde estaba al aceptar. Un
  * conductor con un servicio encima envia siempre, tenga el interruptor como lo
  * tenga.
  *
@@ -81,7 +81,7 @@ export interface UseLocationReportingParams {
    * Lleva al menos un servicio encima.
    *
    * Va aparte del interruptor y no mezclado con el, porque las dos cosas pueden
-   * ser distintas: un motorraton lleno esta ocupado y no disponible, y es
+   * ser distintas: un motocarro lleno esta ocupado y no disponible, y es
    * exactamente cuando mas falta hace que se le vea moverse.
    */
   riding: boolean;

@@ -1,9 +1,9 @@
 import { VehiclesList } from '@/features/vehicles/vehicles-list';
 
 export const metadata = {
-  title: 'Motorratones - Panel administrativo',
+  title: 'Motocarros - Panel administrativo',
 };
 
-export default function MotorratonesPage() {
+export default function MotocarrosPage() {
   return <VehiclesList />;
 }

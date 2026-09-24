@@ -93,7 +93,7 @@ export default function DriverHome() {
     coords,
     available: disponible,
     // Con un servicio encima se envia siempre y mas seguido (R9), tenga el
-    // interruptor como lo tenga: puede estar apagado porque el motorraton se
+    // interruptor como lo tenga: puede estar apagado porque el motocarro se
     // lleno, que es justo cuando hay pasajeros esperando verlo llegar.
     riding: viajes.length > 0,
   });
@@ -294,7 +294,7 @@ export default function DriverHome() {
         ofertas.removeOffer(offerId);
 
         // Hay que releer las dos cosas. Desde D161 el servidor ya no apaga la
-        // disponibilidad sin mas: la recalcula, y solo la apaga si el motorraton
+        // disponibilidad sin mas: la recalcula, y solo la apaga si el motocarro
         // se lleno. Sin volver a preguntar, el interruptor diria una cosa y el
         // servidor otra, y ademas los asientos libres que se pintan mas arriba se
         // calculan a partir de los viajes.
@@ -318,7 +318,7 @@ export default function DriverHome() {
         ofertas.removeOffer(offerId);
       }
 
-      // Si se lleno, lo que la pantalla creia saber del motorraton ya no vale.
+      // Si se lleno, lo que la pantalla creia saber del motocarro ya no vale.
       // Puede haber aceptado otra oferta hace un instante, asi que se releen los
       // viajes y el estado para que los asientos libres cuadren con la realidad.
       if (codigo === RIDE_ERROR_CODES.vehicleCapacityExceeded) {
@@ -370,7 +370,7 @@ export default function DriverHome() {
    * con el conductor actuando sobre informacion falsa:
    *
    *   - **Otro conductor acepta primero.** La oferta se quedaba en pantalla hasta
-   *     caducar, y al tocarla recibia "otro motorratón tomó este servicio".
+   *     caducar, y al tocarla recibia "otro motocarro tomó este servicio".
    *     `use-driver-offers` lo dejo escrito como limite conocido a la espera de
    *     que se publicara `ride_requests`, que es lo que se hizo en el paso 2
    *   - **El pasajero cancela un servicio ya aceptado.** Este es el peor: la
@@ -432,7 +432,7 @@ export default function DriverHome() {
    * Cuanta gente lleva encima y cuanto sitio le queda.
    *
    * Se cuenta aqui en lugar de pedirselo al servidor porque el dato ya esta: los
-   * viajes activos de un conductor van todos en su motorraton, que es una regla
+   * viajes activos de un conductor van todos en su motocarro, que es una regla
    * que la base de datos hace cumplir desde D161. Sumar lo que ya tenemos evita
    * una consulta mas por cada vez que cambia algo.
    */
@@ -465,13 +465,13 @@ export default function DriverHome() {
               <Text variant="caption" color="textSecondary">
                 {/* Desde D161 el interruptor puede apagarse solo, sin que el
                     conductor lo toque: ocurre en cuanto acepta el servicio que
-                    llena el motorraton. Decirle ahi "no recibirás solicitudes
+                    llena el motocarro. Decirle ahi "no recibirás solicitudes
                     mientras estés en este estado" le haria buscar que hizo mal,
                     cuando no hizo nada. */}
                 {disponible
                   ? 'Estás recibiendo solicitudes de servicio.'
                   : aBordo > 0 && libres === 0
-                    ? 'Tu motorratón está completo. Volverás a recibir solicitudes cuando termines un servicio.'
+                    ? 'Tu motocarro está completo. Volverás a recibir solicitudes cuando termines un servicio.'
                     : 'No recibirás solicitudes mientras estés en este estado.'}
               </Text>
             </View>
@@ -488,23 +488,23 @@ export default function DriverHome() {
 
         <Card variant="outlined" padding="md" style={styles.vehicle}>
           <Text variant="caption" color="textTertiary">
-            MOTORRATÓN ASIGNADO
+            MOTOCARRO ASIGNADO
           </Text>
           {estado?.vehicle === null || estado === null ? (
             <>
               <Text variant="subheading">Sin asignar</Text>
               <Text variant="caption" color="textSecondary">
-                La empresa todavía no te asignó un motorratón. Sin él no podrás tomar servicios.
+                La empresa todavía no te asignó un motocarro. Sin él no podrás tomar servicios.
               </Text>
             </>
           ) : (
             <>
-              <Text variant="subheading">Motorratón {estado.vehicle.unitNumber}</Text>
+              <Text variant="subheading">Motocarro {estado.vehicle.unitNumber}</Text>
               <Text variant="caption" color="textSecondary">
                 Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
               </Text>
               {/* Los asientos libres solo aparecen cuando lleva a alguien. Con el
-                  motorraton vacio seria repetir la capacidad con otras palabras, y
+                  motocarro vacio seria repetir la capacidad con otras palabras, y
                   la linea de arriba ya la dice. */}
               {aBordo > 0 && (
                 <Text variant="bodyStrong" color={libres === 0 ? 'textSecondary' : 'brand'}>
@@ -681,7 +681,7 @@ export default function DriverHome() {
               title="Sin solicitudes"
               description={
                 sinVehiculo
-                  ? 'Necesitas un motorratón asignado para recibir servicios.'
+                  ? 'Necesitas un motocarro asignado para recibir servicios.'
                   : 'Cambia tu estado a disponible para empezar a recibir servicios.'
               }
             />
@@ -748,7 +748,7 @@ function Aviso({ icon: Icon, titulo, detalle, accion, accionSecundaria }: AvisoP
  * La despedida del conductor.
  *
  * Mas corta que la del pasajero a proposito. El pasajero se esta bajando del
- * motorraton y puede leer; el conductor tiene la siguiente solicitud entrando por
+ * motocarro y puede leer; el conductor tiene la siguiente solicitud entrando por
  * la misma pantalla, asi que aqui solo va lo que hace falta para decidir: a quien
  * llevo y dos botones.
  *

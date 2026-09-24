@@ -80,7 +80,7 @@ const MESSAGES: Record<string, string> = {
 
   // Situaciones normales de la operación. No son fallos de nadie, y por eso el
   // texto no pide disculpas ni sugiere reintentar sin sentido.
-  NO_DRIVERS_AVAILABLE: 'No hay motorratones disponibles en este momento.',
+  NO_DRIVERS_AVAILABLE: 'No hay motocarros disponibles en este momento.',
   ACTIVE_REQUEST_EXISTS: 'Ya tienes un servicio en curso.',
 
   // Cancelacion.
@@ -109,12 +109,12 @@ const MESSAGES: Record<string, string> = {
   // de que varios conductores vean la misma solicitud. El criterio de aceptacion
   // 3 lo dice con todas las letras: quien pierde "recibe un mensaje claro, no un
   // error". Por eso el texto no se disculpa ni sugiere reintentar.
-  REQUEST_ALREADY_TAKEN: 'Otro motorratón tomó este servicio.',
+  REQUEST_ALREADY_TAKEN: 'Otro motocarro tomó este servicio.',
   OFFER_EXPIRED: 'Se acabó el tiempo para responder a esta solicitud.',
   OFFER_ALREADY_ANSWERED: 'Ya habías respondido a esta solicitud.',
   OFFER_NOT_AVAILABLE: 'Esa solicitud ya no está disponible.',
   OFFER_NOT_FOUND: 'Esa solicitud no es tuya.',
-  NO_VEHICLE_ASSIGNED: 'No tienes un motorratón asignado. Comunícate con la empresa.',
+  NO_VEHICLE_ASSIGNED: 'No tienes un motocarro asignado. Comunícate con la empresa.',
 
   // Recoger pasajeros en ruta, decision D161.
   //
@@ -123,9 +123,9 @@ const MESSAGES: Record<string, string> = {
   // ofertas vivas a la vez, puede aceptar una y descubrir al tocar la otra que ya
   // no le caben. Pasa entre la oferta y el toque, y no hay nada que corregir.
   VEHICLE_CAPACITY_EXCEEDED: 'Ya no te quedan asientos libres para ese servicio.',
-  DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motorratón.',
+  DRIVER_VEHICLE_CONFLICT: 'Tienes un servicio en curso con otro motocarro.',
   /*
-   * Doble turno (D246): dos conductores comparten motorratón y solo uno puede
+   * Doble turno (D246): dos conductores comparten motocarro y solo uno puede
    * estar disponible a la vez.
    *
    * Este texto es el RESPALDO. El servidor manda un mensaje mejor —dice el
@@ -134,7 +134,7 @@ const MESSAGES: Record<string, string> = {
    * llamándolo y sin el nombre tiene que llamar a la oficina.
    */
   COMPANION_ALREADY_AVAILABLE:
-    'Otro conductor ya está conectado con tu motorratón. Solo uno puede estar disponible a la vez.',
+    'Otro conductor ya está conectado con tu motocarro. Solo uno puede estar disponible a la vez.',
 
   // Las calificaciones, desde la Fase 17.
   //
@@ -270,7 +270,7 @@ export const RIDE_ERROR_CODES = {
   noVehicle: 'NO_VEHICLE_ASSIGNED',
 
   // Se lleno entre que le llego la oferta y la toco. La pantalla retira la
-  // tarjeta y vuelve a leer sus viajes, porque el motorraton ya no esta como ella
+  // tarjeta y vuelve a leer sus viajes, porque el motocarro ya no esta como ella
   // creia.
   vehicleCapacityExceeded: 'VEHICLE_CAPACITY_EXCEEDED',
 

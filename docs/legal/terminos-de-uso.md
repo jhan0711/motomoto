@@ -1,6 +1,6 @@
 # Términos y Condiciones de Uso — AmalfiGoApp
 
-**Última actualización:** 7 de septiembre de 2026
+**Última actualización:** 24 de septiembre de 2026
 
 Al crear una cuenta o usar la aplicación **AmalfiGoApp** ("la aplicación"), la
 persona acepta estos términos. Si no está de acuerdo, no debe usar la aplicación.
@@ -8,8 +8,8 @@ persona acepta estos términos. Si no está de acuerdo, no debe usar la aplicaci
 ## 1. Qué es AmalfiGoApp
 
 AmalfiGoApp es una aplicación que **conecta** a personas que necesitan un
-transporte en motorratón (mototaxi) dentro del municipio de Amalfi, Antioquia,
-con conductores de motorratón disponibles. La aplicación:
+transporte en motocarro (mototaxi) dentro del municipio de Amalfi, Antioquia,
+con conductores de motocarro disponibles. La aplicación:
 
 - Permite solicitar un servicio, ver el valor estimado **antes** de confirmarlo,
   y seguir al conductor en el mapa mientras llega.
@@ -90,7 +90,7 @@ perjuicio de las acciones legales que correspondan.
   vehículo, del cumplimiento de las normas de tránsito y de contar con los
   documentos y seguros que exija la ley para prestar el servicio.
 - El conductor declara estar autorizado para prestar el servicio de transporte
-  en motorratón en las condiciones en que lo hace, incluyendo el cumplimiento de
+  en motocarro en las condiciones en que lo hace, incluyendo el cumplimiento de
   la normativa municipal de movilidad aplicable en Amalfi.
 
 ## 8. Limitación de responsabilidad

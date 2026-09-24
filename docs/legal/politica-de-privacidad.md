@@ -1,6 +1,6 @@
 # Política de Tratamiento de Datos Personales — AmalfiGoApp
 
-**Última actualización:** 7 de septiembre de 2026
+**Última actualización:** 24 de septiembre de 2026
 
 Esta política explica cómo se recogen, usan, almacenan y protegen los datos
 personales de las personas que usan la aplicación **AmalfiGoApp** ("la
@@ -38,7 +38,7 @@ contacto.
 | Dato                                         | Para qué                                                            |
 | --------------------------------------------- | -------------------------------------------------------------------- |
 | Documento de identidad                       | Verificar la identidad del conductor. Se conserva mientras la cuenta esté activa como conductor y hasta doce (12) meses después de su inactivación, salvo que la ley exija un plazo mayor |
-| Matrícula del vehículo (motorratón)          | Identificar el vehículo asignado al servicio                         |
+| Matrícula del vehículo (motocarro)          | Identificar el vehículo asignado al servicio                         |
 | Ubicación durante la jornada / los servicios | Ofrecer servicios cercanos y permitir el seguimiento en tiempo real  |
 
 ### 2.3. Datos que NO se recogen

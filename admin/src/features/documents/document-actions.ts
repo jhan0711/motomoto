@@ -18,7 +18,7 @@ const MENSAJES: Record<string, string> = {
   EXPIRY_REQUIRED: 'Ese tipo de documento necesita fecha de vencimiento.',
   INVALID_EXPIRY_DATES: 'El vencimiento tiene que ser posterior a la fecha de expedición.',
   DRIVER_NOT_FOUND: 'No encontramos a ese conductor.',
-  VEHICLE_NOT_FOUND: 'No encontramos ese motorratón.',
+  VEHICLE_NOT_FOUND: 'No encontramos ese motocarro.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {

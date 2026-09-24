@@ -70,7 +70,7 @@ export function backgroundLocationOptions(
     // OBLIGATORIO junto al intervalo, no como un adelanto: una posicion solo
     // se entrega si YA paso el intervalo *Y ADEMAS* el aparato se movio esa
     // distancia. Con 25 m puestos aqui, `driver_locations.updated_at` dejaba
-    // de avanzar en cuanto el motorraton se quedaba quieto -verificado en la
+    // de avanzar en cuanto el motocarro se quedaba quieto -verificado en la
     // tablet fisica el 2026-09-15 con `adb logcat`, que mostraba
     // `FusedLocation: ... blocked - too close` cada ~30 s sin fin-. Vale para
     // los dos estados, "disponible" y "en viaje": este campo no pertenece

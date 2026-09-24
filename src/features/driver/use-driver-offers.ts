@@ -20,7 +20,7 @@ import { fetchOffers, type DriverOffer } from './driver-service';
  *
  * AQUEL LIMITE YA NO EXISTE. Hasta la Fase 13, si otro conductor aceptaba
  * primero, esta lista no se enteraba: la oferta se quedaba en pantalla hasta
- * caducar y quien la tocaba recibia "otro motorratón tomó este servicio". Se
+ * caducar y quien la tocaba recibia "otro motocarro tomó este servicio". Se
  * dejo escrito que hacia falta publicar tambien `ride_requests`, y eso se hizo.
  * Quien recarga esta lista en ese caso no es este hook, sino `useRequestRealtime`
  * desde la pantalla del conductor, que escucha la solicitud y llama a `refresh`.

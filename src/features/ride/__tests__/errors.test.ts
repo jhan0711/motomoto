@@ -4,7 +4,7 @@ describe('toRideFailure', () => {
   it('traduce un hint conocido a su codigo y su texto', () => {
     const f = toRideFailure({ hint: 'NO_DRIVERS_AVAILABLE', code: 'P0001' });
     expect(f.code).toBe('NO_DRIVERS_AVAILABLE');
-    expect(f.message).toBe('No hay motorratones disponibles en este momento.');
+    expect(f.message).toBe('No hay motocarros disponibles en este momento.');
   });
 
   it('recorta los espacios del hint antes de compararlo', () => {

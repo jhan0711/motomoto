@@ -162,7 +162,7 @@ function Contenido({ trip }: { trip: PassengerTripDetail }) {
           </Text>
           <Dato etiqueta="Conductor" valor={trip.driverName} />
           {trip.unitNumber !== null && (
-            <Dato etiqueta="Motorratón" valor={`Unidad ${trip.unitNumber}`} />
+            <Dato etiqueta="Motocarro" valor={`Unidad ${trip.unitNumber}`} />
           )}
           {trip.plate !== null && <Dato etiqueta="Placa" valor={trip.plate} />}
         </Card>

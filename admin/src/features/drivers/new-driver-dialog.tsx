@@ -110,7 +110,7 @@ export function NewDriverDialog({ onCerrar, onCrear }: Props) {
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="vehiculo-cond" className="text-sm font-medium text-text-primary">
-              Motorratón
+              Motocarro
             </label>
             <select
               id="vehiculo-cond"

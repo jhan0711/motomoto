@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase';
 /**
  * Parametros operativos que la empresa configura, leidos desde `app_settings`.
  *
- * El maximo de pasajeros no se escribe en el codigo (R11). Hoy los motorratones
+ * El maximo de pasajeros no se escribe en el codigo (R11). Hoy los motocarros
  * llevan tres, pero eso es un dato de la flota, no una verdad del software: el
  * dia que entre un vehiculo de cuatro plazas la empresa cambia un numero en el
  * panel y la aplicacion se entera sola.

@@ -292,7 +292,7 @@ export function ActiveRideCard({
         description={
           ride.status === 'in_progress'
             ? `${ride.passengerName} ya va contigo. Se cerrará el servicio y no se puede deshacer.`
-            : `Le avisamos a ${ride.passengerName} y buscamos otro motorratón para su servicio.`
+            : `Le avisamos a ${ride.passengerName} y buscamos otro motocarro para su servicio.`
         }
         icon={Ban}
         tone="danger"

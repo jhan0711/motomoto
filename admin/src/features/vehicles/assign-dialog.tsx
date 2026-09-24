@@ -16,7 +16,7 @@ interface Props {
 /**
  * Elegir a quien se le entrega una unidad.
  *
- * **Solo salen los conductores aprobados**: entregarle un motorraton a alguien
+ * **Solo salen los conductores aprobados**: entregarle un motocarro a alguien
  * que la empresa todavia no ha aprobado seria dejar salir a trabajar a quien no
  * puede. El servidor no lo comprueba -asignar a un pendiente es legitimo si la
  * empresa quiere prepararlo antes de aprobarlo-, pero el camino normal de la
@@ -53,7 +53,7 @@ export function AssignDialog({ vehiculo, onCerrar, onAsignar }: Props) {
     setGuardando(true);
     const r = await onAsignar(elegido);
     setGuardando(false);
-    if (!r.ok) setError(r.mensaje ?? 'No pudimos asignar el motorratón.');
+    if (!r.ok) setError(r.mensaje ?? 'No pudimos asignar el motocarro.');
   }
 
   return (
@@ -65,7 +65,7 @@ export function AssignDialog({ vehiculo, onCerrar, onAsignar }: Props) {
     >
       <div className="w-full max-w-[460px] rounded-xl border border-border bg-surface p-5">
         <h3 id="titulo-asignar" className="font-medium text-text-primary">
-          Asignar el motorratón {vehiculo.unit_number}
+          Asignar el motocarro {vehiculo.unit_number}
         </h3>
 
         {cargando ? (
@@ -99,7 +99,7 @@ export function AssignDialog({ vehiculo, onCerrar, onAsignar }: Props) {
                * transaccion, y eso conviene que se sepa de antemano.
                */}
               <p className="text-xs text-text-secondary">
-                Si el conductor ya lleva otro motorratón, esa asignación se cierra automáticamente.
+                Si el conductor ya lleva otro motocarro, esa asignación se cierra automáticamente.
               </p>
             </div>
 

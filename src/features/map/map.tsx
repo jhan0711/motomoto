@@ -64,7 +64,7 @@ export interface MapMarker {
 }
 
 /**
- * El motorraton, moviendose por el mapa.
+ * El motocarro, moviendose por el mapa.
  *
  * Va aparte de `markers` y no como una variante suya porque no es lo mismo: los
  * marcadores senalan sitios que no se mueven, y este es un vehiculo que avanza.
@@ -74,7 +74,7 @@ export interface MapVehicle {
   /**
    * Atenuado cuando la posicion ya no es de fiar.
    *
-   * Un motorraton quieto porque el conductor perdio cobertura no puede pintarse
+   * Un motocarro quieto porque el conductor perdio cobertura no puede pintarse
    * igual que uno que de verdad esta ahi. El texto de la hoja lo explica; esto
    * es lo que se ve sin leer.
    */
@@ -112,7 +112,7 @@ export interface MapProps {
   routes?: MapRoute[];
   /** Puntos senalados, como la recogida y el destino. */
   markers?: MapMarker[];
-  /** El motorraton asignado, cuando ya viene uno. */
+  /** El motocarro asignado, cuando ya viene uno. */
   vehicle?: MapVehicle | null;
   /**
    * A false, el mapa se mira pero no se toca.
@@ -437,7 +437,7 @@ function RoutePoint({ color, filled }: { color: string; filled: boolean }) {
 }
 
 /**
- * El motorraton en el mapa del pasajero.
+ * El motocarro en el mapa del pasajero.
  *
  * Disco de marca con el icono del vehiculo y un aro blanco alrededor, que es lo
  * que lo mantiene visible tanto sobre asfalto oscuro como sobre un parque. El

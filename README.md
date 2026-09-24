@@ -1,6 +1,6 @@
 # AmalfiGoApp
 
-Plataforma movil para solicitar servicios de transporte en motorratones, vehiculos de tres
+Plataforma movil para solicitar servicios de transporte en motocarros, vehiculos de tres
 ruedas tipo tuk-tuk con capacidad para hasta tres pasajeros.
 
 Prueba piloto en el municipio de Amalfi, Antioquia, Colombia.

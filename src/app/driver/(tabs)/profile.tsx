@@ -30,8 +30,8 @@ import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
  * number and their approval status are set by the company from the web panel,
  * per the Phase 0 rules, so those fields are read-only here by design.
  *
- * EL MOTORRATON Y LA CALIFICACION ERAN MAQUETA HASTA LA FASE 13. Esta pantalla
- * nacio en la Fase 4 con datos escritos a mano, "Motorraton 12, placa ABC12", y
+ * EL MOTOCARRO Y LA CALIFICACION ERAN MAQUETA HASTA LA FASE 13. Esta pantalla
+ * nacio en la Fase 4 con datos escritos a mano, "Motocarro 12, placa ABC12", y
  * cuando la Fase 12 conecto la pantalla de inicio al servidor esta se quedo
  * atras. El resultado era que inicio y perfil ensenaban placas distintas del
  * mismo vehiculo, y la de aqui no existia en ninguna parte.
@@ -92,18 +92,18 @@ export default function DriverProfile() {
 
       <Card variant="outlined" padding="md">
         <Text variant="caption" color="textTertiary">
-          MOTORRATÓN ASIGNADO
+          MOTOCARRO ASIGNADO
         </Text>
         {estado?.vehicle == null ? (
           <>
             <Text variant="title">Sin asignar</Text>
             <Text variant="caption" color="textSecondary">
-              La empresa todavía no te asignó un motorratón.
+              La empresa todavía no te asignó un motocarro.
             </Text>
           </>
         ) : (
           <>
-            <Text variant="title">Motorratón {estado.vehicle.unitNumber}</Text>
+            <Text variant="title">Motocarro {estado.vehicle.unitNumber}</Text>
             <Text variant="caption" color="textSecondary">
               Placa {estado.vehicle.plate} · Capacidad {estado.vehicle.maxPassengers} pasajeros
             </Text>

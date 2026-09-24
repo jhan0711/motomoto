@@ -10,7 +10,7 @@ import { UploadDialog } from './upload-dialog';
 interface Props {
   owner: DocumentOwner;
   ownerId: string;
-  /** Para el texto del dialogo: "los papeles de Ana" o "del motorratón 99". */
+  /** Para el texto del dialogo: "los papeles de Ana" o "del motocarro 99". */
   ownerNombre: string;
 }
 

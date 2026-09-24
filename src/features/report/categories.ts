@@ -21,7 +21,7 @@ export const MOTIVOS_PASAJERO = [
   'El conductor no llegó o tardó mucho',
   'Trato del conductor',
   'Conducción imprudente',
-  'Olvidé algo en el motorratón',
+  'Olvidé algo en el motocarro',
   'Problema con la aplicación',
   'Otro',
 ] as const;

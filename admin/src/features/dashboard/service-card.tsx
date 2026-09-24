@@ -148,7 +148,7 @@ export function ServiceCard({
               <dd className="mt-0.5 text-text-primary">
                 {servicio.driver_name}
                 {servicio.unit_number !== null && (
-                  <span className="text-text-secondary"> · Motorratón {servicio.unit_number}</span>
+                  <span className="text-text-secondary"> · Motocarro {servicio.unit_number}</span>
                 )}
                 {/*
                  * Que el conductor este bloqueado se dice AQUI, pegado a su

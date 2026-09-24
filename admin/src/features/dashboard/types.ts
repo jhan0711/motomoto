@@ -27,7 +27,7 @@ export type AssignableDriver =
 export const ESTADOS_VIVOS = ['searching', 'assigned', 'in_progress'] as const;
 
 export const ETIQUETA_ESTADO: Record<string, string> = {
-  searching: 'Buscando motorratón',
+  searching: 'Buscando motocarro',
   assigned: 'Conductor asignado',
   in_progress: 'En recorrido',
 };

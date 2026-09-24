@@ -63,7 +63,7 @@ export function VehiclesList() {
     <section>
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-text-primary">Motorratones</h2>
+          <h2 className="text-lg font-semibold text-text-primary">Motocarros</h2>
           <p className="mt-0.5 text-sm text-text-secondary">
             {cargando
               ? 'Consultando…'
@@ -79,7 +79,7 @@ export function VehiclesList() {
           className="btn btn-primario h-10 px-3"
         >
           <Plus size={16} />
-          Nuevo motorratón
+          Nuevo motocarro
         </button>
       </header>
 
@@ -97,14 +97,14 @@ export function VehiclesList() {
         {cargando && (
           <div className="flex items-center justify-center gap-2 rounded-xl border border-border bg-surface py-12 text-text-secondary">
             <LoaderCircle size={18} className="animate-spin" />
-            Consultando los motorratones…
+            Consultando los motocarros…
           </div>
         )}
 
         {!cargando && vehiculos.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface py-12 text-center">
             <Inbox size={28} className="text-text-tertiary" />
-            <p className="font-medium text-text-primary">Todavía no hay motorratones</p>
+            <p className="font-medium text-text-primary">Todavía no hay motocarros</p>
             <p className="max-w-sm text-sm text-text-secondary">
               Da de alta el primero con el botón de arriba.
             </p>
@@ -199,7 +199,7 @@ export function VehiclesList() {
                 disabled={trabajando || vehiculo.status !== 'active'}
                 title={
                   vehiculo.status !== 'active'
-                    ? 'Solo se pueden asignar motorratones activos.'
+                    ? 'Solo se pueden asignar motocarros activos.'
                     : undefined
                 }
                 onClick={() => setAsignando(vehiculo)}
@@ -230,7 +230,7 @@ export function VehiclesList() {
                     const r = await quitarVehiculo(conductor.id);
                     setTrabajando(false);
                     if (r.ok) void consultar();
-                    else setError(r.mensaje ?? 'No pudimos quitar el motorratón.');
+                    else setError(r.mensaje ?? 'No pudimos quitar el motocarro.');
                   }}
                   className="btn btn-secundario h-9 gap-1.5 px-3"
                 >
@@ -263,7 +263,7 @@ export function VehiclesList() {
                 <DocumentsPanel
                   owner="vehicle"
                   ownerId={vehiculo.vehicle_id}
-                  ownerNombre={`Motorratón ${vehiculo.unit_number} · ${vehiculo.plate}`}
+                  ownerNombre={`Motocarro ${vehiculo.unit_number} · ${vehiculo.plate}`}
                 />
               </div>
             )}

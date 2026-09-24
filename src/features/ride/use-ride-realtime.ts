@@ -10,7 +10,7 @@ import { supabase } from '@/lib/supabase';
  * esa tabla: iniciar el recorrido y finalizarlo. Salir hacia el punto de recogida
  * y **anunciar la llegada** se quedan en `rides`, asi que por aquel canal no
  * suena nada. Se comprobo en pantalla: el conductor salia y el pasajero seguia
- * leyendo "un motorratón tomó tu servicio".
+ * leyendo "un motocarro tomó tu servicio".
  *
  * Y de las dos que se perdian, la de la llegada es la que mas importa: es el
  * aviso que hace que el pasajero salga a la calle.

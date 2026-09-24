@@ -129,7 +129,7 @@ export function Dashboard() {
             <Inbox size={28} className="text-text-tertiary" />
             <p className="font-medium text-text-primary">No hay servicios en curso</p>
             <p className="max-w-sm text-sm text-text-secondary">
-              Aquí aparecerán las solicitudes en cuanto un pasajero pida un motorratón.
+              Aquí aparecerán las solicitudes en cuanto un pasajero pida un motocarro.
             </p>
           </div>
         )}

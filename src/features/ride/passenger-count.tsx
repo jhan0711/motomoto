@@ -84,7 +84,7 @@ export function PassengerCount({ value, onChange, max }: PassengerCountProps) {
 
       {avisoLimite && (
         <Text variant="caption" color="textSecondary">
-          Un motorratón lleva hasta {max} pasajeros. Si van más, pide dos servicios por separado.
+          Un motocarro lleva hasta {max} pasajeros. Si van más, pide dos servicios por separado.
         </Text>
       )}
     </View>

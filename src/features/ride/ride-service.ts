@@ -176,7 +176,7 @@ export interface CreateRequestInput {
  * Crea la solicitud y la deja ofrecida a los conductores cercanos.
  *
  * Devuelve el identificador de la solicitud. Todo lo que puede salir mal llega
- * como codigo en el `hint` y sale de aqui ya traducido: sin motorratones
+ * como codigo en el `hint` y sale de aqui ya traducido: sin motocarros
  * disponibles, fuera de la zona de servicio, un servicio ya en curso, la cuenta
  * bloqueada o el telefono sin registrar.
  */
@@ -301,7 +301,7 @@ export async function fetchFinishedRequest(): Promise<Result<FinishedRequest | n
  * Donde esta el conductor ahora mismo, y de cuando es ese dato.
  *
  * La antiguedad viaja siempre con la posicion y no es un extra. Un marcador
- * quieto puede significar que el motorraton esta parado en un semaforo o que el
+ * quieto puede significar que el motocarro esta parado en un semaforo o que el
  * conductor se quedo sin cobertura, y son cosas muy distintas para quien espera
  * en la calle. Sin este numero la pantalla no puede distinguirlas, y ensenaria
  * una posicion vieja como si fuera de ahora.
@@ -330,7 +330,7 @@ export interface DriverLocation {
  *
  * Solo existe para ESE caso. Si el conductor cancela antes de recoger, la
  * solicitud vuelve a 'searching' y se reofrece: el pasajero sigue viendo
- * "buscando motorratón", que ya es una pantalla honesta, y no necesita esto.
+ * "buscando motocarro", que ya es una pantalla honesta, y no necesita esto.
  */
 export interface DriverCancelledNotice {
   id: string;
@@ -374,7 +374,7 @@ export async function fetchDriverCancelledNotice(): Promise<Result<DriverCancell
  *
  * Devolver null no es un error: significa que ese conductor no tiene posicion
  * registrada, o que quien pregunta no tiene derecho a verla. Las dos cosas se
- * tratan igual en la pantalla, que simplemente no pinta el motorraton.
+ * tratan igual en la pantalla, que simplemente no pinta el motocarro.
  */
 export async function fetchDriverLocation(
   driverId: string,

@@ -26,7 +26,7 @@ En la sección 4 (Data Safety), la URL de eliminación de datos es
 | Nombre de la app       | `AmalfiGoApp` (máx. 30)                                                                          |
 | Descripción breve      | `Pide un mototaxi en Amalfi. Ve el precio antes y sigue al conductor en el mapa.` (máx. 80 → 79) |
 | Categoría de la app    | **Mapas y navegación**                                                                           |
-| Etiquetas              | mototaxi, transporte, Amalfi, motorratón                                                         |
+| Etiquetas              | mototaxi, transporte, Amalfi, motocarro                                                         |
 | Correo de contacto     | `soporte@amalfigo.app`                                                                           |
 | Sitio web              | `https://amalfigo.app`                                                                           |
 | Teléfono               | (opcional)                                                                                       |
@@ -42,7 +42,7 @@ CÓMO FUNCIONA
 • Escribe a dónde vas. La app reconoce las veredas y los sitios de Amalfi que
   ningún mapa tiene.
 • Ve el valor del servicio ANTES de confirmar. La tarifa la fija la empresa de
-  motorratones, no cambia al final.
+  motocarros, no cambia al final.
 • Cuando un conductor acepta, lo sigues en el mapa mientras llega y ves su placa
   y su número de unidad.
 • Al terminar, califican los dos.
@@ -77,8 +77,8 @@ pasajero (tablet, vc 8) ↔ conductor (emulador), cuentas QA
 ($4.000):
 
 1. `5-tarifa.png` — el resumen con la tarifa y "Confirmar servicio".
-2. `6-conductor-en-camino.png` — "Un motorratón tomó tu servicio", con el
-   motorratón en el mapa acercándose a la recogida.
+2. `6-conductor-en-camino.png` — "Un motocarro tomó tu servicio", con el
+   motocarro en el mapa acercándose a la recogida.
 3. `7-solicitud-conductor.png` — la tarjeta "Nueva solicitud" del conductor
    (Aceptar / Rechazar).
 

@@ -16,13 +16,13 @@ import { supabase } from '@/lib/supabase';
  *
  * Mismo criterio que `useDriverOffers`: **del evento solo se usa el aviso, no su
  * contenido**. La fila que llega por el canal no trae ni el conductor ni el
- * motorraton, asi que al recibirla se vuelve a preguntar. Una lectura de mas cada
+ * motocarro, asi que al recibirla se vuelve a preguntar. Una lectura de mas cada
  * vez que suena, a cambio de tener todo lo que hay que ensenar.
  *
  * QUE RESUELVE. Hasta la Fase 13 el pasajero solo se enteraba de algo al abrir la
  * aplicacion o al volver de segundo plano (D152). Un conductor aceptaba su
- * servicio a los diez segundos y el seguia leyendo "buscando motorraton" con el
- * motorraton ya en camino. Bastaba con no tocar el telefono para no enterarse.
+ * servicio a los diez segundos y el seguia leyendo "buscando motocarro" con el
+ * motocarro ya en camino. Bastaba con no tocar el telefono para no enterarse.
  *
  * ESTO NO SUSTITUYE A D152, SE SUMA. La relectura al volver de segundo plano
  * sigue haciendo falta: con el telefono bloqueado el websocket puede caerse, y al

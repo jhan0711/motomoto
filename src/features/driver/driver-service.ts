@@ -26,7 +26,7 @@ function fail<T = never>(error: unknown): Result<T> {
 
 export type ApprovalStatus = Database['public']['Enums']['driver_approval_status'];
 
-/** El motorraton que la empresa le asigno, tal como se le ensena a el. */
+/** El motocarro que la empresa le asigno, tal como se le ensena a el. */
 export interface DriverVehicle {
   /** DECISION D55: es como identifica la gente a las unidades, antes que la placa. */
   unitNumber: number;
@@ -151,10 +151,10 @@ export async function setAvailability(driverId: string, available: boolean): Pro
     }
 
     /*
-     * DOBLE TURNO (D246). Cuando su companero de motorraton ya esta conectado,
+     * DOBLE TURNO (D246). Cuando su companero de motocarro ya esta conectado,
      * el disparador `drivers_one_available_per_vehicle` responde con un mensaje
      * que **dice quien es y con que unidad**: "Juan Perez ya esta conectado con
-     * el motorraton 99".
+     * el motocarro 99".
      *
      * Aqui se prefiere ese mensaje al texto fijo del catalogo, y es la unica vez
      * en el proyecto que se hace. El motivo es que el dato viene del servidor y
@@ -230,7 +230,7 @@ export async function reportLocation(
  *
  * DISTINTO DE `reportLocation`, y conviene no confundirlos. Aquel sobrescribe la
  * UNICA fila de `driver_locations` con la posicion de ahora, para las busquedas y
- * para que el pasajero vea moverse el motorraton. Este ANADE una fila a
+ * para que el pasajero vea moverse el motocarro. Este ANADE una fila a
  * `ride_locations`, que es el rastro del viaje: nunca se sobrescribe y solo se
  * llena durante el recorrido. De ese rastro sale la distancia que calcula
  * `complete_ride`.
@@ -326,7 +326,7 @@ export interface DriverRide {
  * Los viajes en curso del conductor.
  *
  * Pueden ser varios desde D161, que sustituyo a la regla R7. Van todos en el
- * mismo motorraton: el disparador `enforce_ride_capacity` no admite que un
+ * mismo motocarro: el disparador `enforce_ride_capacity` no admite que un
  * conductor tenga servicios activos en dos unidades a la vez, y por eso la
  * pantalla puede sumar los pasajeros de esta lista para saber cuantos asientos
  * le quedan libres sin preguntarselo al servidor.

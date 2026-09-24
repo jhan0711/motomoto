@@ -21,7 +21,7 @@ export function edadDesde(updatedAt: string): number {
 }
 
 /**
- * Donde esta el motorraton que viene a recoger al pasajero.
+ * Donde esta el motocarro que viene a recoger al pasajero.
  *
  * POR QUE TIEMPO REAL Y NO SONDEO. El criterio de aceptacion 4 pide ver moverse
  * al conductor con menos de quince segundos de retraso. El conductor envia cada
@@ -36,7 +36,7 @@ export function edadDesde(updatedAt: string): number {
  * SE SIGUE LLAMANDO A LA FUNCION en dos momentos: el primer pintado -antes de
  * que llegue ningun evento- y al volver de segundo plano -con el telefono
  * bloqueado el websocket puede caerse y al volver el pasajero se encontraria el
- * motorraton donde estaba hace diez minutos, D152-. En esos dos casos la
+ * motocarro donde estaba hace diez minutos, D152-. En esos dos casos la
  * antiguedad la cuenta el servidor; entre eventos la cuenta el telefono a partir
  * de la marca de tiempo, con un temporizador, para que "perdimos la senal" se
  * encienda aunque los eventos dejen de llegar.
@@ -53,7 +53,7 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
    * Descarta respuestas de un conductor que ya no es el nuestro.
    *
    * Pasa de verdad: el pasajero cancela, vuelve a pedir y le toca otro. Una
-   * respuesta lenta del primero llegaria despues y pintaria su motorraton.
+   * respuesta lenta del primero llegaria despues y pintaria su motocarro.
    */
   const turno = useRef(0);
 
@@ -79,7 +79,7 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
     if (mio !== turno.current) return;
 
     // Un fallo de red no borra lo que ya se sabe: la posicion de hace veinte
-    // segundos sigue siendo mas util que un mapa sin motorraton, y la antiguedad
+    // segundos sigue siendo mas util que un mapa sin motocarro, y la antiguedad
     // que se pinta al lado ya avisa de que no es de ahora.
     if (resultado.ok && resultado.data !== null) {
       const d = resultado.data;
@@ -92,7 +92,7 @@ export function useDriverLocation(driverId: string | null): DriverLocation | nul
    *
    * Se ajusta en el render y no en un efecto, que es la forma que React
    * documenta para corregir estado cuando cambia una entrada, y la unica que no
-   * deja un fotograma con el motorraton de otro servicio en el mapa.
+   * deja un fotograma con el motocarro de otro servicio en el mapa.
    */
   const [driverIdAnterior, setDriverIdAnterior] = useState(driverId);
 

@@ -106,8 +106,8 @@ export function DriverRow({ conductor, onCambio }: Props) {
           <span className="flex items-center gap-1.5 text-text-primary">
             <Truck size={15} className="text-text-tertiary" />
             {conductor.unit_number === null
-              ? 'Sin motorratón'
-              : `Motorratón ${conductor.unit_number}`}
+              ? 'Sin motocarro'
+              : `Motocarro ${conductor.unit_number}`}
           </span>
           <span className="flex items-center gap-1.5 text-text-secondary">
             <Star size={14} className="text-text-tertiary" />

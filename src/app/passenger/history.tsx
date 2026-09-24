@@ -106,7 +106,7 @@ export default function PassengerHistory() {
         <EmptyState
           icon={History}
           title="Todavía no tienes viajes"
-          description="Cuando solicites tu primer motorratón, aparecerá aquí con su fecha, su recorrido y el conductor que te llevó."
+          description="Cuando solicites tu primer motocarro, aparecerá aquí con su fecha, su recorrido y el conductor que te llevó."
           actionLabel="Solicitar un viaje"
           onAction={() => router.replace('/passenger')}
         />

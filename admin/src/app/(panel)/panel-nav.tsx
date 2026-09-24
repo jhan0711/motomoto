@@ -23,7 +23,7 @@ const SECCIONES = [
   { href: '/', etiqueta: 'Tablero', icono: LayoutDashboard },
   { href: '/servicios', etiqueta: 'Servicios', icono: ListOrdered },
   { href: '/conductores', etiqueta: 'Conductores', icono: Users },
-  { href: '/motorratones', etiqueta: 'Motorratones', icono: Truck },
+  { href: '/motocarros', etiqueta: 'Motocarros', icono: Truck },
   { href: '/pasajeros', etiqueta: 'Pasajeros', icono: User },
   { href: '/lugares', etiqueta: 'Lugares', icono: MapPin },
   { href: '/tarifas', etiqueta: 'Tarifas', icono: SlidersHorizontal },

@@ -11,7 +11,7 @@ import { recordTrackPoint } from './driver-service';
  *
  * POR QUE NO CADA DIEZ SEGUNDOS. `useLocationReporting` ya manda la posicion
  * actual con esa cadencia, y con ella basta para que el pasajero vea moverse el
- * motorraton. El rastro es otra cosa: es el registro del viaje, y guardar un
+ * motocarro. El rastro es otra cosa: es el registro del viaje, y guardar un
  * punto cada diez segundos llenaria la tabla de puntos casi identicos cuando el
  * conductor esta parado en un semaforo. El filtro por distancia (D14: "con
  * filtro de distancia minima") guarda un punto solo cuando de verdad avanzo.
@@ -22,7 +22,7 @@ import { recordTrackPoint } from './driver-service';
  * aunque llegara a colarse.
  *
  * UN VEHICULO, VARIOS VIAJES (D161). El conductor puede llevar dos o tres
- * pasajeros a la vez, cada uno con su propio rastro. Como es un solo motorraton
+ * pasajeros a la vez, cada uno con su propio rastro. Como es un solo motocarro
  * en una sola posicion, la referencia del ultimo punto grabado es compartida:
  * cuando el vehiculo avanza 50 metros se anade un punto al rastro de CADA viaje
  * en curso. Asi cada pasajero tiene el registro de su tramo.

@@ -342,7 +342,7 @@ export default function PassengerHome() {
    * viaje que ya es valido. La pantalla estaria mintiendo, y ademas sobre lo
    * unico que el pasajero acaba de corregir.
    *
-   * Va la cantidad de pasajeros ademas de las coordenadas: "no hay motorratones
+   * Va la cantidad de pasajeros ademas de las coordenadas: "no hay motocarros
    * disponibles" puede deberse a que ninguno tiene capacidad para tres, y baja a
    * dos deja de ser cierto.
    */
@@ -621,7 +621,7 @@ export default function PassengerHome() {
     // El servidor dice que no queda ninguna viva. Antes de dar nada por
     // caducado hay que preguntar por lo contrario: que haya TERMINADO.
     //
-    // Sin esta pregunta, el pasajero que acaba de bajarse del motorraton veia su
+    // Sin esta pregunta, el pasajero que acaba de bajarse del motocarro veia su
     // cuenta atras en cero y, debajo, "Volver a pedirlo" y "Cambiar el viaje",
     // como si nadie lo hubiera recogido. Es el mismo dato leido al reves.
     const terminada = await fetchFinishedRequest();
@@ -693,7 +693,7 @@ export default function PassengerHome() {
   useRideRealtime(solicitud?.conductor?.rideId ?? null, sincronizarSolicitud);
 
   /**
-   * Donde esta su motorraton, mientras haya uno asignado.
+   * Donde esta su motocarro, mientras haya uno asignado.
    *
    * Antes de que alguien acepte no hay a quien seguir, y el hook se queda quieto:
    * un canal abierto de mas es una conexion abierta de mas en el telefono de
@@ -706,10 +706,10 @@ export default function PassengerHome() {
    *
    * Es el mismo parametro con el que el servidor descarta a un conductor sin
    * cobertura (R10). Si la empresa lo cambia, las dos cosas se mueven juntas, que
-   * es justo lo que evita que la pantalla diga que un motorraton viene mientras
+   * es justo lo que evita que la pantalla diga que un motocarro viene mientras
    * el buscador ya lo da por desconectado.
    */
-  // Solo sirve cuando hay un motorraton asignado a quien seguir. Hasta entonces
+  // Solo sirve cuando hay un motocarro asignado a quien seguir. Hasta entonces
   // no se lee: es otra llamada fuera del primer pintado (Fase 24 paso 4).
   const segundosParaCaducar = useNumericSetting(
     'driver_location_stale_seconds',
@@ -735,7 +735,7 @@ export default function PassengerHome() {
    * Cuando se calculo por ultima vez, y para que conductor.
    *
    * Lleva el conductor dentro y no solo la hora porque si no la espera de medio
-   * minuto se heredaria: al pasajero al que le acaban de asignar otro motorraton
+   * minuto se heredaria: al pasajero al que le acaban de asignar otro motocarro
    * le tocaria esperar a que venciera el turno del anterior para ver su primer
    * tiempo de llegada.
    */
@@ -769,7 +769,7 @@ export default function PassengerHome() {
    * Se ajusta en el render, con el mismo patron que la ruta y el modo de la
    * hoja: es la forma que React documenta para corregir estado cuando cambia una
    * entrada, y la unica que no deja un fotograma diciendo cuanto tarda un
-   * motorraton que ya no viene.
+   * motocarro que ya no viene.
    */
   const claveLlegada = solicitud?.conductor?.id ?? null;
   const [claveLlegadaAnterior, setClaveLlegadaAnterior] = useState(claveLlegada);
@@ -955,7 +955,7 @@ export default function PassengerHome() {
    *
    * Los extremos se toman de la propia ruta y no de las coordenadas pedidas, que
    * es lo que hace la pantalla del conductor. Mapbox devuelve la ruta pegada a
-   * la via, asi que su primer punto es donde el motorraton puede parar de
+   * la via, asi que su primer punto es donde el motocarro puede parar de
    * verdad; la coordenada cruda puede caer dentro de una manzana.
    */
   const trazado: MapRoute[] =
@@ -1062,8 +1062,8 @@ export default function PassengerHome() {
             // solicitado no son la misma accion, y la segunda no puede quedar a
             // un toque descuidado: tiene su propio boton, con su nombre escrito.
             // El titulo tiene que contar lo mismo que la tarjeta de abajo. Con
-            // un conductor ya asignado, "Buscando motorratón" contradecia a
-            // "Tu motorratón va en camino" a dos centimetros de distancia.
+            // un conductor ya asignado, "Buscando motocarro" contradecia a
+            // "Tu motocarro va en camino" a dos centimetros de distancia.
             <Text variant="subheading">
               {modo === 'terminado'
                 ? 'Llegaste'
@@ -1073,7 +1073,7 @@ export default function PassengerHome() {
                     ? tituloDelViaje(solicitud.conductor.rideStatus)
                     : expirada
                       ? 'Nadie tomó tu servicio'
-                      : 'Buscando motorratón'}
+                      : 'Buscando motocarro'}
             </Text>
           )
         }
@@ -1239,7 +1239,7 @@ function aSolicitudEnCurso(activa: ActiveRequest): SolicitudEnCurso {
 function tituloDelViaje(status: RideStatus): string {
   switch (status) {
     case 'driver_arrived':
-      return 'Tu motorratón llegó';
+      return 'Tu motocarro llegó';
     case 'in_progress':
       return 'Vas en camino';
     default:
@@ -1251,15 +1251,15 @@ function tituloDelViaje(status: RideStatus): string {
 function mensajeDelViaje(status: RideStatus): string {
   switch (status) {
     case 'assigned':
-      return 'Un motorratón tomó tu servicio';
+      return 'Un motocarro tomó tu servicio';
     case 'driver_on_the_way':
-      return 'Tu motorratón va en camino';
+      return 'Tu motocarro va en camino';
     case 'driver_arrived':
-      return 'Tu motorratón está esperándote';
+      return 'Tu motocarro está esperándote';
     case 'in_progress':
       return 'Vas camino a tu destino';
     default:
-      return 'Tu motorratón va en camino';
+      return 'Tu motocarro va en camino';
   }
 }
 
@@ -1634,7 +1634,7 @@ interface BuscandoConductorProps {
   llegada: RouteEstimate | null;
   /** El pasajero ya va dentro, asi que el tiempo es hasta su destino. */
   enRecorrido: boolean;
-  /** El motorraton ya esta en el punto de recogida, esperando. */
+  /** El motocarro ya esta en el punto de recogida, esperando. */
   yaLlego: boolean;
   /** Su ultima posicion es demasiado vieja para fiarse. */
   posicionCaducada: boolean;
@@ -1663,7 +1663,7 @@ interface BuscandoConductorProps {
  * DESDE LA FASE 13 HAY UN TERCER ESTADO, y llega solo por tiempo real: alguien
  * acepto. Se distingue tanto como la expiracion, porque es la noticia que el
  * pasajero esta esperando desde que pidio el servicio. Antes de esto la pantalla
- * seguia diciendo "avisando a los motorratones cercanos" con el motorraton ya en
+ * seguia diciendo "avisando a los motocarros cercanos" con el motocarro ya en
  * camino.
  */
 function BuscandoConductor({
@@ -1752,12 +1752,12 @@ function BuscandoConductor({
               {conductor !== null
                 ? mensajeDelViaje(conductor.rideStatus)
                 : expirada
-                  ? 'Ningún motorratón tomó el servicio'
-                  : 'Avisando a los motorratones cercanos'}
+                  ? 'Ningún motocarro tomó el servicio'
+                  : 'Avisando a los motocarros cercanos'}
             </Text>
             <Text variant="caption" color="textSecondary">
               {conductor !== null
-                ? `Motorratón ${conductor.vehicle.unitNumber} · Placa ${conductor.vehicle.plate}`
+                ? `Motocarro ${conductor.vehicle.unitNumber} · Placa ${conductor.vehicle.plate}`
                 : expirada
                   ? 'Puedes volver a pedirlo o cambiar el viaje.'
                   : 'Te avisamos en cuanto uno acepte.'}
@@ -1841,7 +1841,7 @@ function BuscandoConductor({
 
                 Los cuatro casos se distinguen a proposito. "Sin senal" y "llega
                 en cuatro minutos" no se parecen en nada para quien espera en la
-                calle: en el primero el motorraton del mapa puede llevar dos
+                calle: en el primero el motocarro del mapa puede llevar dos
                 minutos donde ya no esta, y callarlo seria ensenarle una posicion
                 falsa sin decirselo. Y "en camino" sin numero es honesto cuando
                 la posicion es buena pero no se pudo calcular la ruta, que es el
@@ -1865,14 +1865,14 @@ function BuscandoConductor({
               <Text variant="caption" color={posicionCaducada ? 'textSecondary' : 'textSecondary'}>
                 {posicionCaducada
                   ? enRecorrido
-                    ? 'Perdimos la señal del motorratón. El viaje sigue.'
+                    ? 'Perdimos la señal del motocarro. El viaje sigue.'
                     : yaLlego
                       ? 'Perdimos su señal, pero ya está en el punto de recogida.'
-                      : 'Perdimos su señal. El motorratón sigue en camino.'
+                      : 'Perdimos su señal. El motocarro sigue en camino.'
                   : sinPosicion
-                    ? 'Ubicando su motorratón'
+                    ? 'Ubicando su motocarro'
                     : yaLlego
-                      ? // Con el motorraton parado en el punto, los minutos que
+                      ? // Con el motocarro parado en el punto, los minutos que
                         // faltan son cero y repetirlo no aporta nada. Lo que hay
                         // que decir es que salga.
                         'Te está esperando en el punto de recogida'
@@ -1969,7 +1969,7 @@ function BuscandoConductor({
         title={conductor === null ? '¿Cancelar la búsqueda?' : '¿Cancelar este servicio?'}
         description={
           conductor === null
-            ? 'Dejaremos de buscarte un motorratón.'
+            ? 'Dejaremos de buscarte un motocarro.'
             : 'Le avisamos al conductor y queda libre para tomar otro servicio.'
         }
         icon={Ban}
@@ -1990,14 +1990,14 @@ function BuscandoConductor({
  *
  * No hay estrellas todavia: calificar es de la Fase 17. Lo que si tiene que
  * haber es un final, porque hasta ahora el servicio terminaba y la pantalla se
- * quedaba diciendo que el motorraton venia en camino.
+ * quedaba diciendo que el motocarro venia en camino.
  *
  * La distancia y el tiempo pueden faltar, y cuando faltan no se pinta la fila en
  * lugar de rellenarla con ceros. Faltan cuando el conductor no tuvo cobertura
  * para registrar el recorrido, y un "0 m" seria peor que no decir nada.
  *
  * El pasajero lo cierra cuando quiera. No se va solo a los cinco segundos: puede
- * estar bajandose del motorraton, guardando el telefono o pagando.
+ * estar bajandose del motocarro, guardando el telefono o pagando.
  */
 function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCerrar: () => void }) {
   const { colors } = useTheme();
@@ -2017,7 +2017,7 @@ function ViajeTerminado({ resumen, onCerrar }: { resumen: FinishedRequest; onCer
             <Text variant="bodyStrong">Servicio terminado</Text>
             <Text variant="caption" color="textSecondary">
               {resumen.driverName !== null && resumen.unitNumber !== null
-                ? `${resumen.driverName} · Motorratón ${resumen.unitNumber}`
+                ? `${resumen.driverName} · Motocarro ${resumen.unitNumber}`
                 : 'Gracias por viajar con nosotros.'}
             </Text>
           </View>

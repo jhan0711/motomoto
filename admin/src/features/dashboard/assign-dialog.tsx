@@ -103,7 +103,7 @@ export function AssignDialog({ servicio, onCerrar, onAsignado }: Props) {
         <header className="flex items-start justify-between gap-3 border-b border-border p-5">
           <div>
             <h3 id="titulo-asignar" className="font-medium text-text-primary">
-              Asignar un motorratón
+              Asignar un motocarro
             </h3>
             <p className="mt-1 text-sm text-text-secondary">
               {servicio.origin_label}
@@ -183,7 +183,7 @@ export function AssignDialog({ servicio, onCerrar, onAsignado }: Props) {
                             {c.unit_number !== null && (
                               <span className="font-normal text-text-secondary">
                                 {' '}
-                                · Motorratón {c.unit_number}
+                                · Motocarro {c.unit_number}
                               </span>
                             )}
                           </span>

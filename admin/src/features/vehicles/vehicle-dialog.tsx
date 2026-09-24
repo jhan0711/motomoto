@@ -21,7 +21,7 @@ interface Props {
 }
 
 /**
- * Alta y edicion de un motorraton, en el mismo dialogo.
+ * Alta y edicion de un motocarro, en el mismo dialogo.
  *
  * **El estado no se puede elegir al dar de alta**, y por eso ese campo solo
  * aparece al editar: una unidad nace activa. Crearla directamente "retirada"
@@ -48,7 +48,7 @@ export function VehicleDialog({ vehiculo, onCerrar, onGuardar }: Props) {
     // vuelve a comprobar: esta pantalla no es la que protege el dato.
     const numeroEntero = Number.parseInt(numero, 10);
     if (Number.isNaN(numeroEntero)) {
-      setError('El número de motorratón debe ser un número.');
+      setError('El número de motocarro debe ser un número.');
       return;
     }
 
@@ -74,7 +74,7 @@ export function VehicleDialog({ vehiculo, onCerrar, onGuardar }: Props) {
     >
       <div className="max-h-full w-full max-w-[460px] overflow-y-auto rounded-xl border border-border bg-surface p-5">
         <h3 id="titulo-vehiculo" className="font-medium text-text-primary">
-          {editando ? `Editar motorratón ${vehiculo.unit_number}` : 'Nuevo motorratón'}
+          {editando ? `Editar motocarro ${vehiculo.unit_number}` : 'Nuevo motocarro'}
         </h3>
 
         <form onSubmit={enviar} className="mt-4 flex flex-col gap-4" noValidate>
@@ -91,7 +91,7 @@ export function VehicleDialog({ vehiculo, onCerrar, onGuardar }: Props) {
                 className="h-11 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
               />
               {/* D55: es como la gente identifica las unidades a distancia. */}
-              <p className="text-xs text-text-secondary">El que va pintado en el motorratón.</p>
+              <p className="text-xs text-text-secondary">El que va pintado en el motocarro.</p>
             </div>
 
             <div className="flex flex-col gap-1.5">
@@ -161,7 +161,7 @@ export function VehicleDialog({ vehiculo, onCerrar, onGuardar }: Props) {
                 </select>
                 {vehiculo.has_active_ride && estado !== 'active' && (
                   <p className="text-xs text-on-danger-subtle">
-                    Este motorratón tiene un servicio en curso. El servidor no permitirá el cambio
+                    Este motocarro tiene un servicio en curso. El servidor no permitirá el cambio
                     hasta que se resuelva.
                   </p>
                 )}

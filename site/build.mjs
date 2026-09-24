@@ -103,7 +103,7 @@ writeFileSync(
     titulo: 'Inicio',
     cuerpo: `
     <h1>Muévete fácil, llega seguro.</h1>
-    <p>AmalfiGoApp conecta a quien necesita un motorratón en Amalfi con los conductores disponibles. Pide el servicio, ve el valor antes de confirmar y sigue al conductor en el mapa mientras llega.</p>
+    <p>AmalfiGoApp conecta a quien necesita un motocarro en Amalfi con los conductores disponibles. Pide el servicio, ve el valor antes de confirmar y sigue al conductor en el mapa mientras llega.</p>
     <p style="margin-top:32px">
       <a href="/privacidad">Política de privacidad</a> ·
       <a href="/terminos">Términos de uso</a> ·
@@ -132,7 +132,7 @@ writeFileSync(
     inmediata y no se puede deshacer.</p>
     <h2>Qué se conserva</h2>
     <p>Los servicios que hiciste quedan en el registro operativo de la empresa de
-    motorratones <strong>sin tu nombre ni tus datos de contacto</strong>, porque
+    motocarros <strong>sin tu nombre ni tus datos de contacto</strong>, porque
     son parte de la contabilidad del conductor.</p>
     <h2>Si ya desinstalaste la aplicación</h2>
     <p>Escríbenos a <a href="mailto:soporte@amalfigo.app">soporte@amalfigo.app</a>

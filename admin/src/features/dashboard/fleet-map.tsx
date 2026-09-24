@@ -37,8 +37,8 @@ function crearMarcadorEl(u: DriverLocation): HTMLDivElement {
 function popupHtml(u: DriverLocation): string {
   const vehiculo =
     u.unitNumber !== null
-      ? `Motorratón ${u.unitNumber}${u.plate ? ` · ${u.plate}` : ''}`
-      : 'Sin motorratón asignado';
+      ? `Motocarro ${u.unitNumber}${u.plate ? ` · ${u.plate}` : ''}`
+      : 'Sin motocarro asignado';
   const estado = u.hasActiveRide ? 'En viaje' : u.isAvailable ? 'Disponible' : 'No disponible';
   const antiguedad =
     u.ageSeconds < 60 ? `hace ${u.ageSeconds} s` : `hace ${Math.round(u.ageSeconds / 60)} min`;

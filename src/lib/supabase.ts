@@ -16,7 +16,7 @@ const supabaseKey = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 // Falla al arrancar y no al primer uso. Un error aqui es un despliegue mal
 // configurado, y es mucho mejor descubrirlo en el arranque que cuando un
-// pasajero intenta pedir un motorraton.
+// pasajero intenta pedir un motocarro.
 if (!supabaseUrl || !supabaseKey) {
   throw new Error(
     'Faltan EXPO_PUBLIC_SUPABASE_URL o EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY. ' +

@@ -158,7 +158,7 @@ export function RideDetailDialog({ requestId, onCerrar }: Props) {
                       {detalle.unit_number !== null && (
                         <span className="text-text-secondary">
                           {' '}
-                          · Motorratón {detalle.unit_number}
+                          · Motocarro {detalle.unit_number}
                         </span>
                       )}
                     </p>
@@ -260,7 +260,7 @@ export function RideDetailDialog({ requestId, onCerrar }: Props) {
                       <span className="text-text-primary">
                         {o.driver_name}
                         {o.unit_number !== null && (
-                          <span className="text-text-secondary"> · Motorratón {o.unit_number}</span>
+                          <span className="text-text-secondary"> · Motocarro {o.unit_number}</span>
                         )}
                         {o.distance_m !== null && (
                           <span className="text-text-secondary">

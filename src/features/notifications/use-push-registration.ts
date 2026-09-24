@@ -128,7 +128,7 @@ async function obtenerToken(): Promise<string | null> {
       // posteriores no muestran nada aunque el envio funcione.
       //
       // MAX y no DEFAULT, y esto se decidio mirando la pantalla. Con DEFAULT el
-      // aviso llegaba —"Tu motorratón llegó" estaba en la bandeja— pero el
+      // aviso llegaba —"Tu motocarro llegó" estaba en la bandeja— pero el
       // usuario no se enteraba: sin sonido y sin asomarse, quedaba enterrado
       // entre las notificaciones del sistema. Los dos avisos de esta fase son
       // justo los que no pueden pasar desapercibidos: uno saca al pasajero a la
