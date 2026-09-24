@@ -6719,6 +6719,7 @@ liquidacion mensual sigue aplazada (D267).
 | D272 | **Mapa de flota en el panel, por una funcion nueva y no reutilizando `get_driver_location`** | Pedido de la empresa, fuera del plan de ajustes, 2026-09-16: ver a todos los conductores en un mapa, no solo al de un servicio en curso. `get_driver_location` (Fase 14) esta acotada a proposito a un conductor por vez, protegida por `driver_locations_select_active_passenger`; forzarla a la flota entera habria significado tocar una politica que hoy protege la privacidad de cada conductor frente a los demas pasajeros. `admin_list_driver_locations` es `security invoker` como el resto de funciones del panel y no necesito politica nueva: `driver_locations_select_admin` ya existe desde la Fase 5 y no se habia usado hasta ahora. Devuelve solo conductores con fila en `driver_locations` -sin eso habria que fingir una coordenada 0,0-. El panel gano `mapbox-gl` como dependencia nueva, con el mismo token `pk.` de pruebas que ya usa la app movil para el buscador; antes de produccion conviene un token propio con restriccion de URL a `panel.amalfigo.app` en la cuenta de Mapbox. De paso, el mismo pedido incluyo un contador de "conductores disponibles" en el tablero -se apoya en `admin_list_drivers`, ya existente, no en una consulta nueva- y quitar "MotoMoto" del panel por el nombre real de la app, `AmalfiGoApp` |
 | D273 | **Ubicacion en segundo plano tambien para "en viaje"** | Encontrado en un servicio real el 2026-09-16, el dia siguiente de D271: con la app minimizada durante un viaje, el indicador se ponia gris a los dos minutos y, al volver el conductor a la app, la posicion "saltaba" medio kilometro de golpe -era la reanudacion del envio en primer plano desde donde estaba en ese instante, no un fallo del mapa-. Se valido con la empresa y esta vez se decidio ampliar el alcance de D271 a "en viaje" tambien: el riesgo de D116 -un conductor "congelado" en el mapa- pesa menos que el salto real que se estaba viendo, sobre todo con el intervalo corto de "en viaje" (R9, hoy 3 s) de por medio. `useBackgroundLocation` paso de recibir `disponibleSinViaje` a recibir `disponible` y `riding` por separado, igual que ya hace `useLocationReporting` en primer plano; el intervalo activo se recalcula segun cual de los dos es cierto, y la tarea se reinicia si cambia -`startLocationUpdatesAsync` no actualiza una tarea ya en marcha, solo la deja como arranco la primera vez, hueco que no importaba mientras solo habia un intervalo posible-. La notificacion tambien cambia de texto segun el estado ("Buscando servicios..." vs "Llevando un servicio en curso."), para no decir "buscando" con un pasajero ya a bordo |
 | D274 | **Aviso para desactivar el ahorro de bateria, sin pedir el permiso directo -y limitacion conocida, sin resolver del todo-** | Mismo hallazgo del servicio real: un conductor de prueba quedo marcado disponible con la posicion sin avanzar durante horas, mucho despues de que el arreglo de `distanceInterval` (D271) ya estuviera verificado -indicio de que Android (HyperOS/MIUI en la tablet de pruebas) sigue restringiendo la tarea en segundo plano con el tiempo si la app no esta en su lista de "sin restricciones" de bateria, algo que ningun arreglo de codigo por si solo puede forzar-. Se agrego un aviso -`battery-optimization-notice.ts`- que abre `IGNORE_BATTERY_OPTIMIZATION_SETTINGS` con `expo-intent-launcher` (nueva dependencia), mas un texto que pide ademas bloquear la app en "Apps recientes" -el otro ajuste tipico de MIUI-. Deliberadamente NO se uso `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` -el dialogo directo de un toque-, porque exige un permiso especial que Google Play revisa igual de estricto que la ubicacion en segundo plano, y vc9 ya se acababa de enviar a revision con esa declaracion (D271/D272): sumar otra justo ahora habria sido mas riesgo de rechazo por poca ganancia. El aviso se puede descartar -"Ya lo hice"- y queda recordado en `AsyncStorage`, porque no existe forma de consultarle al sistema si la app ya esta en la lista. **Verificado en la tablet el mismo 2026-09-16 con registro de diagnostico temporal** (ya retirado del codigo): el aviso si aparece y si abre los ajustes correctos. Pero incluso con las dos cosas hechas -bateria sin restricciones y bloqueada en recientes-, la tarea siguio entregando una sola vez y quedandose muda mas de 5 minutos en las pruebas de ese dia. **No se investigo mas alla**: es posible que las pruebas repetidas -instalar, desinstalar, activar y desactivar una y otra vez en una tablet quieta sobre un escritorio- disparen una restriccion mas agresiva que la que veria un conductor real moviendose en su turno, pero eso solo lo confirma un conductor real. Queda como pendiente explicito validar en un turno real antes de considerar D271/D273 completamente resueltos |
+| D275 | **Se revierte D270 (motivo al desconectarse), completo** | Pedido de la empresa, 2026-09-23, una semana despues de pedirlo: no aporto lo que se esperaba. Se decidio revertirlo ENTERO y no solo dejar de exigirlo -catalogo, funcion, disparador, columnas y modal-, porque dejar codigo sin usar "por si se retoma" es dejarle a quien llegue despues algo que entender desde cero; mas facil escribirlo otra vez con lo que se sepa entonces. Migracion `20260924004056`: `admin_list_drivers()` vuelve a su forma de antes de D270 (`drop` + `create` completo), se quitan el disparador `drivers_clear_unavailable_reason`, `set_driver_unavailable`, las dos columnas de `drivers` con sus restricciones y el enum `driver_unavailable_reason_code`. `setAvailability` vuelve a ser un UPDATE directo en los dos sentidos (D83). La fila D270 de arriba NO se borra: es historia real de lo que se hizo y por que |
 
 ---
 
@@ -8323,6 +8324,79 @@ rápidas" automáticas de Google (~10 min) antes de entrar a la cola de revisió
 humana. Incluye los cuatro pedidos (D270-D271, pedido 3 y el bug del selector
 de carga) mas el arreglo del bug real de D271 y el barrido de marca a
 AmalfiGoApp.
+
+### Plan de ajustes pedido por la empresa (2026-09-23): motocarro, recargas, oferta de precio
+
+Cuatro pedidos nuevos, planeados antes de programar y aprobados por la empresa. Se
+entregan por separado, de menor a mayor riesgo. Plan completo en la sesion del
+2026-09-23; aqui queda lo que hay que saber para retomarlo.
+
+**1. Quitar los motivos de no disponibilidad -HECHO (D275).** Ver la fila D275 de
+la tabla de decisiones. Se revirtio entero, incluida la base de datos.
+
+**2. "Motorratón" -> "Motocarro" -pendiente.** El vehículo real de Amalfi se llama
+motocarro. Un `grep -ri motorrat` da 403 apariciones en 112 archivos, pero NINGUNA
+es un identificador SQL -la tabla es `vehicles`, las columnas `unit_number`,
+`plate`-: todo es texto de interfaz o comentarios. Por eso no hace falta migracion.
+Alcance acordado: solo lo que ve el usuario (pantallas, panel, ficha de Play Store,
+textos legales, notificaciones). NO se reescriben los comentarios de las migraciones
+ya aplicadas -no aportan al usuario y tocar historia de produccion solo para un
+comentario es riesgo sin ganancia-. Verificacion al terminar: `grep -ri motorrat`
+sobre las carpetas de interfaz debe dar cero.
+
+**3. Recargas del conductor y comision del 4% -pendiente, la entrega mas grande.**
+Decidido con la empresa: el conductor prepaga un saldo (recarga minima $10.000) y
+cada viaje completado descuenta el 4% de `ride_requests.fare_amount`. Si el saldo no
+alcanza ni para el 4% del viaje minimo, se bloquea "disponible" solo hasta recargar.
+La recarga es por **Wompi** (pasarela de pagos), no acreditada a mano por un
+administrador. Esto **cambia una frontera documentada desde el inicio -"la
+plataforma no procesa pagos"-**: es la primera vez que la aplicacion maneja dinero
+real. Hoy no existe ningun concepto de saldo (la pestana "Recaudo", D217, solo
+muestra lo que el conductor cobro de los pasajeros, para cuadrar caja). Diseno
+propuesto: un libro de movimientos que solo se anade -recargas y descuentos por
+viaje, cada uno con su `ride_id` o su id de transaccion de Wompi- en lugar de un
+numero mutable, para poder revisar cualquier disputa; `complete_ride` es donde se
+calcula y anota el descuento. **La integracion con Wompi se deja para el final y con
+su propia investigacion**: exige una Edge Function que reciba el webhook y VERIFIQUE
+LA FIRMA antes de acreditar nada -jamas fiarse de que el cliente diga "ya pague"-, y
+llaves de sandbox primero y de produccion despues, que requieren que la empresa este
+dada de alta como comercio en Wompi (tramite de la empresa, no del codigo). Se puede
+empezar antes por lo que no depende de Wompi: el libro, el descuento y el bloqueo.
+
+Balance calculado con la empresa (supuesto: 20 servicios por dia por cada uno de los
+35 motocarros, 30 dias, todo a tarifa minima de $4.000):
+
+| Concepto | Valor |
+|---|---|
+| Servicios al mes | 21.000 |
+| Valor bruto movido | $84.000.000 |
+| Comision por servicio (4% de $4.000) | $160 |
+| Ingreso de la empresa al mes | **$3.360.000** |
+| Por conductor: bruto / comision / le queda | $2.400.000 / $96.000 / $2.304.000 |
+| Recargas de $10.000 que necesita cada conductor al mes | ~10 |
+
+Es un piso: cualquier viaje sobre $4.000 deja mas de $160. Riesgos senalados y aun
+por decidir: que hacer con una disputa de descuento (hace falta un camino para que
+un administrador lo reverse, siempre dejando registro), y la carga operativa de
+verificar recargas si Wompi no alcanza a cubrir a algun conductor sin tarjeta.
+
+**4. El pasajero propone el precio -pendiente.** Hoy `request_ride()` no recibe
+ningun precio del cliente: lo calcula siempre el servidor con `quote_fare()`. Y el
+conductor hoy **acepta la oferta sin ver el precio**: `ride_offers`,
+`list_driver_offers()` y el tipo `DriverOffer` no llevan ningun campo de tarifa ni de
+carga. Lo acordado: el pasajero escribe el valor en un campo -en la pantalla de
+"resumen", donde hoy ve el estimado- y ese valor pasa a ser la tarifa de la
+solicitud; el conductor ve el valor ofertado junto con pasajeros, carga y el resto, y
+decide si acepta o rechaza. El modelo de aceptacion NO cambia -el primero que acepta
+se lo lleva-, asi que no hace falta pantalla nueva de comparar ofertas. Es un cambio
+en una frontera de confianza -el cliente ahora manda un precio-, asi que el servidor
+tiene que validarlo (como minimo, no bajar de la tarifa minima vigente). Toca
+`request_ride`, `list_driver_offers`, `DriverOffer`, `OfferCard` y el resumen del
+pasajero. Pendiente de decidir: si los desgloses `fare_trip_amount` /
+`fare_cargo_amount` se conservan como referencia o se anulan cuando el pasajero
+sobrescribe el total.
+
+Orden de entrega acordado: 1 (hecho) -> 2 -> 4 -> 3.
 
 ---
 
