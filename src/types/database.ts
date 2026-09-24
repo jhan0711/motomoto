@@ -254,6 +254,42 @@ export type Database = {
           },
         ];
       };
+      driver_ledger: {
+        Row: {
+          amount: number;
+          created_at: string;
+          created_by: string | null;
+          driver_id: string;
+          external_ref: string | null;
+          id: string;
+          kind: Database['public']['Enums']['ledger_entry_kind'];
+          reason: string | null;
+          ride_id: string | null;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          created_by?: string | null;
+          driver_id: string;
+          external_ref?: string | null;
+          id?: string;
+          kind: Database['public']['Enums']['ledger_entry_kind'];
+          reason?: string | null;
+          ride_id?: string | null;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          created_by?: string | null;
+          driver_id?: string;
+          external_ref?: string | null;
+          id?: string;
+          kind?: Database['public']['Enums']['ledger_entry_kind'];
+          reason?: string | null;
+          ride_id?: string | null;
+        };
+        Relationships: [];
+      };
       driver_locations: {
         Row: {
           accuracy_m: number | null;
@@ -1086,6 +1122,15 @@ export type Database = {
     };
     Functions: {
       accept_ride_offer: { Args: { p_offer_id: string }; Returns: string };
+      admin_adjust_driver_balance: {
+        Args: {
+          p_amount: number;
+          p_driver: string;
+          p_reason: string;
+          p_ride_id?: string;
+        };
+        Returns: number;
+      };
       admin_assign_driver: {
         Args: { p_driver_id: string; p_reason?: string; p_request_id: string };
         Returns: string;
@@ -1136,6 +1181,19 @@ export type Database = {
       admin_delete_document: {
         Args: { p_document_id: string };
         Returns: string;
+      };
+      admin_get_driver_ledger: {
+        Args: { p_driver: string; p_limit?: number };
+        Returns: {
+          amount: number;
+          created_at: string;
+          created_by_name: string;
+          external_ref: string;
+          id: string;
+          kind: Database['public']['Enums']['ledger_entry_kind'];
+          reason: string;
+          ride_id: string;
+        }[];
       };
       admin_get_passenger_rides: {
         Args: { p_limit?: number; p_passenger_id: string };
@@ -1327,6 +1385,14 @@ export type Database = {
           type_name: string;
           uploaded_at: string;
           uploaded_by_name: string;
+        }[];
+      };
+      admin_list_driver_balances: {
+        Args: never;
+        Returns: {
+          balance: number;
+          can_work: boolean;
+          driver_id: string;
         }[];
       };
       admin_list_driver_locations: {
@@ -1669,6 +1735,7 @@ export type Database = {
         Args: never;
         Returns: Database['public']['Enums']['user_role'];
       };
+      balance_enforced: { Args: never; Returns: boolean };
       cancel_request: {
         Args: { p_reason?: string; p_request_id: string };
         Returns: undefined;
@@ -1683,10 +1750,13 @@ export type Database = {
         Returns: undefined;
       };
       delete_my_account: { Args: never; Returns: undefined };
+      driver_balance: { Args: { p_driver: string }; Returns: number };
+      driver_can_work: { Args: { p_driver: string }; Returns: boolean };
       driver_linked_to_request: {
         Args: { p_request_id: string };
         Returns: boolean;
       };
+      driver_min_balance: { Args: never; Returns: number };
       expire_stale_requests: { Args: never; Returns: number };
       find_available_drivers: {
         Args: {
@@ -1814,6 +1884,17 @@ export type Database = {
         }[];
       };
       get_min_offer_amount: { Args: never; Returns: number };
+      get_my_balance: {
+        Args: never;
+        Returns: {
+          balance: number;
+          can_work: boolean;
+          commission_percent: number;
+          enforced: boolean;
+          min_required: number;
+          min_topup: number;
+        }[];
+      };
       get_passenger_trip: {
         Args: { p_request_id: string };
         Returns: {
@@ -1937,6 +2018,17 @@ export type Database = {
           requested_at: string;
           seconds_remaining: number;
           service_type: Database['public']['Enums']['service_type'];
+        }[];
+      };
+      list_my_ledger: {
+        Args: { p_limit?: number };
+        Returns: {
+          amount: number;
+          created_at: string;
+          id: string;
+          kind: Database['public']['Enums']['ledger_entry_kind'];
+          reason: string;
+          ride_id: string;
         }[];
       };
       list_passenger_history: {
@@ -2081,6 +2173,7 @@ export type Database = {
       actor_type: 'passenger' | 'driver' | 'admin' | 'system';
       document_owner: 'driver' | 'vehicle';
       driver_approval_status: 'pending' | 'approved' | 'blocked';
+      ledger_entry_kind: 'topup' | 'commission' | 'adjustment';
       report_status: 'open' | 'in_review' | 'resolved';
       ride_offer_response: 'pending' | 'accepted' | 'rejected' | 'expired';
       ride_request_status:
@@ -2223,6 +2316,7 @@ export const Constants = {
       actor_type: ['passenger', 'driver', 'admin', 'system'],
       document_owner: ['driver', 'vehicle'],
       driver_approval_status: ['pending', 'approved', 'blocked'],
+      ledger_entry_kind: ['topup', 'commission', 'adjustment'],
       report_status: ['open', 'in_review', 'resolved'],
       ride_offer_response: ['pending', 'accepted', 'rejected', 'expired'],
       ride_request_status: [
