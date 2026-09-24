@@ -4,7 +4,7 @@ Documento de continuidad del proyecto. Si se pierde el contexto de una conversac
 este archivo contiene todo lo necesario para retomar el trabajo desde el ultimo punto estable.
 
 - **Proyecto:** AmalfiGoApp (antes MotoMoto, nombre provisional; decidido el 2026-09-02)
-- **Ultima actualizacion:** 2026-09-02
+- **Ultima actualizacion:** 2026-09-24
 - **Fases completadas y aprobadas:** 0 definicion funcional, 1 preparacion del equipo,
   2 creacion del proyecto, 3 sistema de diseno, 4 navegacion, 5 base de datos,
   6 autenticacion, 7 perfil del pasajero, 8 mapa principal,
@@ -8397,6 +8397,16 @@ pasajero. Pendiente de decidir: si los desgloses `fare_trip_amount` /
 sobrescribe el total.
 
 Orden de entrega acordado: 1 (hecho) -> 2 -> 4 -> 3.
+
+**Estado para retomar (2026-09-24, cierre de sesion).**
+
+- Codigo y base de datos: todo comiteado y empujado; ultimo commit `3327a7a` (D275). Migraciones aplicadas en produccion hasta `20260924004056`.
+- Play Console: **vc9 ya esta publicada** en la prueba cerrada (segmento Alpha; los 12 testers siguen corriendo los 14 dias). **vc10** (EAS `b1b029c8`, .aab en `C:\dev\motomoto\AmalfiGoApp-produccion.aab`) esta compilado pero **NO se ha subido, y ya no conviene subirlo tal cual**: incluye D273/D274 pero todavia trae el modal de motivo de D270, que D275 acaba de revertir. Hay que recompilar (`npx eas-cli build --platform android --profile production --non-interactive --no-wait`; el versionCode sube solo) cuando esten hechos los puntos 2 y 4, o antes si hay prisa. Ojo: la cola gratuita de EAS llego a tardar ~49 min.
+- Panel (`panel.amalfigo.app`): desplegado con AmalfiGoApp, contador de disponibles y mapa de flota; falta la variable `NEXT_PUBLIC_MAPBOX_TOKEN` solo si se cambia de token (hoy usa el de pruebas; pendiente uno propio con restriccion de URL).
+- Pendiente del plan del 2026-09-23, en este orden: **2** motocarro (texto de usuario; pregunta abierta: si la ruta del panel `/motorratones` tambien pasa a `/motocarros` o solo el texto), **4** oferta de precio del pasajero, **3** recargas con Wompi y comision del 4%.
+- Limitacion conocida sin cerrar: la ubicacion en segundo plano (D271/D273) dejo de entregar tras el primer envio en las pruebas de la tablet Xiaomi, incluso con bateria sin restricciones y app bloqueada en recientes (D274). Falta validarlo con un conductor real en la calle.
+- Herramientas de prueba: pasajero de QA `pasajero.prueba@motomoto-qa.co` / `Pasajero.2026` (`supabase/dev-tools/seed_test_passenger.sql`) y conductor de QA `conductor2.prueba@motomoto-qa.co` / `Conductor.2026`. **Diego Alexis Castro (`50af9ae1...`) es un conductor REAL de Amalfi que trabaja: solo leer sus datos, nunca escribir ni forzar estados en su cuenta.** Al instalar el APK local en la tablet Xiaomi hay que activar "Instalar por USB" y confirmar el dialogo en pantalla; el APK local es versionCode 1, asi que primero hay que desinstalar la version de Play.
+- Cuidado en Git Bash: `adb pull //sdcard/...` (doble barra) para que MSYS no mangle la ruta; y las consultas `supabase db query --linked` hay que lanzarlas desde `C:\dev\motomoto`.
 
 ---
 
