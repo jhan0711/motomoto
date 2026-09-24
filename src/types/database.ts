@@ -1813,6 +1813,7 @@ export type Database = {
           vehicle_unit_number: number;
         }[];
       };
+      get_min_offer_amount: { Args: never; Returns: number };
       get_passenger_trip: {
         Args: { p_request_id: string };
         Returns: {
@@ -1918,19 +1919,24 @@ export type Database = {
       list_driver_offers: {
         Args: never;
         Returns: {
+          cargo_summary: string;
           destination_label: string;
           destination_lat: number;
           destination_lng: number;
           distance_m: number;
           expires_at: string;
+          fare_amount: number;
+          fare_official_amount: number;
           offer_id: string;
           origin_label: string;
           origin_lat: number;
           origin_lng: number;
+          parcel_description: string;
           passenger_count: number;
           request_id: string;
           requested_at: string;
           seconds_remaining: number;
+          service_type: Database['public']['Enums']['service_type'];
         }[];
       };
       list_passenger_history: {
@@ -2026,6 +2032,7 @@ export type Database = {
           p_destination_lat: number;
           p_destination_lng: number;
           p_destination_place_id?: string;
+          p_offered_amount?: number;
           p_origin_label: string;
           p_origin_lat: number;
           p_origin_lng: number;

@@ -61,6 +61,23 @@ export interface DriverOffer {
   origin: { latitude: number; longitude: number; label: string };
   destination: { latitude: number; longitude: number; label: string };
   requestedAt: string;
+  /**
+   * El valor que propuso el pasajero (D277). Es lo que el conductor cobra si
+   * acepta, y lo que decide si le conviene. Nulo solo en solicitudes viejas, de
+   * antes de que existieran las tarifas.
+   */
+  fareAmount: number | null;
+  /**
+   * Lo que la tabla de tarifas habria cobrado por ese viaje. Sirve para que el
+   * conductor vea cuanto se aparta la oferta de la tarifa; nulo cuando no hay.
+   */
+  fareOfficialAmount: number | null;
+  /** Pasajero (con o sin carga) o encomienda sola. */
+  serviceType: 'passenger' | 'parcel';
+  /** Que es la encomienda. Solo viene cuando `serviceType` es `'parcel'`. */
+  parcelDescription: string | null;
+  /** La carga en una linea, "2 × Caja, 1 × Bicicleta". Nulo si no lleva. */
+  cargoSummary: string | null;
 }
 
 /**
@@ -288,6 +305,16 @@ export async function fetchOffers(): Promise<Result<DriverOffer[]>> {
         label: fila.destination_label,
       },
       requestedAt: fila.requested_at,
+      // El generador de tipos declara estos como no nulos; pueden serlo. Misma
+      // trampa que `distance_m` arriba.
+      fareAmount: typeof fila.fare_amount === 'number' ? fila.fare_amount : null,
+      fareOfficialAmount:
+        typeof fila.fare_official_amount === 'number' ? fila.fare_official_amount : null,
+      serviceType: fila.service_type,
+      parcelDescription: fila.parcel_description ? fila.parcel_description : null,
+      // El servidor separa con " x " porque el texto de la base va sin simbolos;
+      // aqui se le da la forma que se lee bien en pantalla.
+      cargoSummary: fila.cargo_summary ? fila.cargo_summary.replace(/ x /g, ' × ') : null,
     })),
   );
 }

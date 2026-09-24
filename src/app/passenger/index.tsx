@@ -2,6 +2,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import {
   ArrowRight,
   Ban,
+  Banknote,
   Bike as BikeIcon,
   Circle,
   CircleCheck,
@@ -53,6 +54,7 @@ import { ServiceTypeToggle } from '@/features/fare/service-type-toggle';
 import type { CargoItem, CargoType, FareQuote, ServiceType } from '@/features/fare/types';
 import { useCargoTypes } from '@/features/fare/use-cargo-types';
 import { useFareQuote, type FareQuotePending } from '@/features/fare/use-fare-quote';
+import { useOfferPrice } from '@/features/fare/use-offer-price';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
 import { Map, type MapHandle, type MapMarker, type MapRoute } from '@/features/map/map';
 import { AMALFI_REGION, regionAround } from '@/features/map/region';
@@ -301,6 +303,13 @@ export default function PassengerHome() {
     cargo: cargoItems,
   });
 
+  /**
+   * El valor que el pasajero ofrece (D277). Parte de la tarifa sugerida y el
+   * conductor lo ve antes de aceptar.
+   */
+  const oferta = useOfferPrice(tarifa.quote?.totalAmount ?? null);
+  const reiniciarOferta = oferta.reset;
+
   const [ruta, setRuta] = useState<Route | null>(null);
   const [estimando, setEstimando] = useState(false);
 
@@ -462,6 +471,13 @@ export default function PassengerHome() {
       }
     }
 
+    // Un valor sin sentido -vacio o bajo el piso- se dice aqui, sin viaje de red.
+    // El servidor lo vuelve a exigir: esto es comodidad, no validacion.
+    if (oferta.error !== null) {
+      setErrorSolicitud(oferta.error);
+      return;
+    }
+
     setEnviando(true);
     setErrorSolicitud(null);
 
@@ -511,6 +527,10 @@ export default function PassengerHome() {
       serviceType,
       parcelDescription: serviceType === 'parcel' ? parcelDescription : null,
       cargo: cargoItems,
+      // Siempre el valor que se ve en pantalla, aunque sea la sugerida: lo que
+      // el pasajero leyo es lo que se guarda, incluso si la tarifa cambia de
+      // franja -nocturna- entre que la vio y que confirma.
+      offeredAmount: oferta.amount,
     });
 
     if (!creada.ok) {
@@ -523,6 +543,8 @@ export default function PassengerHome() {
     // desviado. Por eso se relee en vez de construirla aqui.
     const activa = await fetchActiveRequest();
     setEnviando(false);
+    // La oferta era de ESTE viaje. Al volver a pedir otro, arranca de la sugerida.
+    reiniciarOferta();
 
     if (activa.ok && activa.data !== null) {
       setSolicitud(aSolicitudEnCurso(activa.data));
@@ -564,6 +586,9 @@ export default function PassengerHome() {
     serviceType,
     parcelDescription,
     cargoItems,
+    oferta.amount,
+    oferta.error,
+    reiniciarOferta,
   ]);
 
   /**
@@ -1123,6 +1148,10 @@ export default function PassengerHome() {
             calculandoTarifa={tarifa.loading}
             errorTarifa={tarifa.error}
             tarifaPendiente={tarifa.pending}
+            ofertaTexto={oferta.text}
+            onCambiarOferta={oferta.setText}
+            errorOferta={oferta.error}
+            ofertaMinima={oferta.minimum}
           />
         )}
 
@@ -1423,6 +1452,11 @@ interface ResumenDelViajeProps {
   calculandoTarifa: boolean;
   errorTarifa: string | null;
   tarifaPendiente: FareQuotePending | null;
+  /** Lo que el pasajero ofrece, tal cual lo escribio (D277). */
+  ofertaTexto: string;
+  onCambiarOferta: (texto: string) => void;
+  errorOferta: string | null;
+  ofertaMinima: number | null;
 }
 
 /**
@@ -1461,6 +1495,10 @@ function ResumenDelViaje({
   calculandoTarifa,
   errorTarifa,
   tarifaPendiente,
+  ofertaTexto,
+  onCambiarOferta,
+  errorOferta,
+  ofertaMinima,
 }: ResumenDelViajeProps) {
   const { colors } = useTheme();
   const esEncomienda = tipoServicio === 'parcel';
@@ -1566,6 +1604,31 @@ function ResumenDelViaje({
           pending={tarifaPendiente}
         />
 
+        {/* D277: el pasajero propone el valor. Solo cuando hay tarifa que
+            proponer sobre ella: sin cotizacion no hay de donde partir, y el
+            boton ya espera por lo mismo. La tarifa de arriba pasa a ser la
+            sugerida; este campo es lo que se enviara y lo que vera el
+            conductor. */}
+        {tarifa !== null && !calculandoTarifa && errorTarifa === null && (
+          <Input
+            value={ofertaTexto}
+            onChangeText={onCambiarOferta}
+            icon={Banknote}
+            placeholder="Tu oferta en pesos"
+            keyboardType="number-pad"
+            maxLength={9}
+            returnKeyType="done"
+            // Sin etiqueta encima, mismo criterio que la referencia: una linea
+            // menos en una hoja donde cada pixel se le quita al mapa. El texto
+            // de abajo ya dice de que numero se trata.
+            helperText={
+              `Tarifa sugerida ${formatAmount(tarifa.totalAmount)}` +
+              (ofertaMinima !== null ? ` · Mínimo ${formatAmount(ofertaMinima)}` : '')
+            }
+            errorText={errorOferta ?? undefined}
+          />
+        )}
+
         {/* La estimacion solo ocupa sitio cuando existe. Si Mapbox no responde
             no se pinta nada, en lugar de ensenar un numero fabricado (D149). */}
         {(estimando || ruta !== null) && (
@@ -1606,7 +1669,9 @@ function ResumenDelViaje({
         // encomienda sin carga o un destino sin tarifa- el boton espera. La
         // misma llamada que hace esta fila es la que hara `request_ride`, asi
         // que si aqui no hay precio, confirmar tampoco lo tendria.
-        disabled={calculandoTarifa || tarifa === null || errorTarifa !== null}
+        disabled={
+          calculandoTarifa || tarifa === null || errorTarifa !== null || errorOferta !== null
+        }
         onPress={onConfirmar}
       />
 

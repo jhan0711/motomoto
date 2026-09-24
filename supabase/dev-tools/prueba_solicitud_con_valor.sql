@@ -724,7 +724,7 @@ $capacidad$;
 do $permisos2$
 declare
   v_firma constant text :=
-    'public.request_ride(double precision,double precision,text,double precision,double precision,text,smallint,uuid,uuid,text,public.service_type,text,uuid[],smallint[])';
+    'public.request_ride(double precision,double precision,text,double precision,double precision,text,smallint,uuid,uuid,text,public.service_type,text,uuid[],smallint[],integer)';
   v_ok boolean;
 begin
   select has_function_privilege('anon', v_firma, 'execute') into v_ok;

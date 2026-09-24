@@ -170,6 +170,12 @@ export interface CreateRequestInput {
   parcelDescription?: string | null;
   /** Lo que lleva el servicio, sea un pasajero con carga o una encomienda sola. */
   cargo?: CargoItem[];
+  /**
+   * El valor que el pasajero propone (D277). Sin el rige la tarifa oficial. El
+   * servidor lo valida -no baja de la tarifa minima ni pasa del tope-, asi que
+   * mandarlo no es darle al cliente la palabra final sobre el precio.
+   */
+  offeredAmount?: number | null;
 }
 
 /**
@@ -215,6 +221,7 @@ export async function createRequest(input: CreateRequestInput): Promise<Result<s
           p_cargo_quantities: input.cargo.map((c) => c.quantity),
         }
       : {}),
+    ...(input.offeredAmount != null ? { p_offered_amount: input.offeredAmount } : {}),
   });
 
   if (error) {

@@ -78,6 +78,14 @@ const MESSAGES: Record<string, string> = {
   URBAN_FARE_NOT_CONFIGURED:
     'No pudimos calcular el valor de este servicio. Inténtalo de nuevo en un momento.',
 
+  /**
+   * D277: el pasajero propone el valor y el servidor lo acota. La pantalla ya
+   * avisa del piso antes de enviar, asi que estos dos solo llegan si la tabla de
+   * tarifas cambio en medio, o por un tope que el campo no conoce.
+   */
+  OFFER_BELOW_MINIMUM: 'El valor que ofreces es menor que la tarifa mínima.',
+  OFFER_ABOVE_MAXIMUM: 'El valor que ofreces es demasiado alto para este viaje. Revísalo.',
+
   // Situaciones normales de la operación. No son fallos de nadie, y por eso el
   // texto no pide disculpas ni sugiere reintentar sin sentido.
   NO_DRIVERS_AVAILABLE: 'No hay motocarros disponibles en este momento.',

@@ -75,6 +75,18 @@ export async function quoteFare(input: QuoteFareInput): Promise<Result<FareQuote
   });
 }
 
+/**
+ * La tarifa minima vigente: el piso de lo que un pasajero puede ofrecer (D277).
+ *
+ * Nulo si no se pudo leer. No es un error que ensenar: el campo simplemente no
+ * avisa por adelantado y es el servidor quien rechaza, como siempre.
+ */
+export async function fetchMinOfferAmount(): Promise<number | null> {
+  const { data, error } = await supabase.rpc('get_min_offer_amount');
+  if (error || typeof data !== 'number') return null;
+  return data;
+}
+
 /** Una linea de carga ya guardada, con su nombre y su precio congelado. */
 export interface RequestCargoLine {
   cargoTypeName: string;

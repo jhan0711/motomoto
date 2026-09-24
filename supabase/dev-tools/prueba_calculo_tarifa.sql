@@ -599,7 +599,13 @@ begin
   select location into v_org from public.places order by sort_order, name limit 1;
   select location into v_dst from public.places order by sort_order desc, name limit 1;
 
-  -- 42. Un total que no cuadra con sus partes, en viaje de pasajeros.
+  -- 42. Un total distinto de la suma de sus partes, en viaje de pasajeros.
+  --
+  --     D277: antes se rechazaba (`rr_fare_matches_parts`). Ahora ENTRA, a
+  --     proposito: el pasajero propone el valor, `fare_amount` es lo acordado y
+  --     el desglose es el de la tarifa oficial de referencia. Aqui 9.999 es la
+  --     oferta sobre una oficial de 4.000 + 2.300. Los limites de la oferta los
+  --     pone `request_ride` y los prueba `prueba_oferta_precio.sql`.
   begin
     insert into public.ride_requests (
       passenger_id, service_type, passenger_count,
@@ -609,12 +615,15 @@ begin
       v_pas, 'passenger', 1, v_org, 'A', v_dst, 'B', '3001234567', now() + interval '5 minutes',
       9999, 4000, 2300, false, false
     );
-    insert into resultados values (42, 'Total que no cuadra con sus partes (pasajero)',
-      'rechaza', 'LO ACEPTO', false);
+    insert into resultados values (42, 'Total distinto de sus partes (oferta, D277) entra',
+      'entra', 'entro', true);
   exception when others then
-    insert into resultados values (42, 'Total que no cuadra con sus partes (pasajero)',
-      'rechaza', sqlstate, true);
+    insert into resultados values (42, 'Total distinto de sus partes (oferta, D277) entra',
+      'entra', 'LO RECHAZO ' || sqlstate, false);
   end;
+
+  update public.ride_requests set status = 'expired'
+  where passenger_id = v_pas and status in ('searching', 'assigned', 'in_progress');
 
   -- 43. El que si cuadra entra: 4.000 + 2.300.
   begin
@@ -636,7 +645,9 @@ begin
   update public.ride_requests set status = 'expired'
   where passenger_id = v_pas and status in ('searching', 'assigned', 'in_progress');
 
-  -- 44. En la encomienda la regla es la mayor, no la suma. 4.000 + 4.900 no vale.
+  -- 44. En la encomienda el desglose de referencia es la mayor, no la suma; y
+  --     desde D277 el total guardado puede apartarse de el (la oferta). 8.900
+  --     sobre 4.000 y 4.900 entra.
   begin
     insert into public.ride_requests (
       passenger_id, service_type, passenger_count, parcel_description,
@@ -647,12 +658,15 @@ begin
       v_org, 'A', v_dst, 'B', '3001234567', now() + interval '5 minutes',
       8900, 4000, 4900, false, false
     );
-    insert into resultados values (44, 'Encomienda cobrada como suma en vez de la mayor',
-      'rechaza', 'LA ACEPTO', false);
+    insert into resultados values (44, 'Encomienda con total distinto de la mayor (oferta, D277) entra',
+      'entra', 'entro', true);
   exception when others then
-    insert into resultados values (44, 'Encomienda cobrada como suma en vez de la mayor',
-      'rechaza', sqlstate, true);
+    insert into resultados values (44, 'Encomienda con total distinto de la mayor (oferta, D277) entra',
+      'entra', 'LO RECHAZO ' || sqlstate, false);
   end;
+
+  update public.ride_requests set status = 'expired'
+  where passenger_id = v_pas and status in ('searching', 'assigned', 'in_progress');
 
   -- 45. Media tarifa guardada.
   begin

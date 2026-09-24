@@ -23,6 +23,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { fetchRequestCargo, type RequestCargoLine } from '@/features/fare/fare-service';
 import { formatAmount } from '@/features/fare/format-amount';
+import { officialFareAmount } from '@/features/fare/official-fare';
 import { formatWhen } from '@/features/history/format-when';
 import { StarPicker } from '@/features/rating/star-picker';
 import { fetchDriverJob, type DriverJobDetail } from '@/features/history/history-service';
@@ -94,6 +95,14 @@ function Contenido({ job }: { job: DriverJobDetail }) {
   const { colors } = useTheme();
   const router = useRouter();
   const { icon: Icon, color, titulo } = presentacionDe(job);
+
+  const tarifaOficial = officialFareAmount(
+    job.serviceType,
+    job.fareTripAmount,
+    job.fareCargoAmount,
+  );
+  const ofertaDistinta =
+    tarifaOficial !== null && job.fareAmount !== null && tarifaOficial !== job.fareAmount;
 
   /**
    * El detalle de la carga, si lleva. Igual criterio que en el resumen del
@@ -213,19 +222,29 @@ function Contenido({ job }: { job: DriverJobDetail }) {
             <Wallet size={iconSize.lg} color={colors.brand} strokeWidth={iconStrokeWidth} />
             <View style={styles.valorTextos}>
               <Text variant="heading">{formatAmount(job.fareAmount)}</Text>
-              {job.fareReference !== null && (
+              {/* D277: si el pasajero ofrecio algo distinto de la tarifa, el
+                  desglose de abajo -que es el de la tarifa oficial- ya no suma
+                  este valor, y ensenarlo seria mostrar cuentas que no cuadran.
+                  Se dice de que se aparto en lugar de eso. */}
+              {ofertaDistinta && (
+                <Text variant="caption" color="textSecondary">
+                  Oferta del pasajero · Tarifa {formatAmount(tarifaOficial ?? 0)}
+                </Text>
+              )}
+              {!ofertaDistinta && job.fareReference !== null && (
                 <Text variant="caption" color="textSecondary">
                   Tarifa de {job.fareReference}
                 </Text>
               )}
-              {job.fareIsNight === true && (
+              {!ofertaDistinta && job.fareIsNight === true && (
                 <Text variant="caption" color="textSecondary">
                   Con recargo nocturno
                 </Text>
               )}
             </View>
           </View>
-          {job.serviceType === 'passenger' &&
+          {!ofertaDistinta &&
+            job.serviceType === 'passenger' &&
             job.fareCargoAmount !== null &&
             job.fareCargoAmount > 0 && (
               <>

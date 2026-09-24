@@ -47,6 +47,15 @@ export function RideDetailDialog({ requestId, onCerrar }: Props) {
     return () => clearTimeout(inicial);
   }, [consultar]);
 
+  // La misma cuenta que `quote_fare`: en una encomienda manda la mayor de las
+  // dos partes, en un viaje de pasajeros se suman (D277).
+  const tarifaOficial =
+    detalle === null || detalle.fare_trip_amount === null || detalle.fare_cargo_amount === null
+      ? null
+      : detalle.service_type === 'parcel'
+        ? Math.max(detalle.fare_trip_amount, detalle.fare_cargo_amount)
+        : detalle.fare_trip_amount + detalle.fare_cargo_amount;
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/45 p-4"
@@ -181,12 +190,22 @@ export function RideDetailDialog({ requestId, onCerrar }: Props) {
                 </p>
                 {detalle.fare_amount !== null && (
                   <p className="mt-0.5 text-sm text-text-secondary">
-                    Viaje {formatearPesos(detalle.fare_trip_amount)}
-                    {detalle.fare_cargo_amount !== null && detalle.fare_cargo_amount > 0
-                      ? ` · Carga ${formatearPesos(detalle.fare_cargo_amount)}`
-                      : ''}
-                    {detalle.fare_is_night === true ? ' · Tarifa nocturna' : ''}
-                    {detalle.fare_reference !== null ? ` · ${detalle.fare_reference}` : ''}
+                    {/* D277: el pasajero propone el valor. Si difiere de la tarifa
+                        oficial -el desglose es el de esa tarifa, no el de este
+                        valor-, se dice cual era en lugar de ensenar cuentas que
+                        no suman. */}
+                    {tarifaOficial !== null && tarifaOficial !== detalle.fare_amount ? (
+                      `Oferta del pasajero · Tarifa oficial ${formatearPesos(tarifaOficial)}`
+                    ) : (
+                      <>
+                        Viaje {formatearPesos(detalle.fare_trip_amount)}
+                        {detalle.fare_cargo_amount !== null && detalle.fare_cargo_amount > 0
+                          ? ` · Carga ${formatearPesos(detalle.fare_cargo_amount)}`
+                          : ''}
+                        {detalle.fare_is_night === true ? ' · Tarifa nocturna' : ''}
+                        {detalle.fare_reference !== null ? ` · ${detalle.fare_reference}` : ''}
+                      </>
+                    )}
                   </p>
                 )}
               </div>

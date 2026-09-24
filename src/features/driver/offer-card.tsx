@@ -1,10 +1,11 @@
-import { Circle, MapPin, Users } from 'lucide-react-native';
+import { Banknote, Circle, MapPin, Package, Users } from 'lucide-react-native';
 import { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Text } from '@/components/ui/text';
+import { formatAmount } from '@/features/fare/format-amount';
 import { formatCountdown, useCountdown } from '@/features/ride/use-countdown';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
 
@@ -102,6 +103,24 @@ export function OfferCard({
 
       <View style={[styles.separador, { backgroundColor: colors.border }]} />
 
+      {/* El valor va primero: es lo que decide si el viaje le conviene, y hasta
+          D277 el conductor aceptaba sin verlo. Si el pasajero ofrecio algo
+          distinto de la tarifa, se dice cual era, para que se vea de cuanto se
+          aparta y no solo el numero suelto. */}
+      {offer.fareAmount !== null && (
+        <View style={styles.punto}>
+          <Banknote size={iconSize.sm} color={colors.brand} strokeWidth={iconStrokeWidth} />
+          <Text variant="subheading" style={styles.puntoTexto}>
+            {formatAmount(offer.fareAmount)}
+            {offer.fareOfficialAmount !== null && offer.fareOfficialAmount !== offer.fareAmount && (
+              <Text variant="caption" color="textSecondary">
+                {`  ·  Tarifa ${formatAmount(offer.fareOfficialAmount)}`}
+              </Text>
+            )}
+          </Text>
+        </View>
+      )}
+
       <View style={styles.punto}>
         <Circle size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
         <Text variant="body" numberOfLines={1} style={styles.puntoTexto}>
@@ -116,12 +135,32 @@ export function OfferCard({
         </Text>
       </View>
 
-      <View style={styles.punto}>
-        <Users size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
-        <Text variant="body" style={styles.puntoTexto}>
-          {offer.passengerCount === 1 ? 'Un pasajero' : `${offer.passengerCount} pasajeros`}
-        </Text>
-      </View>
+      {/* Una encomienda no lleva pasajeros -el servidor lo exige-, asi que en
+          lugar de "0 pasajeros" se dice que es y la carga. */}
+      {offer.serviceType === 'parcel' ? (
+        <View style={styles.punto}>
+          <Package size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <Text variant="body" style={styles.puntoTexto}>
+            {`Encomienda${offer.parcelDescription !== null ? `: ${offer.parcelDescription}` : ''}`}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.punto}>
+          <Users size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <Text variant="body" style={styles.puntoTexto}>
+            {offer.passengerCount === 1 ? 'Un pasajero' : `${offer.passengerCount} pasajeros`}
+          </Text>
+        </View>
+      )}
+
+      {offer.cargoSummary !== null && (
+        <View style={styles.punto}>
+          <Package size={iconSize.sm} color={colors.textSecondary} strokeWidth={iconStrokeWidth} />
+          <Text variant="body" style={styles.puntoTexto}>
+            {offer.cargoSummary}
+          </Text>
+        </View>
+      )}
 
       {/* El mapa va despues de las direcciones y antes de los botones. Ese orden
           es el de la decision: primero se lee a donde, luego se mira por donde,
