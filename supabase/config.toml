@@ -412,3 +412,8 @@ enabled = true
 # declarative_schema_path = "./database"
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
+
+# D279: la llama Wompi, no la app, y no lleva sesion de nadie: lo unico que autoriza el aviso
+# es su firma (se verifica dentro de la funcion). Sin esto Supabase la rechazaria por falta de JWT.
+[functions.wompi-webhook]
+verify_jwt = false
