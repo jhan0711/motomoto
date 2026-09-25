@@ -54,6 +54,7 @@ import { ServiceTypeToggle } from '@/features/fare/service-type-toggle';
 import type { CargoItem, CargoType, FareQuote, ServiceType } from '@/features/fare/types';
 import { useCargoTypes } from '@/features/fare/use-cargo-types';
 import { useFareQuote, type FareQuotePending } from '@/features/fare/use-fare-quote';
+import { formatAmountInput } from '@/features/fare/offer-amount';
 import { useOfferPrice } from '@/features/fare/use-offer-price';
 import { LocationGate, blockingState } from '@/features/map/location-gate';
 import { Map, type MapHandle, type MapMarker, type MapRoute } from '@/features/map/map';
@@ -1611,12 +1612,11 @@ function ResumenDelViaje({
             conductor. */}
         {tarifa !== null && !calculandoTarifa && errorTarifa === null && (
           <Input
-            value={ofertaTexto}
+            value={formatAmountInput(ofertaTexto)}
             onChangeText={onCambiarOferta}
             icon={Banknote}
             placeholder="Tu oferta en pesos"
             keyboardType="number-pad"
-            maxLength={9}
             returnKeyType="done"
             // Sin etiqueta encima, mismo criterio que la referencia: una linea
             // menos en una hoja donde cada pixel se le quita al mapa. El texto
