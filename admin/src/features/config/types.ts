@@ -127,6 +127,23 @@ export const META: Record<string, MetaParametro> = {
     grupo: 'operacion',
     unidad: 'm',
   },
+  driver_balance_enforced: {
+    etiqueta: 'Cobro de comisión por saldo (0 apagado, 1 encendido)',
+    grupo: 'operacion',
+    aviso:
+      'Apagado, no se cobra comisión ni se bloquea a nadie. Al encenderlo, todo conductor sin saldo suficiente queda fuera de servicio hasta recargar: antes de hacerlo, acredita saldo a los conductores desde su ficha (botón Saldo).',
+  },
+  commission_percent: {
+    etiqueta: 'Comisión por servicio terminado',
+    grupo: 'operacion',
+    unidad: '%',
+    aviso: 'Se descuenta del saldo del conductor, sobre el valor acordado de cada servicio.',
+  },
+  min_topup_amount: {
+    etiqueta: 'Recarga mínima del conductor',
+    grupo: 'operacion',
+    unidad: '$',
+  },
 };
 
 export function metaDe(clave: string): MetaParametro {

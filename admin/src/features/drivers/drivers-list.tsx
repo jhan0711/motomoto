@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { AlertCircle, Inbox, LoaderCircle, Plus } from 'lucide-react';
-import { crearConductor, listarConductores } from './driver-actions';
+import {
+  crearConductor,
+  listarConductores,
+  listarSaldos,
+  type SaldoConductor,
+} from './driver-actions';
 import { DriverRow } from './driver-row';
 import type { Driver } from './types';
 import { NewDriverDialog } from './new-driver-dialog';
@@ -13,6 +18,7 @@ export function DriversList() {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
+  const [saldos, setSaldos] = useState<Map<string, SaldoConductor>>(new Map());
 
   /*
    * La contrasena recien generada, mientras el dialogo la ensena. Vive aqui y
@@ -30,6 +36,11 @@ export function DriversList() {
     setConductores(r.conductores);
     setError(null);
     setCargando(false);
+
+    // Los saldos van aparte de la lista: si esta consulta falla, la ficha sigue
+    // sirviendo para todo lo demas y solo se queda sin la cifra.
+    const s = await listarSaldos();
+    if (s.ok) setSaldos(s.saldos);
   }, []);
 
   useEffect(() => {
@@ -103,6 +114,7 @@ export function DriversList() {
           <DriverRow
             key={conductor.driver_id}
             conductor={conductor}
+            saldo={saldos.get(conductor.driver_id) ?? null}
             onCambio={() => void consultar()}
           />
         ))}

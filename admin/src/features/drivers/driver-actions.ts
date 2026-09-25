@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import type { Database } from '@/lib/supabase/database.types';
 import type { ApprovalStatus, Driver } from './types';
 
 /**
@@ -134,6 +135,73 @@ export async function crearConductor(
   const fila = data?.[0];
   if (fila === undefined) return { ok: false, mensaje: 'No pudimos crear la cuenta.' };
   return { ok: true, password: fila.initial_password };
+}
+
+// ---------------------------------------------------------------------------
+// Saldo del conductor (D278)
+// ---------------------------------------------------------------------------
+
+export interface SaldoConductor {
+  driver_id: string;
+  balance: number;
+  can_work: boolean;
+}
+
+export type Movimiento =
+  Database['public']['Functions']['admin_get_driver_ledger']['Returns'][number];
+
+const MENSAJES_SALDO: Record<string, string> = {
+  ADJUSTMENT_REASON_REQUIRED: 'Explica el motivo del ajuste, de 5 a 300 caracteres.',
+  INVALID_ADJUSTMENT_AMOUNT: 'El ajuste debe ser un valor distinto de cero.',
+};
+
+export async function listarSaldos(): Promise<
+  { ok: true; saldos: Map<string, SaldoConductor> } | { ok: false; mensaje: string }
+> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_list_driver_balances');
+
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true, saldos: new Map((data ?? []).map((s) => [s.driver_id, s])) };
+}
+
+export async function obtenerMovimientos(
+  driverId: string,
+): Promise<{ ok: true; movimientos: Movimiento[] } | { ok: false; mensaje: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_get_driver_ledger', {
+    p_driver: driverId,
+    p_limit: 50,
+  });
+
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true, movimientos: data ?? [] };
+}
+
+/**
+ * Un ajuste al saldo, a favor (positivo) o en contra (negativo).
+ *
+ * Es el camino para acreditar a mano mientras la recarga por pasarela no exista
+ * y para revertir un descuento en disputa. No borra nada: anade una fila al
+ * libro con el motivo, y queda en el registro de auditoria.
+ */
+export async function ajustarSaldo(
+  driverId: string,
+  monto: number,
+  motivo: string,
+): Promise<{ ok: true; saldo: number } | { ok: false; mensaje: string }> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_adjust_driver_balance', {
+    p_driver: driverId,
+    p_amount: monto,
+    p_reason: motivo,
+  });
+
+  if (error) {
+    const codigo = error.hint ?? '';
+    return { ok: false, mensaje: MENSAJES_SALDO[codigo] ?? traducir(error) };
+  }
+  return { ok: true, saldo: typeof data === 'number' ? data : 0 };
 }
 
 /** Genera una contrasena nueva para un conductor. Tambien se muestra una vez. */

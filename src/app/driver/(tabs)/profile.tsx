@@ -19,6 +19,7 @@ import { Modal } from '@/components/ui/modal';
 import { Screen } from '@/components/ui/screen';
 import { Text } from '@/components/ui/text';
 import { useSession } from '@/features/auth/session';
+import { BalanceCard } from '@/features/driver/balance-card';
 import { fetchDriverState, type DriverState } from '@/features/driver/driver-service';
 import { ProfileAvatar } from '@/features/profile/profile-avatar';
 import { iconSize, iconStrokeWidth, radius, spacing, useTheme } from '@/theme';
@@ -89,6 +90,9 @@ export default function DriverProfile() {
           </Text>
         </View>
       </View>
+
+      {/* Solo aparece cuando la empresa enciende el cobro por saldo (D278). */}
+      <BalanceCard />
 
       <Card variant="outlined" padding="md">
         <Text variant="caption" color="textTertiary">

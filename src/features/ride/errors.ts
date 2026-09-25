@@ -105,6 +105,14 @@ const MESSAGES: Record<string, string> = {
    */
   INVALID_STATE_TRANSITION: 'Ese servicio ya no admite esa acción.',
 
+  /**
+   * D278: el cobro por saldo esta encendido y el del conductor no alcanza ni
+   * para la comision del viaje minimo. No es un fallo: es el desenlace normal de
+   * un saldo agotado, y el texto dice que hacer.
+   */
+  INSUFFICIENT_BALANCE:
+    'Tu saldo no alcanza para recibir servicios. Comunícate con la empresa para recargar.',
+
   // Estados de la cuenta. El usuario no puede resolverlos por su cuenta, asi que
   // el mensaje le dice a quien acudir en lugar de invitarle a insistir.
   ACCOUNT_BLOCKED: 'Tu cuenta está bloqueada. Comunícate con la empresa.',

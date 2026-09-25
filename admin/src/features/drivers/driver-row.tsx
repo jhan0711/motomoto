@@ -12,6 +12,7 @@ import {
   Star,
   Truck,
   UserCheck,
+  Wallet,
 } from 'lucide-react';
 import { BlockDialog } from '@/features/shared/block-dialog';
 import type { Driver } from './types';
@@ -21,17 +22,23 @@ import {
   cambiarEstadoCuenta,
   editarContacto,
   restablecerContrasena,
+  type SaldoConductor,
 } from './driver-actions';
+import { BalanceDialog } from './balance-dialog';
+import { formatearPesos } from '@/features/config/types';
 import { EditContactDialog } from './edit-contact-dialog';
 import { PasswordNotice } from '@/features/shared/password-notice';
 import { DocumentsPanel } from '@/features/documents/documents-panel';
 
 interface Props {
   conductor: Driver;
+  /** Nulo mientras no llega, o si la consulta de saldos falló. */
+  saldo: SaldoConductor | null;
   onCambio: () => void;
 }
 
-export function DriverRow({ conductor, onCambio }: Props) {
+export function DriverRow({ conductor, saldo, onCambio }: Props) {
+  const [verSaldo, setVerSaldo] = useState(false);
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState(false);
@@ -109,6 +116,18 @@ export function DriverRow({ conductor, onCambio }: Props) {
               ? 'Sin motocarro'
               : `Motocarro ${conductor.unit_number}`}
           </span>
+          {saldo !== null && (
+            <span
+              className={`flex items-center gap-1.5 ${
+                saldo.can_work ? 'text-text-secondary' : 'text-on-danger-subtle'
+              }`}
+              title={saldo.can_work ? undefined : 'El saldo no alcanza para recibir servicios.'}
+            >
+              <Wallet size={14} className="text-text-tertiary" />
+              Saldo {saldo.balance < 0 ? '-' : ''}
+              {formatearPesos(Math.abs(saldo.balance))}
+            </span>
+          )}
           <span className="flex items-center gap-1.5 text-text-secondary">
             <Star size={14} className="text-text-tertiary" />
             {conductor.rating_count === 0
@@ -165,6 +184,16 @@ export function DriverRow({ conductor, onCambio }: Props) {
             Retirar aprobación
           </button>
         )}
+
+        <button
+          type="button"
+          disabled={trabajando}
+          onClick={() => setVerSaldo(true)}
+          className="btn btn-secundario h-9 gap-1.5 px-3"
+        >
+          <Wallet size={15} />
+          Saldo
+        </button>
 
         <button
           type="button"
@@ -262,6 +291,16 @@ export function DriverRow({ conductor, onCambio }: Props) {
             }
             return r;
           }}
+        />
+      )}
+
+      {verSaldo && (
+        <BalanceDialog
+          nombre={conductor.full_name}
+          driverId={conductor.driver_id}
+          saldoActual={saldo?.balance ?? 0}
+          onCerrar={() => setVerSaldo(false)}
+          onAjustado={onCambio}
         />
       )}
 
