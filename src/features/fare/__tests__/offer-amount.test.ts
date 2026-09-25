@@ -1,4 +1,4 @@
-import { parseOfferAmount, sanitizeOfferText } from '../offer-amount';
+import { formatAmountInput, parseOfferAmount, sanitizeOfferText } from '../offer-amount';
 
 describe('parseOfferAmount', () => {
   it('lee un entero simple', () => {
@@ -27,5 +27,22 @@ describe('sanitizeOfferText', () => {
 
   it('recorta un pegado exageradamente largo', () => {
     expect(sanitizeOfferText('1'.repeat(30))).toHaveLength(9);
+  });
+});
+
+describe('formatAmountInput', () => {
+  it('pinta pesos con el punto de los miles', () => {
+    expect(formatAmountInput('12500')).toBe('$12.500');
+    expect(formatAmountInput('1000000')).toBe('$1.000.000');
+  });
+
+  it('acepta lo que ya viene formateado', () => {
+    expect(formatAmountInput('$12.500')).toBe('$12.500');
+  });
+
+  it('sin digitos deja el campo vacio, no en $0', () => {
+    expect(formatAmountInput('')).toBe('');
+    expect(formatAmountInput('$')).toBe('');
+    expect(formatAmountInput('0')).toBe('');
   });
 });

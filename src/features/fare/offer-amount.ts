@@ -1,3 +1,5 @@
+import { formatAmount } from './format-amount';
+
 /**
  * Lo que el pasajero escribe en el campo de su oferta, convertido en pesos.
  *
@@ -24,4 +26,16 @@ export function parseOfferAmount(texto: string): number | null {
 /** El texto del campo tras una edicion: solo digitos, sin ceros a la izquierda. */
 export function sanitizeOfferText(texto: string): string {
   return texto.replace(/\D/g, '').replace(/^0+/, '').slice(0, 9);
+}
+
+/**
+ * El texto de un campo de pesos tal como se ve mientras se escribe: "$12.500".
+ *
+ * Se guarda solo lo digitado (`sanitizeOfferText`) y esto solo lo pinta, asi que
+ * el signo y los puntos nunca se cuelan en el valor. Vacio si no hay digitos: un
+ * "$0" sobre un campo sin escribir taparia el marcador de posicion.
+ */
+export function formatAmountInput(texto: string): string {
+  const digitos = sanitizeOfferText(texto);
+  return digitos === '' ? '' : formatAmount(Number(digitos));
 }

@@ -10,7 +10,11 @@ import { Input } from '@/components/ui/input';
 import { Modal } from '@/components/ui/modal';
 import { Text } from '@/components/ui/text';
 import { formatAmount } from '@/features/fare/format-amount';
-import { parseOfferAmount, sanitizeOfferText } from '@/features/fare/offer-amount';
+import {
+  formatAmountInput,
+  parseOfferAmount,
+  sanitizeOfferText,
+} from '@/features/fare/offer-amount';
 import { radius, iconSize, iconStrokeWidth, spacing, useTheme } from '@/theme';
 
 import {
@@ -205,34 +209,38 @@ export function BalanceCard() {
         onConfirm={() => void recargar()}
         confirmLoading={enviando}
       >
-        <View style={styles.montos}>
-          {montosSugeridos(minimo).map((m) => (
-            <Pressable
-              key={m}
-              accessibilityRole="button"
-              accessibilityLabel={`Recargar ${formatAmount(m)}`}
-              onPress={() => setTexto(String(m))}
-              style={[
-                styles.monto,
-                {
-                  borderColor: monto === m ? colors.brand : colors.border,
-                  backgroundColor: monto === m ? colors.brandSubtle : 'transparent',
-                },
-              ]}
-            >
-              <Text variant="bodyStrong">{formatAmount(m)}</Text>
-            </Pressable>
-          ))}
+        {/* El diálogo centra su contenido, y un campo sin ancho propio se encoge
+            a lo que mide su texto: con el campo vacío quedaba del tamaño de su
+            marcador de posición. Este contenedor le da todo el ancho. */}
+        <View style={styles.cuerpo}>
+          <View style={styles.montos}>
+            {montosSugeridos(minimo).map((m) => (
+              <Pressable
+                key={m}
+                accessibilityRole="button"
+                accessibilityLabel={`Recargar ${formatAmount(m)}`}
+                onPress={() => setTexto(String(m))}
+                style={[
+                  styles.monto,
+                  {
+                    borderColor: monto === m ? colors.brand : colors.border,
+                    backgroundColor: monto === m ? colors.brandSubtle : 'transparent',
+                  },
+                ]}
+              >
+                <Text variant="bodyStrong">{formatAmount(m)}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <Input
+            value={formatAmountInput(texto)}
+            onChangeText={(t) => setTexto(sanitizeOfferText(t))}
+            placeholder="Otro valor en pesos"
+            keyboardType="number-pad"
+            errorText={errorMonto ?? undefined}
+          />
+          <FormError message={errorRecarga} />
         </View>
-        <Input
-          value={texto}
-          onChangeText={(t) => setTexto(sanitizeOfferText(t))}
-          placeholder="Otro valor en pesos"
-          keyboardType="number-pad"
-          maxLength={9}
-          errorText={errorMonto ?? undefined}
-        />
-        <FormError message={errorRecarga} />
       </Modal>
     </Card>
   );
@@ -250,6 +258,9 @@ const styles = StyleSheet.create({
   },
   cabeceraTextos: {
     flex: 1,
+  },
+  cuerpo: {
+    width: '100%',
   },
   lista: {
     gap: spacing.sm,
