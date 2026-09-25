@@ -1,4 +1,4 @@
-import { toRideFailure } from '@/features/ride/errors';
+import { messageForCode, toRideFailure } from '@/features/ride/errors';
 import { supabase } from '@/lib/supabase';
 
 import type { Result } from './driver-service';
@@ -59,6 +59,49 @@ export async function fetchMyBalance(): Promise<Result<DriverBalance | null>> {
       canWork: fila.can_work,
     },
   };
+}
+
+/**
+ * Pide a la Edge Function `create-topup` un cobro de Wompi ya firmado.
+ *
+ * La firma del cobro se calcula en el servidor con un secreto que la app no
+ * tiene: por eso el telefono no arma la URL, solo la abre. Y solo se abre una URL
+ * del checkout de Wompi -defensa barata contra que una respuesta rara mande al
+ * conductor a cualquier otro sitio-.
+ *
+ * Que la funcion conteste bien NO significa que el conductor haya pagado: el
+ * saldo sube cuando Wompi avisa al servidor, y la pantalla lo relee despues.
+ */
+export async function createTopup(
+  amount: number,
+): Promise<Result<{ url: string; reference: string }>> {
+  const { data, error } = await supabase.functions.invoke('create-topup', { body: { amount } });
+
+  if (error) {
+    // Un error HTTP de la funcion trae el cuerpo con `{ error: CODIGO }` dentro de
+    // `context`. Se lee aqui y se traduce por el codigo, nunca por el texto.
+    let codigo = '';
+    try {
+      const cuerpo = await (error as { context?: Response }).context?.json();
+      codigo = typeof cuerpo?.error === 'string' ? cuerpo.error : '';
+    } catch {
+      // Sin cuerpo legible: cae en el mensaje generico de abajo.
+    }
+
+    return {
+      ok: false,
+      failure: { code: codigo || 'TOPUP_FAILED', message: messageForCode(codigo) },
+    };
+  }
+
+  const url = typeof data?.url === 'string' ? data.url : '';
+  const reference = typeof data?.reference === 'string' ? data.reference : '';
+
+  if (!url.startsWith('https://checkout.wompi.co/') || reference === '') {
+    return { ok: false, failure: toRideFailure(new Error('respuesta de create-topup invalida')) };
+  }
+
+  return { ok: true, data: { url, reference } };
 }
 
 export async function fetchMyLedger(limit = 20): Promise<Result<LedgerEntry[]>> {

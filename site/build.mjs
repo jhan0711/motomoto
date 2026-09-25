@@ -172,6 +172,23 @@ writeFileSync(
   }),
 );
 
+// A donde vuelve el conductor tras pagar una recarga en Wompi (D279). Wompi
+// añade `?id=...` al final; esta página no lo lee ni lo necesita. NO afirma que
+// el pago se acreditó: el saldo sube cuando Wompi avisa al servidor, y la app lo
+// relee sola. Lleva `noindex`: a Google no le sirve de nada.
+mkdirSync(resolve(DIST, 'recarga'), { recursive: true });
+writeFileSync(
+  resolve(DIST, 'recarga/index.html'),
+  pagina({
+    titulo: 'Recarga',
+    noindex: true,
+    cuerpo: `
+    <h1>Gracias, ya puedes volver a la app</h1>
+    <p>Cierra esta página y vuelve a AmalfiGoApp. Tu saldo se actualiza en unos segundos, en cuanto la pasarela de pagos confirma tu recarga.</p>
+    <p>Si pasan varios minutos y no ves el saldo, escríbenos a <a href="mailto:soporte@amalfigo.app">soporte@amalfigo.app</a> con el correo de tu cuenta.</p>`,
+  }),
+);
+
 // `/privacidad` y `/terminos` los sirve Cloudflare desde los `.html` por su
 // manejo por defecto de HTML (auto-trailing-slash). No hacen falta copias.
 

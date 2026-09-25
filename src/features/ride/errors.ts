@@ -113,6 +113,17 @@ const MESSAGES: Record<string, string> = {
   INSUFFICIENT_BALANCE:
     'Tu saldo no alcanza para recibir servicios. Comunícate con la empresa para recargar.',
 
+  /**
+   * D279: recargas. La pantalla ya valida el minimo antes de enviar, asi que los
+   * dos primeros solo llegan si la empresa cambio el ajuste mientras el
+   * conductor tenia la pantalla abierta, o si alguien llama a la funcion sin la
+   * pantalla.
+   */
+  TOPUP_BELOW_MINIMUM: 'El valor está por debajo de la recarga mínima.',
+  TOPUP_ABOVE_MAXIMUM: 'La recarga máxima es de $1.000.000.',
+  TOPUP_RATE_LIMITED: 'Hiciste muchos intentos de recarga. Espera un rato e inténtalo de nuevo.',
+  NOT_AN_ACTIVE_DRIVER: 'Solo un conductor con la cuenta activa puede recargar.',
+
   // Estados de la cuenta. El usuario no puede resolverlos por su cuenta, asi que
   // el mensaje le dice a quien acudir en lugar de invitarle a insistir.
   ACCOUNT_BLOCKED: 'Tu cuenta está bloqueada. Comunícate con la empresa.',
