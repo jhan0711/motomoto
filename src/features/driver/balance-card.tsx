@@ -235,7 +235,8 @@ export function BalanceCard() {
           <Input
             value={formatAmountInput(texto)}
             onChangeText={(t) => setTexto(sanitizeOfferText(t))}
-            placeholder="Otro valor en pesos"
+            label="Otro valor a recargar"
+            placeholder="Escribe el valor en pesos"
             keyboardType="number-pad"
             errorText={errorMonto ?? undefined}
           />

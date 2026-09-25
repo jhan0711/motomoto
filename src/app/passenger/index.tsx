@@ -1618,9 +1618,11 @@ function ResumenDelViaje({
             placeholder="Tu oferta en pesos"
             keyboardType="number-pad"
             returnKeyType="done"
-            // Sin etiqueta encima, mismo criterio que la referencia: una linea
-            // menos en una hoja donde cada pixel se le quita al mapa. El texto
-            // de abajo ya dice de que numero se trata.
+            // Con titulo. Al principio iba sin el, para ahorrar una linea en una
+            // hoja donde cada pixel se le quita al mapa, pero en la tablet el
+            // pasajero no sabia que ese numero era lo que iba a pagar y que
+            // podia cambiarlo.
+            label="¿Cuánto ofreces por el viaje?"
             helperText={
               `Tarifa sugerida ${formatAmount(tarifa.totalAmount)}` +
               (ofertaMinima !== null ? ` · Mínimo ${formatAmount(ofertaMinima)}` : '')
