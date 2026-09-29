@@ -1,5 +1,12 @@
 import { useFocusEffect, useRouter } from 'expo-router';
-import { BatteryWarning, CircleCheck, Inbox, MapPinOff, TriangleAlert } from 'lucide-react-native';
+import {
+  BatteryWarning,
+  CircleCheck,
+  Inbox,
+  MapPinOff,
+  Rocket,
+  TriangleAlert,
+} from 'lucide-react-native';
 import { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Switch, View } from 'react-native';
 
@@ -30,6 +37,7 @@ import {
 import { ActiveRideCard, type RideAction } from '@/features/driver/active-ride-card';
 import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
+import { useAutostartNotice } from '@/features/driver/autostart-notice';
 import { useBatteryOptimizationNotice } from '@/features/driver/battery-optimization-notice';
 import { useBackgroundLocation } from '@/features/driver/use-background-location';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
@@ -104,6 +112,7 @@ export default function DriverHome() {
   // primer plano, sin recalcularlo aparte.
   const segundoPlano = useBackgroundLocation(driverId, disponible, viajes.length > 0);
   const avisoBateria = useBatteryOptimizationNotice(segundoPlano.state.kind === 'active');
+  const avisoAutoinicio = useAutostartNotice(segundoPlano.state.kind === 'active');
 
   // El rastro se graba solo mientras hay pasajero a bordo. Un viaje aceptado o de
   // camino no cuenta: eso es la aproximacion, no el recorrido.
@@ -582,6 +591,19 @@ export default function DriverHome() {
             onPress: () => void avisoBateria.abrirAjustes(),
           }}
           accionSecundaria={{ etiqueta: 'Ya lo hice', onPress: avisoBateria.descartar }}
+        />
+      )}
+
+      {avisoAutoinicio.mostrar && (
+        <Aviso
+          icon={Rocket}
+          titulo="Activa el Autoinicio"
+          detalle="En Xiaomi, la app necesita el permiso de Autoinicio (Seguridad > Permisos) para poder seguir enviando tu ubicación aunque el sistema cierre la app en segundo plano. Es distinto del ahorro de batería: revisa los dos."
+          accion={{
+            etiqueta: 'Abrir Autoinicio',
+            onPress: () => void avisoAutoinicio.abrirAjustes(),
+          }}
+          accionSecundaria={{ etiqueta: 'Ya lo hice', onPress: avisoAutoinicio.descartar }}
         />
       )}
 

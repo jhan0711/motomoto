@@ -13,6 +13,7 @@ import { SessionProvider, useSession } from '@/features/auth/session';
 // para un pasajero o un conductor no disponible: solo queda registrada, a la
 // espera de que use-background-location.ts la arranque de verdad.
 import '@/features/driver/background-location-task';
+import { useNotificationResponseNavigation } from '@/features/notifications/use-notification-response';
 import { usePushRegistration } from '@/features/notifications/use-push-registration';
 import { useTheme } from '@/theme';
 
@@ -61,6 +62,12 @@ function RootNavigator() {
   // para el pasajero que para el conductor, sin repetir la llamada en cada
   // zona de la aplicacion.
   usePushRegistration(user?.id ?? null);
+
+  // Sin sesion no hay como recibir un aviso -el token se borra al cerrar
+  // sesion, `savePushToken(null)`-, asi que el listener no tiene nada que
+  // hacer, pero se registra igual: es barato tenerlo puesto y evita el hueco
+  // de la primera notificacion justo despues de iniciar sesion.
+  useNotificationResponseNavigation();
 
   return (
     <>
