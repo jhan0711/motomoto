@@ -5,6 +5,7 @@ import type { CargoType, Setting, UrbanFare } from './types';
 
 const MENSAJES: Record<string, string> = {
   NOT_AN_ADMIN: 'Tu cuenta ya no tiene permiso para hacer esto. Vuelve a entrar.',
+  NOT_A_SUPER_ADMIN: 'Solo un super administrador puede cambiar este parámetro.',
   INVALID_FARE_AMOUNT: 'El valor debe estar entre 1 y 1.000.000 de pesos.',
   URBAN_FARE_NOT_FOUND: 'Esa casilla de la rejilla no existe.',
   FARE_UNCHANGED: 'No cambiaste nada.',

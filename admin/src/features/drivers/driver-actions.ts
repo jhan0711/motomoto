@@ -153,6 +153,7 @@ export type Movimiento =
 const MENSAJES_SALDO: Record<string, string> = {
   ADJUSTMENT_REASON_REQUIRED: 'Explica el motivo del ajuste, de 5 a 300 caracteres.',
   INVALID_ADJUSTMENT_AMOUNT: 'El ajuste debe ser un valor distinto de cero.',
+  NOT_A_SUPER_ADMIN: 'Solo un super administrador puede ajustar un saldo.',
 };
 
 export async function listarSaldos(): Promise<

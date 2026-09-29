@@ -9,6 +9,11 @@ interface Props {
   nombre: string;
   driverId: string;
   saldoActual: number;
+  /** Sin esto, el formulario de ajuste no se dibuja -solo el saldo y el libro-.
+   * `admin_adjust_driver_balance` lo exige igual en el servidor (D278, pedido
+   * del usuario 2026-09-29); esto es solo para no ensenar un formulario que va
+   * a fallar. */
+  esSuperAdmin: boolean;
   onCerrar: () => void;
   /** Se llama tras un ajuste guardado, para que la lista recargue los saldos. */
   onAjustado: () => void;
@@ -33,7 +38,14 @@ function conSigno(valor: number): string {
  * el signo se elige con dos opciones explicitas y no con un "menos" escrito a
  * mano, que se olvida.
  */
-export function BalanceDialog({ nombre, driverId, saldoActual, onCerrar, onAjustado }: Props) {
+export function BalanceDialog({
+  nombre,
+  driverId,
+  saldoActual,
+  esSuperAdmin,
+  onCerrar,
+  onAjustado,
+}: Props) {
   const [movimientos, setMovimientos] = useState<Movimiento[] | null>(null);
   const [saldo, setSaldo] = useState(saldoActual);
   const [sentido, setSentido] = useState<'favor' | 'contra'>('favor');
@@ -102,73 +114,81 @@ export function BalanceDialog({ nombre, driverId, saldoActual, onCerrar, onAjust
           </button>
         </div>
 
-        <form onSubmit={enviar} className="mt-4 flex flex-col gap-3" noValidate>
-          <fieldset className="flex gap-4 text-sm text-text-primary">
-            <legend className="sr-only">Sentido del ajuste</legend>
-            <label className="flex items-center gap-1.5">
+        {!esSuperAdmin && (
+          <p className="mt-4 rounded-lg bg-surface-subtle px-3 py-2.5 text-sm text-text-secondary">
+            Solo un super administrador puede ajustar un saldo. Puedes ver el historial abajo.
+          </p>
+        )}
+
+        {esSuperAdmin && (
+          <form onSubmit={enviar} className="mt-4 flex flex-col gap-3" noValidate>
+            <fieldset className="flex gap-4 text-sm text-text-primary">
+              <legend className="sr-only">Sentido del ajuste</legend>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="sentido"
+                  checked={sentido === 'favor'}
+                  onChange={() => setSentido('favor')}
+                />
+                A favor del conductor (suma)
+              </label>
+              <label className="flex items-center gap-1.5">
+                <input
+                  type="radio"
+                  name="sentido"
+                  checked={sentido === 'contra'}
+                  onChange={() => setSentido('contra')}
+                />
+                En contra (resta)
+              </label>
+            </fieldset>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="monto" className="text-sm font-medium text-text-primary">
+                Valor en pesos
+              </label>
               <input
-                type="radio"
-                name="sentido"
-                checked={sentido === 'favor'}
-                onChange={() => setSentido('favor')}
+                id="monto"
+                inputMode="numeric"
+                value={monto}
+                onChange={(e) => setMonto(e.target.value)}
+                className="h-11 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
               />
-              A favor del conductor (suma)
-            </label>
-            <label className="flex items-center gap-1.5">
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="motivo" className="text-sm font-medium text-text-primary">
+                Motivo
+              </label>
               <input
-                type="radio"
-                name="sentido"
-                checked={sentido === 'contra'}
-                onChange={() => setSentido('contra')}
+                id="motivo"
+                value={motivo}
+                maxLength={300}
+                onChange={(e) => setMotivo(e.target.value)}
+                placeholder="Ej. Recarga en efectivo, o Reverso del servicio del 24/09"
+                className="h-11 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
               />
-              En contra (resta)
-            </label>
-          </fieldset>
+              <p className="text-xs text-text-secondary">
+                Queda en el libro del conductor y en el registro de auditoría. No se puede borrar.
+              </p>
+            </div>
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="monto" className="text-sm font-medium text-text-primary">
-              Valor en pesos
-            </label>
-            <input
-              id="monto"
-              inputMode="numeric"
-              value={monto}
-              onChange={(e) => setMonto(e.target.value)}
-              className="h-11 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
-            />
-          </div>
+            {error !== null && (
+              <p
+                role="alert"
+                className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-on-danger-subtle"
+              >
+                {error}
+              </p>
+            )}
 
-          <div className="flex flex-col gap-1.5">
-            <label htmlFor="motivo" className="text-sm font-medium text-text-primary">
-              Motivo
-            </label>
-            <input
-              id="motivo"
-              value={motivo}
-              maxLength={300}
-              onChange={(e) => setMotivo(e.target.value)}
-              placeholder="Ej. Recarga en efectivo, o Reverso del servicio del 24/09"
-              className="h-11 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
-            />
-            <p className="text-xs text-text-secondary">
-              Queda en el libro del conductor y en el registro de auditoría. No se puede borrar.
-            </p>
-          </div>
-
-          {error !== null && (
-            <p
-              role="alert"
-              className="rounded-lg bg-danger-subtle px-3 py-2 text-sm text-on-danger-subtle"
-            >
-              {error}
-            </p>
-          )}
-
-          <button type="submit" disabled={guardando} className="btn btn-primario h-10 px-3">
-            {guardando && <LoaderCircle size={16} className="animate-spin" />}
-            Guardar ajuste
-          </button>
-        </form>
+            <button type="submit" disabled={guardando} className="btn btn-primario h-10 px-3">
+              {guardando && <LoaderCircle size={16} className="animate-spin" />}
+              Guardar ajuste
+            </button>
+          </form>
+        )}
 
         <h4 className="mt-6 text-sm font-medium text-text-primary">Movimientos</h4>
         {movimientos === null ? (

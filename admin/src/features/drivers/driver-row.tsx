@@ -34,10 +34,12 @@ interface Props {
   conductor: Driver;
   /** Nulo mientras no llega, o si la consulta de saldos falló. */
   saldo: SaldoConductor | null;
+  /** Decide si el dialogo de saldo trae el formulario de ajuste (D278). */
+  esSuperAdmin: boolean;
   onCambio: () => void;
 }
 
-export function DriverRow({ conductor, saldo, onCambio }: Props) {
+export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
   const [verSaldo, setVerSaldo] = useState(false);
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -299,6 +301,7 @@ export function DriverRow({ conductor, saldo, onCambio }: Props) {
           nombre={conductor.full_name}
           driverId={conductor.driver_id}
           saldoActual={saldo?.balance ?? 0}
+          esSuperAdmin={esSuperAdmin}
           onCerrar={() => setVerSaldo(false)}
           onAjustado={onCambio}
         />

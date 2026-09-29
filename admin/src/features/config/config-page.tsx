@@ -13,7 +13,12 @@ import type { CargoType, Setting, UrbanFare } from './types';
 import { EditableValue } from './editable-value';
 import { CargoDialog } from './cargo-dialog';
 
-export function ConfigPage() {
+interface Props {
+  /** `driver_balance_enforced` solo se puede editar si esto es cierto (D278). */
+  esSuperAdmin: boolean;
+}
+
+export function ConfigPage({ esSuperAdmin }: Props) {
   const [tarifas, setTarifas] = useState<UrbanFare[]>([]);
   const [cargas, setCargas] = useState<CargoType[]>([]);
   const [parametros, setParametros] = useState<Setting[]>([]);
@@ -242,17 +247,29 @@ export function ConfigPage() {
                       </p>
                     )}
                   </div>
-                  <EditableValue
-                    valor={p.value ?? ''}
-                    sufijo={meta.unidad}
-                    ancho={p.key.startsWith('fare_center') ? 'w-36' : 'w-28'}
-                    etiquetaAccesible={meta.etiqueta}
-                    onGuardar={async (v) => {
-                      const r = await guardarParametro(p.key, v);
-                      if (r.ok) void consultar();
-                      return r;
-                    }}
-                  />
+                  {p.key === 'driver_balance_enforced' && !esSuperAdmin ? (
+                    // D278: activa el cobro del 4% para TODA la flota a la vez.
+                    // Solo un super administrador lo puede tocar -pedido del
+                    // usuario, 2026-09-29-; los demas ven el valor, no el editor.
+                    <span
+                      className="h-9 px-2 text-text-secondary"
+                      title="Solo un super administrador puede cambiar esto."
+                    >
+                      {p.value}
+                    </span>
+                  ) : (
+                    <EditableValue
+                      valor={p.value ?? ''}
+                      sufijo={meta.unidad}
+                      ancho={p.key.startsWith('fare_center') ? 'w-36' : 'w-28'}
+                      etiquetaAccesible={meta.etiqueta}
+                      onGuardar={async (v) => {
+                        const r = await guardarParametro(p.key, v);
+                        if (r.ok) void consultar();
+                        return r;
+                      }}
+                    />
+                  )}
                 </article>
               );
             })}

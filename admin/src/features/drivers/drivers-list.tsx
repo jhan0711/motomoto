@@ -13,7 +13,12 @@ import type { Driver } from './types';
 import { NewDriverDialog } from './new-driver-dialog';
 import { PasswordNotice } from '@/features/shared/password-notice';
 
-export function DriversList() {
+interface Props {
+  /** Decide si se ve el boton "Saldo" en cada ficha (D278, pedido del usuario). */
+  esSuperAdmin: boolean;
+}
+
+export function DriversList({ esSuperAdmin }: Props) {
   const [conductores, setConductores] = useState<Driver[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -115,6 +120,7 @@ export function DriversList() {
             key={conductor.driver_id}
             conductor={conductor}
             saldo={saldos.get(conductor.driver_id) ?? null}
+            esSuperAdmin={esSuperAdmin}
             onCambio={() => void consultar()}
           />
         ))}

@@ -131,7 +131,7 @@ export const META: Record<string, MetaParametro> = {
     etiqueta: 'Cobro de comisión por saldo (0 apagado, 1 encendido)',
     grupo: 'operacion',
     aviso:
-      'Apagado, no se cobra comisión ni se bloquea a nadie. Al encenderlo, todo conductor sin saldo suficiente queda fuera de servicio hasta recargar: antes de hacerlo, acredita saldo a los conductores desde su ficha (botón Saldo).',
+      'Apagado, no se cobra comisión ni se bloquea a nadie. Al encenderlo, todo conductor sin saldo suficiente queda fuera de servicio hasta recargar: antes de hacerlo, acredita saldo a los conductores desde su ficha (botón Saldo). Solo un super administrador puede cambiarlo.',
   },
   commission_percent: {
     etiqueta: 'Comisión por servicio terminado',
