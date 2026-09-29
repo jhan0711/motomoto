@@ -24,6 +24,19 @@ import { fetchOffers, type DriverOffer } from './driver-service';
  * dejo escrito que hacia falta publicar tambien `ride_requests`, y eso se hizo.
  * Quien recarga esta lista en ese caso no es este hook, sino `useRequestRealtime`
  * desde la pantalla del conductor, que escucha la solicitud y llama a `refresh`.
+ *
+ * ESE ARREGLO QUEDO INCOMPLETO, y se cerro el 2026-09-29. La politica que decide
+ * si el conductor puede leer la solicitud (`ride_requests_select_offered_driver`,
+ * H15, Fase 22) exige una oferta 'pending' vigente. `accept_ride_offer` y
+ * `cancel_request` ponen la oferta de los demas en 'expired' en la MISMA
+ * transaccion que cambian `ride_requests.status`, asi que para cuando el aviso
+ * de `useRequestRealtime` se reparte, la propia oferta de este conductor ya dejo
+ * de cumplir la politica y el aviso no le llega: la tarjeta se quedaba en
+ * pantalla, con el servicio ya tomado o cancelado, hasta que su propio contador
+ * de R2 la retiraba. `ride_offers_select_own` no tiene esa restriccion -un
+ * conductor siempre puede ver el cambio en SU PROPIA oferta-, y por eso el
+ * segundo listener de abajo, sobre `ride_offers` y no sobre `ride_requests`, si
+ * le llega.
  */
 
 export interface UseDriverOffersResult {
@@ -88,6 +101,14 @@ export function useDriverOffers(active: boolean): UseDriverOffersResult {
         // Cada suscriptor recibe solo sus propias filas: las politicas de
         // seguridad se aplican tambien en tiempo real. Comprobado con dos
         // sesiones, una de conductor y otra de pasajero.
+        () => void cargar(),
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ride_offers' },
+        // Cuando ESTA oferta cambia -la aceptaron, la rechazaron, se le
+        // caducó o se le adelantaron-, mismo motivo para volver a pedir la
+        // lista completa. Ver el porque en la cabecera del archivo.
         () => void cargar(),
       )
       .subscribe();
