@@ -114,12 +114,6 @@ export function BalanceDialog({
           </button>
         </div>
 
-        {!esSuperAdmin && (
-          <p className="mt-4 rounded-lg bg-surface-subtle px-3 py-2.5 text-sm text-text-secondary">
-            Solo un super administrador puede ajustar un saldo. Puedes ver el historial abajo.
-          </p>
-        )}
-
         {esSuperAdmin && (
           <form onSubmit={enviar} className="mt-4 flex flex-col gap-3" noValidate>
             <fieldset className="flex gap-4 text-sm text-text-primary">
