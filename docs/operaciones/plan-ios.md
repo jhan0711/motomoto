@@ -35,6 +35,20 @@ puede haber cambiado desde que se escribió), y proponerme las fases con el
 formato de cinco puntos antes de tocar nada.
 ```
 
+## Estado (actualizado 2026-10-08)
+
+**Fase A hecha** (D285 en `PROJECT_STATUS.md`): `bundleIdentifier`,
+`supportsTablet: false`, ícono iOS (`assets/images/ios-icon.png`, cuadrado y sin
+alfa), ubicación en segundo plano habilitada para iOS, aviso de batería solo en
+Android, navegación con Apple Maps. El perfil `production` de `eas.json` ya
+sirve para iOS, así que la sección 3 ya no pide "perfiles iOS" aparte.
+
+Quedan **cuatro cosas que este documento no preveía** y que ya están resueltas
+o anotadas: la ubicación en segundo plano del conductor (D116), el aviso de
+batería, `geo:` en la navegación y las recargas de Wompi (D279), que Apple puede
+cuestionar (guías 3.1.1 y 3.1.3). Pendiente con la cuenta de Apple pagada: fases
+C a F. La ficha de App Store (fase B) se puede escribir antes.
+
 ## 1. Contexto
 
 El proyecto es un único código Expo/React Native (`AmalfiGoApp`, antes

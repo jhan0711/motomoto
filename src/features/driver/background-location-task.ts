@@ -64,6 +64,14 @@ export function backgroundLocationOptions(
     // este pedido pidio vigilar.
     accuracy: Location.Accuracy.Balanced,
     timeInterval: intervaloSegundos * 1000,
+    // Solo iOS (Android los ignora). Sin `pausesUpdatesAutomatically: false`
+    // iOS puede pausar la entrega por su cuenta cuando cree que el aparato esta
+    // quieto, que es exactamente el fallo del bug de `distanceInterval` en
+    // Android. El indicador azul es el aviso que iOS ensena mientras se usa la
+    // ubicacion en segundo plano: Apple lo espera en una app de este tipo.
+    pausesUpdatesAutomatically: false,
+    showsBackgroundLocationIndicator: true,
+    activityType: Location.ActivityType.AutomotiveNavigation,
     // SIN `distanceInterval`, y a proposito -no es un olvido-. En Android,
     // `expo-location` lo traduce a `setMinUpdateDistanceMeters` de
     // `LocationRequest`, que en el sistema operativo actua como filtro

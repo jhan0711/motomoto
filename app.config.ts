@@ -59,7 +59,20 @@ const config: ExpoConfig = {
   userInterfaceStyle: 'automatic',
 
   ios: {
-    icon: './assets/expo.icon',
+    // Mismo id que el paquete de Android, para tener un solo nombre en las dos
+    // tiendas. Apple no lo exige, pero una vez registrado en App Store Connect
+    // no se puede cambiar (Fase iOS A).
+    bundleIdentifier: 'co.amalfigo.app',
+    // Solo iPhone: sin esto la ficha de App Store pediria capturas de iPad.
+    supportsTablet: false,
+    // PNG plano de 1024 sin canal alfa, que es lo unico que App Store Connect
+    // acepta. Sale de `assets/brand/generate.mjs`, no se edita a mano. Sustituye
+    // al `expo.icon` de la plantilla, que era el simbolo generico de Expo.
+    icon: './assets/images/ios-icon.png',
+    // La app solo usa HTTPS estandar del sistema y Supabase/Mapbox/Wompi, sin
+    // cifrado propio: declararlo aqui evita que App Store Connect pregunte por
+    // el cumplimiento de exportacion en cada build.
+    config: { usesNonExemptEncryption: false },
   },
 
   android: {
@@ -184,8 +197,16 @@ const config: ExpoConfig = {
         // el que ve el sistema operativo, no el que ve el conductor.
         locationAlwaysPermission:
           'AmalfiGoApp usa tu ubicación en segundo plano para que los pasajeros sigan viéndote mientras estás disponible o llevando un servicio, aunque minimices la aplicación.',
+        // iOS pide ademas esta clave -la usa para la pantalla de "Siempre"
+        // desde iOS 11-. Mismo texto que la de arriba.
+        locationAlwaysAndWhenInUsePermission:
+          'AmalfiGoApp usa tu ubicación en segundo plano para que los pasajeros sigan viéndote mientras estás disponible o llevando un servicio, aunque minimices la aplicación.',
         isAndroidBackgroundLocationEnabled: true,
         isAndroidForegroundServiceEnabled: true,
+        // Añade `UIBackgroundModes: location` al Info.plist. Sin esto, iOS
+        // suspende la tarea de ubicacion al minimizar la app y el conductor
+        // deja de reportar posicion (D116, R10).
+        isIosBackgroundLocationEnabled: true,
       },
     ],
     [

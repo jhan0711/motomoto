@@ -572,7 +572,7 @@ export default function DriverHome() {
           <Aviso
             icon={MapPinOff}
             titulo="Sigue enviando tu ubicación con la app minimizada"
-            detalle="Activa la ubicación en segundo plano para que los pasajeros no dejen de verte al minimizar la aplicación. Android pedirá un permiso extra."
+            detalle="Activa la ubicación en segundo plano para que los pasajeros no dejen de verte al minimizar la aplicación. El sistema pedirá un permiso extra."
             accion={
               segundoPlano.state.canAsk
                 ? { etiqueta: 'Activar', onPress: () => void segundoPlano.requestPermission() }

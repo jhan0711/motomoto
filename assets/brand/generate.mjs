@@ -7,6 +7,7 @@
 // automatico con 183 trazos y un `<rect>` de fondo `#2a323c`-. De ahi salen:
 //
 //   assets/images/icon.png                       1024, logo entero sobre su fondo
+//   assets/images/ios-icon.png                   1024x1024 cuadrado, RGB sin alfa (App Store)
 //   assets/images/android-icon-foreground.png    1024, solo la marca, centrada
 //                                                en la zona segura, fondo transparente
 //   assets/images/android-icon-monochrome.png    1024, la marca en blanco plano
@@ -20,6 +21,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { crc32, deflateSync } from 'node:zlib';
 import { Resvg } from '@resvg/resvg-js';
 
 const AQUI = dirname(fileURLToPath(import.meta.url));
@@ -66,12 +68,67 @@ function enmarcar(pngBuffer, canvas, scale, bg = null) {
   return png(svg, canvas);
 }
 
+/**
+ * El icono de iOS: el logo entero sobre su fondo, CUADRADO y SIN canal alfa.
+ *
+ * App Store Connect rechaza un icono de 1024 con canal alfa o que no sea
+ * cuadrado. `icon.png` no cumple ninguna de las dos -sale de `png(svgEntero)`
+ * con ancho fijo, asi que mide 1024x1020 por la proporcion del SVG, y trae RGBA-.
+ * Aqui se compone sobre un lienzo cuadrado del color del fondo y se codifica
+ * como RGB. iOS recorta las esquinas solo: el fondo va a sangre, sin margen.
+ */
+function pngSinAlfa(rgba, ancho, alto) {
+  const fila = ancho * 3 + 1;
+  const datos = Buffer.alloc(fila * alto); // el primer byte de cada fila (filtro 0) queda en 0
+  for (let y = 0; y < alto; y++) {
+    for (let x = 0; x < ancho; x++) {
+      const origen = (y * ancho + x) * 4;
+      const destino = y * fila + 1 + x * 3;
+      datos[destino] = rgba[origen];
+      datos[destino + 1] = rgba[origen + 1];
+      datos[destino + 2] = rgba[origen + 2];
+    }
+  }
+  const bloque = (tipo, contenido) => {
+    const t = Buffer.from(tipo, 'ascii');
+    const largo = Buffer.alloc(4);
+    largo.writeUInt32BE(contenido.length);
+    const crc = Buffer.alloc(4);
+    crc.writeUInt32BE(crc32(Buffer.concat([t, contenido])) >>> 0);
+    return Buffer.concat([largo, t, contenido, crc]);
+  };
+  const cabecera = Buffer.alloc(13);
+  cabecera.writeUInt32BE(ancho, 0);
+  cabecera.writeUInt32BE(alto, 4);
+  cabecera[8] = 8; // 8 bits por canal
+  cabecera[9] = 2; // color verdadero RGB, sin alfa
+  return Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    bloque('IHDR', cabecera),
+    bloque('IDAT', deflateSync(datos)),
+    bloque('IEND', Buffer.alloc(0)),
+  ]);
+}
+
+function iconoIos() {
+  const entero = png(svgEntero, 1024);
+  const alto = Math.round((1024 * 1996) / 2003); // lo que mide `entero`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+    <rect width="1024" height="1024" fill="${FONDO}"/>
+    <image x="0" y="${Math.round((1024 - alto) / 2)}" width="1024" height="${alto}" href="data:image/png;base64,${entero.toString('base64')}"/>
+  </svg>`;
+  const r = new Resvg(svg, { fitTo: { mode: 'width', value: 1024 }, background: FONDO }).render();
+  return pngSinAlfa(r.pixels, r.width, r.height);
+}
+
 const marca1024 = png(svgMarca, 1024);
 const mono1024 = png(svgMono, 1024);
 
 const salidas = {
   // Icono principal: el logo entero sobre su fondo, sin recortar.
   'icon.png': png(svgEntero, 1024),
+  // iOS: cuadrado y sin alfa (ver `iconoIos`).
+  'ios-icon.png': iconoIos(),
   // Android adaptativo: la marca al 62 % del lienzo (dentro de la zona segura
   // del 66 %), fondo transparente -el color lo pone app.config.ts-.
   'android-icon-foreground.png': enmarcar(marca1024, 1024, 0.62),

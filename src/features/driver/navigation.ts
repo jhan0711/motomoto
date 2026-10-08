@@ -1,6 +1,8 @@
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 
 import type { Coordinates } from '@/features/map/region';
+
+import { urlDeNavegacion, urlDeNavegacionWeb } from './navigation-url';
 
 /**
  * Llevar al conductor hasta un punto, con la aplicacion que el ya usa.
@@ -48,11 +50,8 @@ import type { Coordinates } from '@/features/map/region';
  * lugar de quedarse callada.
  */
 export async function openNavigation(point: Coordinates, label: string): Promise<boolean> {
-  const coords = `${point.latitude},${point.longitude}`;
-
-  // El nombre puede llevar espacios, tildes y parentesis. Sin codificar, un
-  // parentesis dentro del texto cerraria el del formato y el punto se perderia.
-  const destino = `geo:${coords}?q=${coords}(${encodeURIComponent(label)})`;
+  // `geo:` en Android, enlace de Apple Maps en iOS: ver `navigation-url.ts`.
+  const destino = urlDeNavegacion(point, label, Platform.OS);
 
   try {
     await Linking.openURL(destino);
@@ -61,9 +60,7 @@ export async function openNavigation(point: Coordinates, label: string): Promise
     // Un telefono sin ninguna aplicacion de mapas instalada. Raro pero posible,
     // y la direccion de Google Maps por navegador funciona con solo tener datos.
     try {
-      await Linking.openURL(
-        'https://www.google.com/maps/dir/?api=1' + `&destination=${coords}&travelmode=driving`,
-      );
+      await Linking.openURL(urlDeNavegacionWeb(point));
       return true;
     } catch {
       return false;

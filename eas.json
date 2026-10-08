@@ -26,6 +26,14 @@
     },
     // El que se sube a Google Play: Android App Bundle, firmado con el keystore
     // de EAS (Play App Signing se activa al subir el primer .aab).
+    //
+    // iOS: este mismo perfil sirve, sin bloque `ios` propio. `eas build -p ios
+    // --profile production` genera un .ipa firmado para la App Store y TestFlight,
+    // con certificado y perfil de aprovisionamiento gestionados por EAS, y
+    // `autoIncrement` + `appVersionSource: remote` suben el buildNumber solos. Los
+    // perfiles `development` y `preview` NO sirven en iOS sin registrar los
+    // iPhone uno a uno (`eas device:create`): para probar en un iPhone se pasa por
+    // TestFlight con este perfil.
     "production": {
       "autoIncrement": true,
       "android": {

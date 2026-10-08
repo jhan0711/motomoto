@@ -1,6 +1,7 @@
 import * as IntentLauncher from 'expo-intent-launcher';
 import { useCallback, useEffect, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
 
 /**
  * El aviso de "revisa el ahorro de batería" (2026-09-16).
@@ -73,5 +74,12 @@ export function useBatteryOptimizationNotice(activo: boolean): UseBatteryOptimiz
     }
   }, []);
 
-  return { mostrar: activo && descartado === false, descartar, abrirAjustes };
+  // Solo Android: la pantalla de ahorro de bateria es de Android y
+  // `expo-intent-launcher` no existe en iOS, donde el sistema no ofrece un
+  // ajuste equivalente que la app pueda abrir.
+  return {
+    mostrar: Platform.OS === 'android' && activo && descartado === false,
+    descartar,
+    abrirAjustes,
+  };
 }
