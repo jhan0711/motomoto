@@ -1,6 +1,6 @@
 # Política de Tratamiento de Datos Personales — AmalfiGoApp
 
-**Última actualización:** 24 de septiembre de 2026
+**Última actualización:** 8 de octubre de 2026
 
 Esta política explica cómo se recogen, usan, almacenan y protegen los datos
 personales de las personas que usan la aplicación **AmalfiGoApp** ("la
@@ -20,32 +20,39 @@ contacto.
 
 ### 2.1. De todas las personas usuarias
 
-| Dato                           | Cuándo se recoge                               | Para qué                                                                                                                     |
-| ------------------------------ | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Nombre completo                | Al registrarse                                 | Identificar a la persona en el servicio                                                                                      |
-| Número de celular              | Al registrarse                                 | Contacto entre pasajero y conductor durante el servicio                                                                      |
-| Correo electrónico             | Al registrarse                                 | Acceso a la cuenta y recuperación de contraseña                                                                              |
-| Contraseña                     | Al registrarse                                 | Acceso a la cuenta. **Se guarda cifrada**, nunca en texto legible                                                            |
-| Foto de perfil                 | Opcional, cuando la persona la sube            | Que la contraparte reconozca a quién recoge o con quién viaja                                                                |
-| Ubicación del dispositivo      | Solo mientras la aplicación está abierta       | Mostrar a la persona en el mapa, calcular el trayecto y, en un servicio en curso, permitir que la contraparte vea dónde está |
-| Historial de servicios         | Cada vez que se completa o cancela un servicio | Mostrar el historial a la persona, resolver reclamos y calcular estadísticas                                                 |
-| Calificaciones y comentarios   | Al calificar un servicio                       | Que pasajeros y conductores sepan con quién van a viajar                                                                     |
-| Token de notificaciones        | Al conceder el permiso de notificaciones       | Enviar avisos del servicio (oferta aceptada, conductor en camino, etc.)                                                      |
-| Datos técnicos del dispositivo | Durante el uso                                 | Que la aplicación funcione y para diagnóstico de errores                                                                     |
+| Dato                           | Cuándo se recoge                                               | Para qué                                                                                                                       |
+| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Nombre completo                | Al registrarse                                                 | Identificar a la persona en el servicio                                                                                        |
+| Número de celular              | Al registrarse                                                 | Contacto entre pasajero y conductor durante el servicio                                                                        |
+| Correo electrónico             | Al registrarse                                                 | Acceso a la cuenta y recuperación de contraseña                                                                                |
+| Contraseña                     | Al registrarse                                                 | Acceso a la cuenta. **Se guarda cifrada**, nunca en texto legible                                                              |
+| Foto de perfil                 | Opcional, cuando la persona la sube                            | Que la contraparte reconozca a quién recoge o con quién viaja                                                                  |
+| Ubicación del dispositivo      | Mientras la aplicación está abierta (los conductores, ver 2.2) | Mostrar a la persona en el mapa, calcular el trayecto y, en un servicio en curso, permitir que la contraparte vea dónde está   |
+| Historial de servicios         | Cada vez que se completa o cancela un servicio                 | Mostrar el historial a la persona, resolver reclamos y calcular estadísticas. Incluye el valor ofrecido y acordado             |
+| Textos que la persona escribe  | Al pedir un servicio o una encomienda                          | La referencia de recogida y la descripción de una encomienda, para que el conductor encuentre a la persona o entienda la carga |
+| Calificaciones y comentarios   | Al calificar un servicio                                       | Que pasajeros y conductores sepan con quién van a viajar                                                                       |
+| Token de notificaciones        | Al conceder el permiso de notificaciones                       | Enviar avisos del servicio (oferta aceptada, conductor en camino, etc.)                                                        |
+| Datos técnicos del dispositivo | Durante el uso                                                 | Que la aplicación funcione y para diagnóstico de errores                                                                       |
 
 ### 2.2. Datos adicionales de los conductores
 
-| Dato                                         | Para qué                                                            |
-| --------------------------------------------- | -------------------------------------------------------------------- |
-| Documento de identidad                       | Verificar la identidad del conductor. Se conserva mientras la cuenta esté activa como conductor y hasta doce (12) meses después de su inactivación, salvo que la ley exija un plazo mayor |
-| Matrícula del vehículo (motocarro)          | Identificar el vehículo asignado al servicio                         |
-| Ubicación durante la jornada / los servicios | Ofrecer servicios cercanos y permitir el seguimiento en tiempo real  |
+| Dato                                         | Para qué                                                                                                                                                                                                                                                                                                                                        |
+| -------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Documento de identidad                       | Verificar la identidad del conductor. Se conserva mientras la cuenta esté activa como conductor y hasta doce (12) meses después de su inactivación, salvo que la ley exija un plazo mayor                                                                                                                                                       |
+| Matrícula del vehículo (motocarro)           | Identificar el vehículo asignado al servicio                                                                                                                                                                                                                                                                                                    |
+| Ubicación durante la jornada / los servicios | Ofrecer servicios cercanos y permitir el seguimiento en tiempo real. **Se envía también con la aplicación minimizada o la pantalla apagada, pero solo mientras el conductor está "disponible" o llevando un servicio.** El sistema operativo muestra un aviso permanente mientras esto ocurre, y el envío se detiene al ponerse "no disponible" |
+| Saldo y movimientos                          | Recargas, comisiones por servicio terminado y ajustes hechos por la administración. Sirve para llevar la cuenta de lo que el conductor debe a la empresa y decidir si puede recibir servicios                                                                                                                                                   |
 
 ### 2.3. Datos que NO se recogen
 
-- **La aplicación no procesa pagos.** El pasajero paga en efectivo directamente al
-  conductor, fuera de la aplicación. No se recogen datos de tarjetas ni de cuentas
-  bancarias.
+- **El valor del servicio no se paga en la aplicación.** El pasajero paga en
+  efectivo directamente al conductor, fuera de la aplicación.
+- **La aplicación no recoge ni guarda datos de tarjetas ni de cuentas
+  bancarias.** Los conductores pueden recargar su saldo con un medio de pago
+  electrónico; ese pago se hace en la página de **Wompi** (ver sección 5), que se
+  abre en el navegador. El número de la tarjeta o de la cuenta lo recibe Wompi,
+  nunca la aplicación ni nuestros servidores. De la recarga solo se guarda el
+  valor, la fecha, el estado y la referencia de la transacción.
 - No se recogen datos de contactos, mensajes, fotos (más allá de la que la
   persona elige como perfil), ni actividad en otras aplicaciones.
 
@@ -61,7 +68,10 @@ Los datos se usan únicamente para:
 4. Enviar notificaciones relacionadas con el servicio.
 5. Gestionar calificaciones y resolver reclamos y quejas.
 6. Mantener la seguridad de la plataforma y prevenir usos indebidos.
-7. Cumplir obligaciones legales.
+7. Llevar el saldo de los conductores: registrar recargas, descontar la
+   comisión de cada servicio terminado y determinar si el conductor puede
+   recibir servicios.
+8. Cumplir obligaciones legales.
 
 No se usan los datos para publicidad de terceros ni se venden a nadie.
 
@@ -81,13 +91,22 @@ del tratamiento** y solo tratan los datos según las instrucciones del
 responsable. Algunos de estos proveedores procesan o almacenan datos fuera de
 Colombia, en el marco de sus propias infraestructuras internacionales:
 
-| Proveedor                               | Para qué                                                        |
-| ---------------------------------------- | ----------------------------------------------------------------- |
-| Supabase                                 | Base de datos, autenticación y almacenamiento de la aplicación   |
-| Mapbox                                   | Mapas, cálculo de rutas y búsqueda de direcciones                |
-| Google (Maps, Firebase Cloud Messaging)  | Mapa base y entrega de notificaciones                            |
-| Resend                                   | Envío de los correos de la cuenta (confirmación, recuperación)   |
-| Expo                                     | Servicio de notificaciones push                                  |
+| Proveedor                               | Para qué                                                       |
+| --------------------------------------- | -------------------------------------------------------------- |
+| Supabase                                | Base de datos, autenticación y almacenamiento de la aplicación |
+| Mapbox                                  | Mapas, cálculo de rutas y búsqueda de direcciones              |
+| Google (Maps, Firebase Cloud Messaging) | Mapa base y entrega de notificaciones en Android               |
+| Apple (notificaciones push)             | Entrega de notificaciones en iPhone                            |
+| Wompi                                   | Procesamiento de las recargas de saldo de los conductores      |
+| Resend                                  | Envío de los correos de la cuenta (confirmación, recuperación) |
+| Expo                                    | Servicio de notificaciones push                                |
+
+**Sobre Wompi.** Cuando un conductor recarga su saldo, la aplicación abre la
+página de pago de Wompi y le entrega solo una referencia y el valor de la
+recarga. Los datos que el conductor escribe en esa página (tarjeta, cuenta,
+documento) los trata Wompi bajo su propia política de privacidad, no
+AmalfiGoApp. Wompi nos informa después si el pago fue aprobado, rechazado o
+revertido.
 
 Cuando el tratamiento implica una transferencia internacional de datos, esta se
 realiza con fundamento en la autorización otorgada por el titular al aceptar
@@ -112,7 +131,13 @@ Conforme al artículo 8 de la Ley 1581 de 2012, toda persona tiene derecho a:
 
 Escribiendo al correo de contacto de la sección 1. La aplicación también permite
 editar el nombre, el teléfono y la foto de perfil, y cambiar la contraseña, desde
-la pantalla de perfil. Para eliminar la cuenta, escribir al correo de contacto.
+la pantalla de perfil.
+
+**Eliminar la cuenta.** Los pasajeros pueden hacerlo ellos mismos desde la
+aplicación (Perfil → "Eliminar mi cuenta") o desde
+https://amalfigo.app/eliminar-cuenta. Las cuentas de conductor las crea y
+gestiona la empresa, así que un conductor que quiera salir lo solicita por el
+correo de contacto.
 
 **Plazos:** las consultas se atienden en un máximo de **diez (10) días hábiles**;
 los reclamos, en un máximo de **quince (15) días hábiles**, prorrogables una vez
@@ -140,7 +165,11 @@ eliminarse una cuenta, los datos personales identificables se eliminan o
 anonimizan en un plazo de treinta (30) días, salvo la información que deba
 conservarse por más tiempo para cumplir obligaciones legales (por ejemplo,
 tributarias o de atención de reclamos), en cuyo caso se conserva únicamente por
-el plazo que la norma respectiva exija.
+el plazo que la norma respectiva exija. En particular, el historial de servicios
+terminados se conserva sin el nombre de la persona (se reemplaza por "Cuenta
+eliminada") porque es el registro del trabajo del conductor, y **los registros de
+recargas, comisiones y ajustes de saldo no se borran**: son registros contables
+que solo se pueden añadir y no modificar.
 
 ## 9. Datos de menores de edad
 

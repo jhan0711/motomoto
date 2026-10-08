@@ -34,3 +34,32 @@ Marcado en el texto como **[REVISAR]**. Lo principal:
 7. **Datos de menores de edad** y de los conductores (documento de identidad).
 8. **Registro Nacional de Bases de Datos (RNBD)** ante la SIC: si aplica por el
    tamaño de la operación.
+
+## Cambios pendientes de revisión — 2026-10-08
+
+Los textos de septiembre ya los revisó el abogado. Esta actualización
+(`politica-de-privacidad.md`) **no está revisada** y no debe llegar a `main`, que
+Cloudflare publica, hasta que la apruebe. Qué cambió y por qué:
+
+1. **Pagos (sección 2.3).** Decía "la aplicación no procesa pagos". Ya no es
+   cierto: los conductores recargan saldo por Wompi (D279). Ahora dice que el
+   viaje se paga en efectivo, que la app nunca recibe datos de tarjeta y qué se
+   guarda de una recarga (valor, fecha, estado, referencia).
+2. **Ubicación en segundo plano del conductor (2.2).** La política hablaba solo
+   de "mientras la aplicación está abierta". Los conductores la envían también
+   minimizada, solo estando "disponibles" o en un servicio (D116, D271).
+3. **Saldo y movimientos (2.2, finalidad 7, sección 8).** Dato y finalidad
+   nuevos. Se dice que los registros de recargas, comisiones y ajustes **no se
+   borran** (el libro `driver_ledger` solo admite añadir filas): **[REVISAR]**
+   si eso es defendible frente a una solicitud de supresión de un conductor.
+4. **Wompi y Apple como terceros (sección 5).** Wompi procesa las recargas y
+   trata los datos de pago bajo su propia política. Apple entrega las
+   notificaciones en iPhone.
+5. **Eliminar la cuenta (sección 6).** Decía "escribir al correo". Los
+   pasajeros pueden hacerlo en la app y en `amalfigo.app/eliminar-cuenta`; los
+   conductores, por el correo, porque su cuenta la gestiona la empresa.
+6. **Datos que el usuario escribe (2.1)** y **valor ofrecido/acordado** en el
+   historial (D277): referencia de recogida, descripción de una encomienda.
+
+**Falta, y no se tocó:** `terminos-de-uso.md` tampoco habla de la comisión ni
+del saldo del conductor. Hay que decidir con el abogado si va ahí.
