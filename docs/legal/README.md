@@ -35,11 +35,11 @@ Marcado en el texto como **[REVISAR]**. Lo principal:
 8. **Registro Nacional de Bases de Datos (RNBD)** ante la SIC: si aplica por el
    tamaño de la operación.
 
-## Cambios pendientes de revisión — 2026-10-08
+## Cambios del 2026-10-08 — aprobados por el abogado
 
-Los textos de septiembre ya los revisó el abogado. Esta actualización
-(`politica-de-privacidad.md`) **no está revisada** y no debe llegar a `main`, que
-Cloudflare publica, hasta que la apruebe. Qué cambió y por qué:
+Los textos de septiembre ya los revisó el abogado, y esta actualización
+(`politica-de-privacidad.md`) también la aprobó (2026-10-08) y se publicó. Qué
+cambió y por qué:
 
 1. **Pagos (sección 2.3).** Decía "la aplicación no procesa pagos". Ya no es
    cierto: los conductores recargan saldo por Wompi (D279). Ahora dice que el
