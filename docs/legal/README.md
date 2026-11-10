@@ -63,3 +63,35 @@ cambió y por qué:
 
 **Falta, y no se tocó:** `terminos-de-uso.md` tampoco habla de la comisión ni
 del saldo del conductor. Hay que decidir con el abogado si va ahí.
+
+## Términos de uso: cambios del 2026-10-08 (pendientes de revisión)
+
+`terminos-de-uso.md` también se desactualizó y se actualizó en la rama
+`legal/terminos-comision-2026-10-08`. **No está revisado** y no debe llegar a
+`main` hasta que lo apruebe el abogado. Qué cambió:
+
+1. **Sección 1.** Decía "no procesa pagos". Ahora: no cobra el servicio, y los
+   conductores pagan una comisión mediante un saldo.
+2. **Sección 3.** El valor ya no lo fija solo la tarifa: el pasajero puede
+   proponer otro (mínimo la tarifa más baja, máximo un múltiplo de la oficial; hoy
+   5 veces) y el conductor decide si lo acepta (D277). Se define el "valor
+   acordado", que es sobre lo que se paga y se cobra la comisión.
+3. **Sección 8 (nueva).** Comisión (4 %), recargas (mínimo $10.000, por Wompi),
+   bloqueo sin saldo, libro de movimientos que solo se añade, y para qué sirve el
+   saldo. Las secciones siguientes se renumeraron (de 8 a 9, etc.): nada en la app
+   ni en la política cita esos números.
+
+**Preguntas abiertas para el abogado, que el texto NO resuelve:**
+
+- **Devolución del saldo.** Si un conductor sale de la operación con saldo sin
+  gastar, ¿se devuelve? Hoy el diseño no permite retirarlo y el texto lo dice, pero
+  no dice qué pasa al irse.
+- **Quién cobra la comisión.** El texto dice "la operación del servicio", como el
+  resto del documento. Si la empresa de motocarros es una persona jurídica distinta
+  de Jhan Carlo Roldán Sepúlveda, hay que nombrarla.
+- **Quién asume la comisión de Wompi** (2,65 % + $700 + IVA) y **contracargos**:
+  decisión de negocio pendiente (ver `docs/operaciones/wompi-recargas.md`).
+- **Facturación e IVA** del saldo prepagado: lo ve el contador, no el texto.
+- **Aceptación por los conductores existentes.** Las cuentas de conductor las crea
+  la empresa; ver cómo consta que aceptaron la versión nueva (la sección 12 dice
+  que los cambios se avisan en la app).
