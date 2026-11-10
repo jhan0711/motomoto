@@ -332,7 +332,7 @@ select cron.schedule('driver-session-sweep', '* * * * *', 'select public.expire_
 -- 8. find_available_drivers con los dos modos
 -- ---------------------------------------------------------------------------
 
-create or replace function public.find_available_drivers(p_origin geography, p_passenger_count smallint, p_max_staleness interval DEFAULT NULL::interval)
+create or replace function public.find_available_drivers(p_origin extensions.geography, p_passenger_count smallint, p_max_staleness interval DEFAULT NULL::interval)
  RETURNS TABLE(driver_id uuid, full_name text, unit_number integer, plate text, max_passengers smallint, rating_average numeric, distance_m double precision)
  LANGUAGE sql
  STABLE SECURITY DEFINER
