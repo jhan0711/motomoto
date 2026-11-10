@@ -64,6 +64,14 @@ export function backgroundLocationOptions(
     // este pedido pidio vigilar.
     accuracy: Location.Accuracy.Balanced,
     timeInterval: intervaloSegundos * 1000,
+    // 0 EXPLICITO, y a proposito. Desde expo-location 57.0.23 la precision
+    // `Balanced` trae un `distanceInterval` POR DEFECTO de 100 m, que Android
+    // aplica como filtro obligatorio (ver la nota de D271 mas abajo): con el
+    // aparato quieto no se entrega nada. Se vio en la tablet el 2026-11-10 tras
+    // subir de 57.0.7 a 57.0.23 -`FusedLocation: ... blocked - too close` y
+    // `driver_locations.updated_at` parado-. Dejar el campo sin poner ya no es
+    // lo mismo que no tener filtro.
+    distanceInterval: 0,
     // Solo iOS (Android los ignora). Sin `pausesUpdatesAutomatically: false`
     // iOS puede pausar la entrega por su cuenta cuando cree que el aparato esta
     // quieto, que es exactamente el fallo del bug de `distanceInterval` en
