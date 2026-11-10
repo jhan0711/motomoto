@@ -42,6 +42,12 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      // Apple ID de la app en App Store Connect (numero publico, no un secreto).
+      // Sin esto `eas submit` / `--auto-submit` no funciona en modo no interactivo.
+      "ios": {
+        "ascAppId": "6833091045"
+      }
+    }
   }
 }
