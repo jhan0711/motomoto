@@ -210,10 +210,12 @@ const config: ExpoConfig = {
         // suspende la tarea de ubicacion al minimizar la app y el conductor
         // deja de reportar posicion (D116, R10).
         isIosBackgroundLocationEnabled: true,
-        // La app no usa el sensor de movimiento. Sin esto el plugin deja una
-        // descripcion generica en ingles (`NSMotionUsageDescription`) que Apple puede
-        // cuestionar por no corresponder a ningun uso.
-        motionUsagePermission: false,
+        // La app no lee el sensor de movimiento, pero el binario de expo-location
+        // referencia las API de CoreMotion y Apple RECHAZA el build sin la clave
+        // `NSMotionUsageDescription` (ITMS-90683, build 1 de TestFlight, 2026-11-10).
+        // Por eso NO se pone en `false`: se deja una frase en espanol y veraz.
+        motionUsagePermission:
+          'AmalfiGoApp puede usar los datos de movimiento del telefono para mejorar la precision de tu ubicacion durante un servicio.',
       },
     ],
     [
