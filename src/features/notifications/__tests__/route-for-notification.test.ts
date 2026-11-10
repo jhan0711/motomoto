@@ -9,6 +9,11 @@ describe('rutaDelAviso', () => {
     expect(rutaDelAviso({ rideId: 'c3d4' })).toBe('/passenger');
   });
 
+  it('un aviso de desconexion del servidor lleva a la pantalla del conductor (D296)', () => {
+    expect(rutaDelAviso({ driverDisconnected: true })).toBe('/driver');
+    expect(rutaDelAviso({ driverDisconnected: 'si' })).toBeNull();
+  });
+
   it('offerId manda si por error llegaran los dos', () => {
     expect(rutaDelAviso({ offerId: 'a1b2', rideId: 'c3d4' })).toBe('/driver');
   });

@@ -4,6 +4,7 @@ import {
   CircleCheck,
   Inbox,
   MapPinOff,
+  PowerOff,
   Rocket,
   TriangleAlert,
 } from 'lucide-react-native';
@@ -39,7 +40,9 @@ import { PendingStops } from '@/features/driver/pending-stops';
 import { OfferCard } from '@/features/driver/offer-card';
 import { useAutostartNotice } from '@/features/driver/autostart-notice';
 import { useBatteryOptimizationNotice } from '@/features/driver/battery-optimization-notice';
+import { disconnectNotice } from '@/features/driver/disconnect-notice';
 import { useBackgroundLocation } from '@/features/driver/use-background-location';
+import { useDriverPresence } from '@/features/driver/use-driver-presence';
 import { useDriverOffers } from '@/features/driver/use-driver-offers';
 import { useLocationReporting } from '@/features/driver/use-location-reporting';
 import { useTrackRecording } from '@/features/driver/use-track-recording';
@@ -86,6 +89,24 @@ export default function DriverHome() {
   const coords = location.state.kind === 'ready' ? location.state.coords : null;
 
   const disponible = estado?.isAvailable ?? false;
+
+  // D296. Al abrir y al volver a primer plano se le avisa al servidor y se toma
+  // de vuelta su estado real: pudo haber apagado la disponibilidad mientras la
+  // app estaba minimizada. Se ignora mientras el conductor mueve el interruptor
+  // (`cambiando`) para no pelear con el cambio que acaba de pedir.
+  useDriverPresence(driverId, (servidor) =>
+    setEstado((actual) =>
+      actual === null || cambiando
+        ? actual
+        : {
+            ...actual,
+            isAvailable: servidor.isAvailable,
+            disconnectReason: servidor.disconnectReason,
+          },
+    ),
+  );
+  const avisoDesconexion =
+    estado === null ? null : disconnectNotice(disponible, estado.disconnectReason);
 
   /**
    * Los servicios que ya lleva encima.
@@ -528,6 +549,21 @@ export default function DriverHome() {
       </View>
 
       <FormError message={error} />
+
+      {/* D296: el servidor lo dejo no disponible sin que el lo pidiera. Se le
+          dice por que y se le da el boton para volver, en vez de dejarlo con el
+          interruptor apagado sin entender por que dejo de recibir servicios. */}
+      {avisoDesconexion !== null && (
+        <Aviso
+          icon={PowerOff}
+          titulo={avisoDesconexion.title}
+          detalle={avisoDesconexion.body}
+          accion={{
+            etiqueta: 'Volver a conectarme',
+            onPress: () => void cambiarDisponibilidad(true),
+          }}
+        />
+      )}
 
       {/* Avisos que solo importan mientras esta disponible. Ensenarlos siempre
           seria ruido permanente para advertir de algo que solo aplica cuando el

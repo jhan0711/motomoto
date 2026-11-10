@@ -1,7 +1,11 @@
+import { Platform } from 'react-native';
+
 import { toRideFailure, type RideFailure } from '@/features/ride/errors';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
+import { parseDisconnectReason, type DisconnectReason } from './disconnect-notice';
 import { sanitizeLocationExtras } from './location-extras';
+import { readLocationPermissionStatus } from './location-permission-status';
 
 /**
  * Capa de servicio del conductor.
@@ -38,6 +42,8 @@ export interface DriverVehicle {
 
 export interface DriverState {
   isAvailable: boolean;
+  /** Por que el servidor lo dejo no disponible (D296). Nulo si no hay motivo. */
+  disconnectReason: DisconnectReason | null;
   approvalStatus: ApprovalStatus;
   ratingAverage: number;
   ratingCount: number;
@@ -91,7 +97,7 @@ export interface DriverOffer {
 export async function fetchDriverState(driverId: string): Promise<Result<DriverState>> {
   const { data: driver, error: driverError } = await supabase
     .from('drivers')
-    .select('is_available, approval_status, rating_average, rating_count')
+    .select('is_available, disconnect_reason, approval_status, rating_average, rating_count')
     .eq('id', driverId)
     .single();
 
@@ -114,6 +120,7 @@ export async function fetchDriverState(driverId: string): Promise<Result<DriverS
 
   return ok({
     isAvailable: driver.is_available,
+    disconnectReason: parseDisconnectReason(driver.disconnect_reason),
     approvalStatus: driver.approval_status,
     ratingAverage: Number(driver.rating_average),
     ratingCount: driver.rating_count,
@@ -149,10 +156,26 @@ export async function fetchDriverState(driverId: string): Promise<Result<DriverS
  * donde no se puede saltar.
  */
 export async function setAvailability(driverId: string, available: boolean): Promise<Result> {
-  const { error } = await supabase
-    .from('drivers')
-    .update({ is_available: available })
-    .eq('id', driverId);
+  // Encender pasa por `driver_go_online` (D296): ademas de encender, anota la
+  // plataforma y el permiso de ubicacion y devuelve el id de la sesion. Los
+  // errores del servidor son los mismos de antes -los disparadores de la tabla
+  // siguen siendo los que deciden-. Apagar sigue siendo el UPDATE directo.
+  let error: { code?: string; hint?: string | null; message: string } | null = null;
+
+  if (available) {
+    const permiso = await readLocationPermissionStatus();
+    const respuesta = await supabase.rpc('driver_go_online', {
+      p_platform: Platform.OS === 'ios' ? 'ios' : 'android',
+      p_permission: permiso ?? 'denied',
+    });
+    error = respuesta.error;
+  } else {
+    const respuesta = await supabase
+      .from('drivers')
+      .update({ is_available: false })
+      .eq('id', driverId);
+    error = respuesta.error;
+  }
 
   if (error) {
     // 23514 es una violacion de restriccion CHECK. Solo puede pasar al
@@ -194,6 +217,38 @@ export async function setAvailability(driverId: string, available: boolean): Pro
   }
 
   return ok(undefined);
+}
+
+/**
+ * Avisa al servidor de que el conductor esta vivo y le pide su estado REAL.
+ *
+ * Se llama al abrir la aplicacion y cada vez que vuelve a primer plano (D296).
+ * Hace dos cosas que importan: renueva `last_seen_at` y pone a cero el contador
+ * de ofertas sin responder, y devuelve si el servidor lo tiene disponible y, si
+ * no, por que -para que la pantalla no dependa de una variable local que el
+ * servidor pudo haber cambiado mientras la app estaba minimizada-.
+ */
+export async function touchDriver(): Promise<
+  Result<{ isAvailable: boolean; disconnectReason: DisconnectReason | null }>
+> {
+  const permiso = await readLocationPermissionStatus();
+  const { data, error } = await supabase.rpc('driver_touch', {
+    p_permission: permiso ?? undefined,
+  });
+
+  if (error) {
+    return fail(error);
+  }
+
+  const fila = data?.[0];
+  if (fila === undefined) {
+    return ok({ isAvailable: false, disconnectReason: null });
+  }
+
+  return ok({
+    isAvailable: fila.is_available,
+    disconnectReason: parseDisconnectReason(fila.disconnect_reason),
+  });
 }
 
 /**

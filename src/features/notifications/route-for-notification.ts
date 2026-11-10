@@ -15,6 +15,8 @@ export function rutaDelAviso(data: unknown): '/driver' | '/passenger' | null {
   const d = data as Record<string, unknown>;
 
   if (typeof d.offerId === 'string') return '/driver';
+  // D296: "te desconectamos"; abre la pantalla del conductor, donde esta el boton para volver.
+  if (d.driverDisconnected === true) return '/driver';
   if (typeof d.rideId === 'string') return '/passenger';
   return null;
 }

@@ -382,6 +382,13 @@ export type Database = {
       };
       drivers: {
         Row: {
+          availability_session_id: string | null;
+          availability_started_at: string | null;
+          device_platform: string | null;
+          disconnect_reason: string | null;
+          last_seen_at: string | null;
+          location_permission: string | null;
+          unanswered_offers: number;
           approval_status: Database['public']['Enums']['driver_approval_status'];
           approved_at: string | null;
           approved_by: string | null;
@@ -393,6 +400,13 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          availability_session_id?: string | null;
+          availability_started_at?: string | null;
+          device_platform?: string | null;
+          disconnect_reason?: string | null;
+          last_seen_at?: string | null;
+          location_permission?: string | null;
+          unanswered_offers?: number;
           approval_status?: Database['public']['Enums']['driver_approval_status'];
           approved_at?: string | null;
           approved_by?: string | null;
@@ -404,6 +418,13 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          availability_session_id?: string | null;
+          availability_started_at?: string | null;
+          device_platform?: string | null;
+          disconnect_reason?: string | null;
+          last_seen_at?: string | null;
+          location_permission?: string | null;
+          unanswered_offers?: number;
           approval_status?: Database['public']['Enums']['driver_approval_status'];
           approved_at?: string | null;
           approved_by?: string | null;
@@ -1790,6 +1811,18 @@ export type Database = {
       delete_my_account: { Args: never; Returns: undefined };
       driver_balance: { Args: { p_driver: string }; Returns: number };
       driver_can_work: { Args: { p_driver: string }; Returns: boolean };
+      driver_go_online: {
+        Args: { p_permission: string; p_platform: string };
+        Returns: string;
+      };
+      driver_touch: {
+        Args: { p_permission?: string };
+        Returns: {
+          disconnect_reason: string | null;
+          is_available: boolean;
+          session_id: string | null;
+        }[];
+      };
       driver_linked_to_request: {
         Args: { p_request_id: string };
         Returns: boolean;
