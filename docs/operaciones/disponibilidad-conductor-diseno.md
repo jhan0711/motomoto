@@ -128,14 +128,18 @@ online(plataforma, permiso)` que crea la sesión y `driver_touch()` que anota
 - Dos teléfonos con la misma cuenta: la sesión más nueva gana. Hay que decidir
   qué se le dice al otro (sección 9, punto 4).
 
-## 9. Decisiones que necesito de Jhan
+## 9. Decisiones (aprobadas por Jhan el 2026-11-10)
 
-1. **K** (ofertas seguidas sin responder antes de desconectar): propongo **3**.
-2. **Duración máxima de sesión:** propongo **12 horas** (una jornada larga).
-3. **Ventana de "alcanzable por push"** (`driver_seen_window_seconds`): propongo
-   **30 minutos**, ajustable desde el panel.
-4. **Dos teléfonos con la misma cuenta:** propongo que el nuevo desconecte al
-   anterior y este muestre "Tu cuenta se abrió en otro teléfono".
+1. **K = 3** ofertas seguidas sin responder antes de desconectar.
+2. **Sesión máxima: 12 horas.**
+3. **Ventana de "alcanzable por push": 30 minutos** (1800 s).
+4. **Dos teléfonos con la misma cuenta:** el nuevo desconecta al anterior, que
+   muestra "Tu cuenta se abrió en otro teléfono". (El motivo `other_device` ya
+   existe en la base; falta la parte de la app.)
+
+**Estado:** migración escrita y **validada con `rollback`** (7 comprobaciones de
+comportamiento, ver D296), **sin aplicar**. Nace en modo `location`: no cambia
+nada hasta pasar `availability_mode` a `session`.
 
 ## 10. Pruebas previas a activar el modo `session`
 
