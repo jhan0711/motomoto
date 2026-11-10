@@ -657,6 +657,44 @@ export type Database = {
           },
         ];
       };
+      driver_tracking_events: {
+        Row: {
+          detail: Json;
+          driver_id: string;
+          id: number;
+          kind: string;
+          occurred_at: string;
+          platform: string | null;
+          source: string;
+        };
+        Insert: {
+          detail?: Json;
+          driver_id: string;
+          id?: never;
+          kind: string;
+          occurred_at?: string;
+          platform?: string | null;
+          source: string;
+        };
+        Update: {
+          detail?: Json;
+          driver_id?: string;
+          id?: never;
+          kind?: string;
+          occurred_at?: string;
+          platform?: string | null;
+          source?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'driver_tracking_events_driver_id_fkey';
+            columns: ['driver_id'];
+            isOneToOne: false;
+            referencedRelation: 'drivers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       ride_locations: {
         Row: {
           accuracy_m: number | null;

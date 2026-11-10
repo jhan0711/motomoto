@@ -2,8 +2,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Location from 'expo-location';
 import type { LocationObject, LocationTaskOptions } from 'expo-location';
 import * as TaskManager from 'expo-task-manager';
+import { AppState, Platform } from 'react-native';
 
 import { reportLocation } from './driver-service';
+import { logTaskFiredThrottled, logTrackingEvent } from './tracking-diagnostics';
 
 /**
  * Ubicacion del conductor con la aplicacion minimizada (pedido de la empresa,
@@ -58,11 +60,23 @@ export function backgroundLocationOptions(
   riding: boolean,
 ): LocationTaskOptions {
   return {
-    // La misma que ya usa el mapa del pasajero en foreground (use-location.ts):
-    // unos metros de error no importan aqui, y la de mayor precision mantendria
-    // el chip de GPS encendido sin necesidad -justo el costo de bateria que
-    // este pedido pidio vigilar.
-    accuracy: Location.Accuracy.Balanced,
+    // ANDROID: la misma que ya usa el mapa del pasajero en foreground
+    // (use-location.ts): unos metros de error no importan aqui, y la de mayor
+    // precision mantendria el chip de GPS encendido sin necesidad -justo el
+    // costo de bateria que este pedido pidio vigilar-. El intervalo de 30 s lo
+    // impone `timeInterval`, que Android si respeta.
+    //
+    // iOS: `High` y no `Balanced`, a proposito (2026-11-10). iOS IGNORA
+    // `timeInterval`: decide el solo cuando entrega, y con precision de ~100 m y
+    // el aparato quieto no entrego nada -un iPhone 16 con la app minimizada dejo
+    // `driver_locations.updated_at` parado mas de cinco minutos, y a los dos el
+    // conductor desaparece de las busquedas-. Ademas `expo-location` arranca en
+    // iOS `startUpdatingLocation` Y `startMonitoringSignificantLocationChanges`
+    // a la vez, combinacion que Apple documenta como causa de suspension desde
+    // iOS 16.4 si la precision es baja. Con `High` el GPS sigue encendido y
+    // iOS sigue entregando. Cuesta mas bateria que `Balanced`; se mide en la
+    // prueba y, si fuera demasiado, se rebaja con la evidencia en la mano.
+    accuracy: Platform.OS === 'ios' ? Location.Accuracy.High : Location.Accuracy.Balanced,
     timeInterval: intervaloSegundos * 1000,
     // 0 EXPLICITO, y a proposito. Desde expo-location 57.0.23 la precision
     // `Balanced` trae un `distanceInterval` POR DEFECTO de 100 m, que Android
@@ -79,7 +93,11 @@ export function backgroundLocationOptions(
     // ubicacion en segundo plano: Apple lo espera en una app de este tipo.
     pausesUpdatesAutomatically: false,
     showsBackgroundLocationIndicator: true,
-    activityType: Location.ActivityType.AutomotiveNavigation,
+    // `Other` y no `AutomotiveNavigation`: Apple deja que el sistema pause la
+    // entrega cuando cree que el vehiculo se paro, y un conductor esperando
+    // pasajeros en el parque es justo eso. Con `pausesUpdatesAutomatically:
+    // false` ya no deberia pausar, pero no hay razon para dejarle la pista.
+    activityType: Location.ActivityType.Other,
     // SIN `distanceInterval`, y a proposito -no es un olvido-. En Android,
     // `expo-location` lo traduce a `setMinUpdateDistanceMeters` de
     // `LocationRequest`, que en el sistema operativo actua como filtro
@@ -114,10 +132,18 @@ TaskManager.defineTask<{ locations: LocationObject[] }>(
   BACKGROUND_LOCATION_TASK_NAME,
   async ({ data, error }) => {
     // Un error aqui lo reporta el sistema operativo, no el servidor: no hay
-    // conductor al que devolverselo ni pantalla que lo muestre. Se ignora en
-    // vez de intentar registrarlo -un throw dentro de esta tarea la deja de
-    // recibir mas entregas hasta que el proceso se reinicie.
-    if (error !== null) return;
+    // conductor al que devolverselo ni pantalla que lo muestre. NO se lanza -un
+    // throw dentro de esta tarea la deja de recibir mas entregas hasta que el
+    // proceso se reinicie-, pero SI se anota en el diario tecnico (fase A): es
+    // exactamente la pista que faltaba para saber por que iOS deja de entregar.
+    if (error !== null) {
+      const driverIdConError = await AsyncStorage.getItem(DRIVER_ID_KEY);
+      await logTrackingEvent(driverIdConError, 'task', 'task_os_error', {
+        message: String(error.message ?? error).slice(0, 200),
+        appState: AppState.currentState,
+      });
+      return;
+    }
 
     // La mas reciente. Android puede entregar varias posiciones juntas si se
     // acumularon mientras el proceso estaba suspendido.
@@ -127,7 +153,7 @@ TaskManager.defineTask<{ locations: LocationObject[] }>(
     const driverId = await AsyncStorage.getItem(DRIVER_ID_KEY);
     if (driverId === null) return;
 
-    await reportLocation(
+    const resultado = await reportLocation(
       driverId,
       { latitude: ultima.coords.latitude, longitude: ultima.coords.longitude },
       {
@@ -136,5 +162,24 @@ TaskManager.defineTask<{ locations: LocationObject[] }>(
         accuracyM: ultima.coords.accuracy,
       },
     );
+
+    const detalle = {
+      locations: data.locations.length,
+      // Edad de la posicion al llegar: una posicion vieja delata una entrega
+      // retrasada por el sistema, no un GPS que no encuentra senal.
+      ageS: Math.round((Date.now() - ultima.timestamp) / 1000),
+      accuracyM: ultima.coords.accuracy !== null ? Math.round(ultima.coords.accuracy) : null,
+      appState: AppState.currentState,
+    };
+
+    if (resultado.ok) {
+      await logTaskFiredThrottled(driverId, detalle);
+    } else {
+      // Los fallos del envio NO se limitan: cada uno cuenta.
+      await logTrackingEvent(driverId, 'task', 'task_report_failed', {
+        ...detalle,
+        message: resultado.failure.message.slice(0, 200),
+      });
+    }
   },
 );

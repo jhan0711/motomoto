@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Linking } from 'react-native';
+import { AppState, Linking, Platform } from 'react-native';
 
 import { useNumericSetting } from '@/features/ride/settings';
 
@@ -9,6 +9,7 @@ import {
   backgroundLocationOptions,
   setBackgroundLocationDriverId,
 } from './background-location-task';
+import { logTrackingEvent } from './tracking-diagnostics';
 
 /**
  * Ubicacion en segundo plano mientras el conductor esta "disponible" o "en
@@ -90,6 +91,13 @@ export function useBackgroundLocation(
    * cambio de estado tambien cambia el texto de la notificacion-. */
   const enMarchaConRef = useRef<{ intervalo: number; riding: boolean } | null>(null);
 
+  /** Al volver a primer plano en iOS se REARMA la tarea aunque siga "en marcha".
+   * Apple solo garantiza que `startUpdatingLocation` funcione si se llama con la
+   * app a la vista, y una sesion que el sistema dejo dormida no se despierta
+   * sola. Parar y arrancar de nuevo es barato y no duplica nada: la tarea tiene
+   * un nombre unico y `startLocationUpdatesAsync` la reemplaza. */
+  const rearmarRef = useRef(false);
+
   const verificar = useCallback(async () => {
     runId.current += 1;
     const id = runId.current;
@@ -103,7 +111,10 @@ export function useBackgroundLocation(
       const enMarcha = await Location.hasStartedLocationUpdatesAsync(
         BACKGROUND_LOCATION_TASK_NAME,
       ).catch(() => false);
-      if (enMarcha) await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK_NAME);
+      if (enMarcha) {
+        await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK_NAME);
+        void logTrackingEvent(driverId, 'app', 'tracking_stop', {});
+      }
       await setBackgroundLocationDriverId(null);
       enMarchaConRef.current = null;
 
@@ -117,6 +128,10 @@ export function useBackgroundLocation(
     if (isStale()) return;
 
     if (!permiso.granted) {
+      void logTrackingEvent(driverId, 'app', 'permission_missing', {
+        status: permiso.status,
+        canAsk: permiso.canAskAgain,
+      });
       setState({ kind: 'permission-required', canAsk: permiso.canAskAgain });
       return;
     }
@@ -130,17 +145,28 @@ export function useBackgroundLocation(
       const yaEstaAsi =
         enMarchaConRef.current?.intervalo === intervaloSegundos &&
         enMarchaConRef.current?.riding === riding;
-      if (!enMarcha || !yaEstaAsi) {
+      const rearmar = rearmarRef.current;
+      rearmarRef.current = false;
+      if (!enMarcha || !yaEstaAsi || rearmar) {
         if (enMarcha) await Location.stopLocationUpdatesAsync(BACKGROUND_LOCATION_TASK_NAME);
         await Location.startLocationUpdatesAsync(
           BACKGROUND_LOCATION_TASK_NAME,
           backgroundLocationOptions(intervaloSegundos, riding),
         );
         enMarchaConRef.current = { intervalo: intervaloSegundos, riding };
+        void logTrackingEvent(driverId, 'app', 'tracking_start', {
+          intervalS: intervaloSegundos,
+          riding,
+          rearmed: rearmar,
+          wasRunning: enMarcha,
+        });
       }
 
       if (!isStale()) setState({ kind: 'active' });
     } catch (e) {
+      void logTrackingEvent(driverId, 'app', 'tracking_error', {
+        message: (e instanceof Error ? e.message : String(e)).slice(0, 200),
+      });
       if (!isStale()) {
         setState({
           kind: 'error',
@@ -157,6 +183,31 @@ export function useBackgroundLocation(
     const id = setTimeout(() => void verificar(), 0);
     return () => clearTimeout(id);
   }, [verificar]);
+
+  // Primer plano / segundo plano. Dos cosas: (1) anotar el cambio en el diario
+  // tecnico, que es lo que permite ver cuanto tarda en detenerse la ubicacion
+  // despues de minimizar; (2) al volver a primer plano, comprobar de nuevo que
+  // la tarea esta en marcha -y en iOS, rearmarla-. Sin esto, si el sistema la
+  // detuvo mientras la app estaba minimizada, el conductor seguia "disponible"
+  // en pantalla sin que nada la reactivara hasta el proximo cambio de estado.
+  useEffect(() => {
+    if (!activo) return;
+    const suscripcion = AppState.addEventListener('change', (siguiente) => {
+      void logTrackingEvent(
+        driverId,
+        'app',
+        siguiente === 'active' ? 'app_foreground' : 'app_background',
+        {
+          state: siguiente,
+        },
+      );
+      if (siguiente === 'active') {
+        if (Platform.OS === 'ios') rearmarRef.current = true;
+        void verificar();
+      }
+    });
+    return () => suscripcion.remove();
+  }, [activo, driverId, verificar]);
 
   const requestPermission = useCallback(async () => {
     await Location.requestBackgroundPermissionsAsync();
