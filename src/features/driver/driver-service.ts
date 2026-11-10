@@ -1,6 +1,7 @@
 import { toRideFailure, type RideFailure } from '@/features/ride/errors';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/types/database';
+import { sanitizeLocationExtras } from './location-extras';
 
 /**
  * Capa de servicio del conductor.
@@ -218,13 +219,17 @@ export async function reportLocation(
   coords: { latitude: number; longitude: number },
   extras?: { heading?: number | null; speedKmh?: number | null; accuracyM?: number | null },
 ): Promise<Result> {
+  // iOS manda -1 en rumbo y velocidad cuando esta quieto y la tabla lo rechaza
+  // (CHECK de rango): ver `location-extras.ts`.
+  const limpio = sanitizeLocationExtras(extras);
+
   const { error } = await supabase.from('driver_locations').upsert(
     {
       driver_id: driverId,
       location: `SRID=4326;POINT(${coords.longitude} ${coords.latitude})`,
-      heading: extras?.heading ?? null,
-      speed_kmh: extras?.speedKmh ?? null,
-      accuracy_m: extras?.accuracyM ?? null,
+      heading: limpio.heading,
+      speed_kmh: limpio.speedKmh,
+      accuracy_m: limpio.accuracyM,
     },
     { onConflict: 'driver_id' },
   );
