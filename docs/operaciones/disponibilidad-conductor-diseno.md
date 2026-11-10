@@ -132,8 +132,17 @@ online(plataforma, permiso)` que crea la sesión y `driver_touch()` que anota
 
 1. **K = 3** ofertas seguidas sin responder antes de desconectar.
 2. **Sesión máxima: 12 horas.**
-3. **Ventana de "alcanzable por push": 30 minutos** (1800 s).
-4. **Dos teléfonos con la misma cuenta:** el nuevo desconecta al anterior, que
+3. **Ventana de "alcanzable por push": 12 horas** (43200 s), igual que la sesión.
+   Se cambió de 30 minutos el 2026-11-10: un reloj corto hace desaparecer a un
+   conductor quieto que no recibe ofertas, que es el mismo error con otro plazo.
+   La señal real de que no está es **ignorar K ofertas**. Además, como las
+   ofertas van a todos a la vez, un fantasma no retrasa al pasajero mientras
+   haya otro que pueda aceptar.
+4. **Antigüedad de ubicación para el buscador: 60 minutos** (nuevo parámetro
+   `driver_available_stale_seconds`, 3600 s). Se separó de
+   `driver_location_stale_seconds` (vuelve a 120 s), que la pantalla del
+   pasajero usa para avisar "el motocarro perdió señal" durante un viaje.
+5. **Dos teléfonos con la misma cuenta:** el nuevo desconecta al anterior, que
    muestra "Tu cuenta se abrió en otro teléfono". (El motivo `other_device` ya
    existe en la base; falta la parte de la app.)
 

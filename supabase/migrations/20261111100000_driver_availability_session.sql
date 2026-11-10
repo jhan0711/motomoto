@@ -67,9 +67,21 @@ insert into public.app_settings (key, value, description) values
    'D296. Ofertas seguidas sin responder antes de desconectar al conductor (modo session).'),
   ('driver_max_session_hours', '12',
    'D296. Duracion maxima de una sesion disponible (modo session).'),
-  ('driver_seen_window_seconds', '1800',
-   'D296. Cuanto tiempo cuenta como alcanzable por push un conductor sin ubicacion fresca (modo session).')
+  ('driver_seen_window_seconds', '43200',
+   'D296. Cuanto tiempo cuenta como alcanzable por push un conductor sin ubicacion fresca (modo session). Igual que la sesion maxima: la senal real de que no esta es ignorar K ofertas, no un reloj.'),
+  ('driver_available_stale_seconds', '3600',
+   'D296. Antiguedad maxima de la ubicacion para que el buscador siga ofreciendo servicios a un conductor disponible. NO es la de la pantalla del pasajero (esa sigue siendo driver_location_stale_seconds).')
 on conflict (key) do nothing;
+
+-- DESACOPLAR. `driver_location_stale_seconds` hacia DOS cosas distintas: decidir
+-- si el buscador ofrece servicios a un conductor Y decidir si la pantalla del
+-- pasajero avisa "el motocarro perdio senal" durante un viaje. Subirlo a 600 el
+-- 2026-11-10 (parche para que un conductor con la app minimizada no
+-- desapareciera) dejaba al pasajero mirando una posicion de hasta 10 minutos
+-- como si fuera buena. Ahora cada cosa tiene su parametro y este vuelve a 120.
+update public.app_settings
+set value = '120', updated_at = now()
+where key = 'driver_location_stale_seconds' and value = '600'::jsonb;
 
 -- ---------------------------------------------------------------------------
 -- 3. `protect_driver_columns`: las columnas de sesion solo las toca el servidor
@@ -366,7 +378,7 @@ AS $function$
         coalesce(public.get_setting('availability_mode', '"location"') #>> '{}', 'location') <> 'session'
         and dl.updated_at > now() - coalesce(
               p_max_staleness,
-              make_interval(secs => (public.get_setting('driver_location_stale_seconds', '120'))::integer)
+              make_interval(secs => (public.get_setting('driver_available_stale_seconds', '3600'))::integer)
             )
       )
       or
@@ -383,11 +395,11 @@ AS $function$
         and (
           dl.updated_at > now() - coalesce(
                 p_max_staleness,
-                make_interval(secs => (public.get_setting('driver_location_stale_seconds', '120'))::integer)
+                make_interval(secs => (public.get_setting('driver_available_stale_seconds', '3600'))::integer)
               )
           or (
             greatest(d.last_seen_at, dl.updated_at) > now()
-              - make_interval(secs => (public.get_setting('driver_seen_window_seconds', '1800'))::integer)
+              - make_interval(secs => (public.get_setting('driver_seen_window_seconds', '43200'))::integer)
             and p.push_token is not null
           )
         )
