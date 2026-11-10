@@ -64,11 +64,10 @@ cambió y por qué:
 **Falta, y no se tocó:** `terminos-de-uso.md` tampoco habla de la comisión ni
 del saldo del conductor. Hay que decidir con el abogado si va ahí.
 
-## Términos de uso: cambios del 2026-10-08 (pendientes de revisión)
+## Términos de uso: cambios del 2026-10-08 (aprobados por el abogado, 2026-11-10)
 
-`terminos-de-uso.md` también se desactualizó y se actualizó en la rama
-`legal/terminos-comision-2026-10-08`. **No está revisado** y no debe llegar a
-`main` hasta que lo apruebe el abogado. Qué cambió:
+`terminos-de-uso.md` también se había desactualizado. El abogado aprobó la
+versión actualizada el 2026-11-10, sin cambios, y se publicó. Qué cambió:
 
 1. **Sección 1.** Decía "no procesa pagos". Ahora: no cobra el servicio, y los
    conductores pagan una comisión mediante un saldo.
@@ -81,7 +80,7 @@ del saldo del conductor. Hay que decidir con el abogado si va ahí.
    saldo. Las secciones siguientes se renumeraron (de 8 a 9, etc.): nada en la app
    ni en la política cita esos números.
 
-**Preguntas abiertas para el abogado, que el texto NO resuelve:**
+**Puntos que el texto no resuelve** (anotados; el abogado aprobó el documento tal cual):
 
 - **Devolución del saldo.** Si un conductor sale de la operación con saldo sin
   gastar, ¿se devuelve? Hoy el diseño no permite retirarlo y el texto lo dice, pero
