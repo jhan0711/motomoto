@@ -164,6 +164,9 @@ const config: ExpoConfig = {
   plugins: [
     'expo-router',
     'expo-dev-client',
+    // Los pide `expo install --fix` desde expo 57.0.32: antes no hacian falta.
+    'expo-image',
+    'expo-web-browser',
     // Sin opciones: el token de descarga lo lee el plugin del entorno, y el
     // público lo registra el código al arrancar. Ver el comentario de arriba.
     '@rnmapbox/maps',
@@ -207,6 +210,10 @@ const config: ExpoConfig = {
         // suspende la tarea de ubicacion al minimizar la app y el conductor
         // deja de reportar posicion (D116, R10).
         isIosBackgroundLocationEnabled: true,
+        // La app no usa el sensor de movimiento. Sin esto el plugin deja una
+        // descripcion generica en ingles (`NSMotionUsageDescription`) que Apple puede
+        // cuestionar por no corresponder a ningun uso.
+        motionUsagePermission: false,
       },
     ],
     [
