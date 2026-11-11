@@ -186,7 +186,7 @@ clasificación por contenido: no hay nada que justifique subirla de 4+.
 | --------------------------- | ----------------------------------------------------------------------------------------------- |
 | ¿Requiere inicio de sesión? | **Sí**                                                                                          |
 | Cuenta de pasajero          | `pasajero.prueba@motomoto-qa.co` (contraseña: la de las notas del proyecto, no se escribe aquí) |
-| Cuenta de conductor         | `conductor.prueba@motomoto-qa.co` (ídem)                                                        |
+| Cuenta de conductor         | `conductor2.prueba@motomoto-qa.co` (ídem; la `conductor.prueba` NO tiene motocarro asignado)    |
 | Contacto                    | Nombre, teléfono y correo de Jhan                                                               |
 | Eliminación de cuenta       | En la app: Perfil → "Eliminar mi cuenta". Web: `https://amalfigo.app/eliminar-cuenta`           |
 | Sign in with Apple          | **No aplica**: no hay inicio de sesión con terceros, solo correo y contraseña                   |
