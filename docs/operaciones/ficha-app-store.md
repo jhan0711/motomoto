@@ -91,26 +91,31 @@ app no hace, y también una app que cobra algo que la ficha no dice.
 
 ## 2. Capturas
 
-| Tamaño                          | Especificación                | Estado                                                                                                     |
-| ------------------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| iPhone 6,9" (único obligatorio) | 1290 × 2796 PNG/JPG, sin alfa | **Provisionales** en `assets/store/capturas-ios/` (7). Las genera `assets/brand/store-ios-screenshots.mjs` |
-| 6,5" / 5,5" / iPad              | —                             | No hacen falta: App Store escala el de 6,9". iPad no aplica (`supportsTablet: false`)                      |
+**Definitivas (2026-11-10).** Cinco capturas tomadas en un iPhone real (TestFlight,
+build 5), de 1320 × 2868 (iPhone 6,9", único obligatorio) y sin alfa, en
+`assets/store/capturas-iphone/`:
 
-Son las 7 capturas de Play (1080 × 2340, la misma proporción) ampliadas, no
-capturas de un iPhone. Sirven para dejar la ficha armada, pero hay dos motivos
-para **reemplazarlas** antes del envío:
+| #   | Archivo                    | Muestra                                         |
+| --- | -------------------------- | ----------------------------------------------- |
+| 1   | `1-bienvenida.png`         | Pantalla de inicio de la app                    |
+| 2   | `2-tarifa.png`             | "Tu viaje" con el precio que ofrece el pasajero |
+| 3   | `3-buscando-motocarro.png` | Buscando conductor, con la cuenta atras         |
+| 4   | `4-historial.png`          | Historial con un viaje terminado                |
+| 5   | `5-perfil.png`             | Perfil de la cuenta de demostracion             |
 
-1. **Una está desactualizada.** `5-tarifa.png` es de antes de D277: no muestra
-   el campo "¿Cuánto ofreces por el viaje?" que hoy tiene esa pantalla. Las
-   otras seis habría que contrastarlas con la app actual.
-2. **Apple prefiere (y a veces exige, regla 2.3.3) capturas del producto real en
-   un iPhone.** No llevan barra de estado ni marco de Android, así que no
-   delatan la plataforma, pero las de TestFlight no dejan duda.
+Apple muestra las tres primeras en los resultados de busqueda. Se dejo fuera la
+del conductor ("Nueva solicitud"): desde Medellin marcaba "A 87,2 km de ti".
 
-Orden sugerido al rehacerlas: bienvenida, inicio, tarifa (con el precio
-ofrecido), conductor en camino, historial, perfil, y la del conductor
-("Nueva solicitud"). Apple muestra las tres primeras en los resultados de
-búsqueda: que sean las más claras.
+La barra de estado de cada captura esta **sustituida** por la estandar de Apple
+(9:41, senal completa, bateria llena) con `assets/brand/store-ios-clean-statusbar.py`,
+porque las originales llevaban cosas del telefono (una reproduccion en la
+Dynamic Island, bateria baja). Solo se repinta la franja de arriba: el contenido
+de la app no se toca, que es lo que pide la regla 2.3.3. Las originales sin
+tocar no se guardan en el repositorio.
+
+La cuenta de demostracion (`pasajero.prueba@motomoto-qa.co`) se llama ahora
+"Camila Restrepo". Las capturas provisionales antiguas siguen en
+`assets/store/capturas-ios/` y **no se deben subir**.
 
 ---
 
