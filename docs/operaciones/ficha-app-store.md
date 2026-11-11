@@ -203,11 +203,15 @@ single municipality: Amalfi, Antioquia, Colombia. It is not available elsewhere,
 and the service area is enforced on our server, so a reviewer outside Colombia
 cannot complete a real ride request by location alone.
 
-To make the review possible we have attached a screen recording of the complete
-flow (passenger requests a ride -> driver accepts -> passenger follows the driver
-on the map -> both rate each other), and two demo accounts (passenger and
-driver). Driver accounts can only be created by the company, there is no public
-driver sign-up.
+To make the review possible we have attached a screen recording of the passenger
+flow (log in -> choose pickup and destination -> propose a price -> request the
+ride -> a driver accepts and the passenger sees the vehicle on its way), and two
+demo accounts (passenger and driver). Driver accounts can only be created by the
+company, there is no public driver sign-up.
+
+Tip for testing outside Colombia: on the pickup screen choose a place from the
+list (for example "El parque") instead of "Your current location". The list
+places are inside the service area.
 
 Location: the passenger app uses location while in use. The driver app also uses
 location in the background while the driver is available or on a ride, so that
