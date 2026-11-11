@@ -75,3 +75,6 @@ site/dist/
 
 # scratch de sesion (comparativas, no se comitea)
 _scratch/
+
+# Documento con contrasenas de las cuentas de prueba: NUNCA al repositorio
+cuentas-de-prueba.*
