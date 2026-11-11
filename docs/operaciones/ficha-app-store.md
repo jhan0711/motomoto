@@ -233,7 +233,7 @@ Account deletion: Profile -> "Eliminar mi cuenta" (guideline 5.1.1(v)).
    Colombia, no hay conductor real esperando, y el área de servicio la valida el
    servidor (Fase 11A). Es el motivo más común de rechazo en apps de transporte
    locales. Mitigación: el video del flujo completo y las cuentas de demostración
-   (sección 5; el video está en `assets/store/video-revisor-apple.mp4` y se adjunta en App Store Connect, en "App Review Information"). **Decisión pendiente, no tomada:** si el video no basta, la
+   (sección 5; el video definitivo está en `assets/store/video-revisor-iphone.mp4` (grabado en un iPhone real, 1 min, con rótulos en inglés; el anterior, `video-revisor-apple.mp4`, es de un emulador y ya no se usa) y se adjunta en App Store Connect, en "App Review Information"). **Decisión pendiente, no tomada:** si el video no basta, la
    salida es una cuenta de demostración que omita la validación de área, lo que
    es cambio de backend y se discute aparte antes de hacerlo.
 2. **Las recargas de Wompi (regla 3.1.1 / 3.1.3).** Apple obliga a usar sus
