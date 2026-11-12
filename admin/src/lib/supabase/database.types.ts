@@ -1182,7 +1182,11 @@ export type Database = {
         Args: { p_document_id: string };
         Returns: string;
       };
-      admin_archive_driver: { Args: { p_driver_id: string }; Returns: undefined };
+      admin_archive_driver: {
+        Args: { p_driver_id: string; p_release_email?: boolean };
+        Returns: undefined;
+      };
+      admin_release_driver_email: { Args: { p_driver_id: string }; Returns: undefined };
       admin_restore_driver: { Args: { p_driver_id: string }; Returns: undefined };
       admin_delete_driver: { Args: { p_driver_id: string }; Returns: string[] };
       admin_archive_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined };
@@ -1426,6 +1430,7 @@ export type Database = {
           archived_at: string | null;
           created_at: string;
           driver_id: string;
+          email_released: boolean;
           full_name: string;
           has_active_ride: boolean;
           has_history: boolean;

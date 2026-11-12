@@ -29,8 +29,13 @@ interface Props {
   etiquetaConfirmar: string;
   /** Rojo y definitivo (eliminar) frente a normal y reversible (archivar). */
   peligroso: boolean;
+  /**
+   * Una casilla opcional (empieza sin marcar). Su valor llega a `onConfirmar`.
+   * D307: "liberar el correo" al archivar a un conductor.
+   */
+  opcion?: { etiqueta: string; ayuda?: string };
   onCerrar: () => void;
-  onConfirmar: () => Promise<Resultado>;
+  onConfirmar: (opcion: boolean) => Promise<Resultado>;
 }
 
 export function RemoveDialog({
@@ -41,10 +46,12 @@ export function RemoveDialog({
   queEscribir,
   etiquetaConfirmar,
   peligroso,
+  opcion,
   onCerrar,
   onConfirmar,
 }: Props) {
   const [escrito, setEscrito] = useState('');
+  const [opcionMarcada, setOpcionMarcada] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [trabajando, setTrabajando] = useState(false);
 
@@ -57,7 +64,7 @@ export function RemoveDialog({
     if (!coincide) return;
     setError(null);
     setTrabajando(true);
-    const r = await onConfirmar();
+    const r = await onConfirmar(opcionMarcada);
     setTrabajando(false);
     if (!r.ok) setError(r.mensaje ?? 'No pudimos completar la operación.');
   }
@@ -98,6 +105,23 @@ export function RemoveDialog({
                 className="h-10 rounded-lg border border-border bg-surface px-3 text-text-primary outline-none focus:border-brand"
               />
             </div>
+          )}
+
+          {opcion !== undefined && (
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border px-3 py-2.5">
+              <input
+                type="checkbox"
+                checked={opcionMarcada}
+                onChange={(e) => setOpcionMarcada(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-brand)]"
+              />
+              <span className="text-sm">
+                <span className="font-medium text-text-primary">{opcion.etiqueta}</span>
+                {opcion.ayuda !== undefined && (
+                  <span className="mt-0.5 block text-text-secondary">{opcion.ayuda}</span>
+                )}
+              </span>
+            </label>
           )}
 
           {error !== null && (

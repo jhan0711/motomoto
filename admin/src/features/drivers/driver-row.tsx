@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CircleSlash,
   KeyRound,
+  MailX,
   Pencil,
   Star,
   Trash2,
@@ -27,6 +28,7 @@ import {
   cambiarEstadoCuenta,
   editarContacto,
   eliminarConductor,
+  liberarCorreoConductor,
   restablecerContrasena,
   restaurarConductor,
   type SaldoConductor,
@@ -57,7 +59,7 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, archivado, onCambio 
   const [credencial, setCredencial] = useState<string | null>(null);
   const [bloqueando, setBloqueando] = useState(false);
   // D306. Que se esta confirmando: archivar (reversible) o eliminar (definitivo).
-  const [quitando, setQuitando] = useState<'archivar' | 'eliminar' | null>(null);
+  const [quitando, setQuitando] = useState<'archivar' | 'eliminar' | 'liberar' | null>(null);
 
   /*
    * Los documentos van plegados. Cada ficha abierta es una consulta mas y una
@@ -110,6 +112,11 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, archivado, onCambio 
             {archivado && (
               <span className="rounded-md bg-surface-subtle px-2 py-0.5 text-xs text-text-secondary">
                 Archivado
+              </span>
+            )}
+            {archivado && conductor.email_released && (
+              <span className="rounded-md bg-surface-subtle px-2 py-0.5 text-xs text-text-secondary">
+                Correo liberado
               </span>
             )}
             {/*
@@ -166,21 +173,40 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, archivado, onCambio 
 
       {archivado ? (
         <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3">
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={trabajando}
-              onClick={() => void ejecutar(() => restaurarConductor(conductor.driver_id))}
-              className="btn btn-primario h-9 gap-1.5 px-3"
-            >
-              <ArchiveRestore size={15} />
-              Restaurar
-            </button>
-          </div>
-          <p className="text-xs text-text-secondary">
-            Al restaurarlo vuelve a la lista, pero su cuenta sigue bloqueada hasta que la
-            desbloquees.
-          </p>
+          {conductor.email_released ? (
+            <p className="text-sm text-text-secondary">
+              Su correo ya quedó libre: puede registrarse de nuevo como pasajero con el mismo
+              correo. Esta ficha ya no se puede restaurar.
+            </p>
+          ) : (
+            <>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={trabajando}
+                  onClick={() => void ejecutar(() => restaurarConductor(conductor.driver_id))}
+                  className="btn btn-primario h-9 gap-1.5 px-3"
+                >
+                  <ArchiveRestore size={15} />
+                  Restaurar
+                </button>
+                <button
+                  type="button"
+                  disabled={trabajando}
+                  onClick={() => setQuitando('liberar')}
+                  className="btn btn-secundario h-9 gap-1.5 px-3"
+                >
+                  <MailX size={15} />
+                  Liberar su correo
+                </button>
+              </div>
+              <p className="text-xs text-text-secondary">
+                Al restaurarlo vuelve a la lista, pero su cuenta sigue bloqueada hasta que la
+                desbloquees. «Liberar su correo» es para quien se va de la empresa y quiere usar la
+                app como pasajero: ya no se podrá restaurar.
+              </p>
+            </>
+          )}
         </div>
       ) : (
         <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
@@ -362,9 +388,34 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, archivado, onCambio 
           }
           etiquetaConfirmar="Archivar"
           peligroso={false}
+          opcion={{
+            etiqueta: 'Liberar su correo para que pueda registrarse como pasajero',
+            ayuda:
+              'Úsalo si se va de la empresa. Podrá crear una cuenta nueva con el mismo correo (con contraseña nueva) y no verá su historial de conductor. Después ya no se podrá restaurar esta ficha.',
+          }}
+          onCerrar={() => setQuitando(null)}
+          onConfirmar={async (liberarCorreo) => {
+            const r = await archivarConductor(conductor.driver_id, liberarCorreo);
+            if (r.ok) {
+              setQuitando(null);
+              onCambio();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {quitando === 'liberar' && (
+        <RemoveDialog
+          titulo={`Liberar el correo de ${conductor.full_name}`}
+          descripcion="Su correo queda libre para que esa persona (u otra) se registre de nuevo, por ejemplo como pasajero. Su cuenta de conductor sigue archivada y su historial se conserva, pero esta ficha ya no se podrá restaurar."
+          escribirParaConfirmar={conductor.full_name}
+          queEscribir="su nombre"
+          etiquetaConfirmar="Liberar su correo"
+          peligroso
           onCerrar={() => setQuitando(null)}
           onConfirmar={async () => {
-            const r = await archivarConductor(conductor.driver_id);
+            const r = await liberarCorreoConductor(conductor.driver_id);
             if (r.ok) {
               setQuitando(null);
               onCambio();

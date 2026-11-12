@@ -39,6 +39,11 @@ const MENSAJES: Record<string, string> = {
   NOT_ARCHIVED: 'Ese conductor no está archivado.',
   DRIVER_HAS_HISTORY:
     'Ese conductor tiene viajes, saldo o calificaciones: no se puede eliminar, solo archivar.',
+  // D307: liberar el correo.
+  DRIVER_NOT_ARCHIVED: 'Primero hay que archivar al conductor.',
+  EMAIL_ALREADY_RELEASED: 'El correo de ese conductor ya está liberado.',
+  EMAIL_RELEASED:
+    'El correo de ese conductor ya está liberado, así que no se puede restaurar. Si vuelve, que se registre de nuevo.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {
@@ -225,10 +230,29 @@ export async function restablecerContrasena(
   return { ok: true, password: data };
 }
 
-/** D306. Oculta la ficha de la lista, bloquea la cuenta y le quita el motocarro. */
-export async function archivarConductor(driverId: string): Promise<Resultado> {
+/**
+ * D306. Oculta la ficha de la lista, bloquea la cuenta y le quita el motocarro.
+ *
+ * D307. Con `liberarCorreo` ademas se renombra su correo interno, para que la
+ * persona pueda registrarse de nuevo (como pasajero) con el mismo correo.
+ */
+export async function archivarConductor(
+  driverId: string,
+  liberarCorreo = false,
+): Promise<Resultado> {
   const supabase = createClient();
-  const { error } = await supabase.rpc('admin_archive_driver', { p_driver_id: driverId });
+  const { error } = await supabase.rpc('admin_archive_driver', {
+    p_driver_id: driverId,
+    p_release_email: liberarCorreo,
+  });
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/** D307. Libera el correo de un conductor YA archivado. No se puede deshacer desde el panel. */
+export async function liberarCorreoConductor(driverId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('admin_release_driver_email', { p_driver_id: driverId });
   if (error) return { ok: false, mensaje: traducir(error) };
   return { ok: true };
 }
