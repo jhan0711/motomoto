@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { BUCKET } from '@/features/documents/types';
 import type { Vehicle, VehicleStatus } from './types';
 
 /**
@@ -25,6 +26,11 @@ const MENSAJES: Record<string, string> = {
     'Hay un servicio en curso con ese conductor o ese motocarro. Resuélvelo primero.',
   ASSIGNMENT_UNCHANGED: 'Ese conductor ya lleva ese motocarro.',
   NO_ASSIGNMENT: 'Ese conductor no tiene ningún motocarro asignado.',
+  // D306: archivar, restaurar y eliminar.
+  ALREADY_ARCHIVED: 'Ese motocarro ya está archivado.',
+  NOT_ARCHIVED: 'Ese motocarro no está archivado.',
+  VEHICLE_HAS_HISTORY:
+    'Ese motocarro tiene viajes o conductores que lo llevaron: no se puede eliminar, solo archivar.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {
@@ -36,11 +42,11 @@ export interface Resultado {
   mensaje?: string;
 }
 
-export async function listarVehiculos(): Promise<
-  { ok: true; vehiculos: Vehicle[] } | { ok: false; mensaje: string }
-> {
+export async function listarVehiculos(
+  archivados = false,
+): Promise<{ ok: true; vehiculos: Vehicle[] } | { ok: false; mensaje: string }> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc('admin_list_vehicles');
+  const { data, error } = await supabase.rpc('admin_list_vehicles', { p_archived: archivados });
   if (error) return { ok: false, mensaje: traducir(error) };
   return { ok: true, vehiculos: data ?? [] };
 }
@@ -99,5 +105,32 @@ export async function quitarVehiculo(driverId: string): Promise<Resultado> {
   const supabase = createClient();
   const { error } = await supabase.rpc('admin_unassign_vehicle', { p_driver_id: driverId });
   if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/** D306. Lo oculta de la lista, lo deja "Retirado" y le quita los conductores. */
+export async function archivarVehiculo(vehicleId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('admin_archive_vehicle', { p_vehicle_id: vehicleId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/** D306. Lo devuelve a la lista como "Activo". */
+export async function restaurarVehiculo(vehicleId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('admin_restore_vehicle', { p_vehicle_id: vehicleId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/** D306. Elimina para siempre un motocarro SIN historial (y quita sus documentos). */
+export async function eliminarVehiculo(vehicleId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_delete_vehicle', { p_vehicle_id: vehicleId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+
+  const rutas = data ?? [];
+  if (rutas.length > 0) await supabase.storage.from(BUCKET).remove(rutas);
   return { ok: true };
 }

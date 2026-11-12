@@ -117,4 +117,11 @@ body {
     @apply hover:border-border-strong hover:bg-surface-pressed;
     @apply disabled:text-text-tertiary disabled:hover:border-border disabled:hover:bg-surface;
   }
+
+  /* Para lo que no se puede deshacer (eliminar). Mismos estados que el primario. */
+  .btn-peligro {
+    @apply bg-danger text-on-danger;
+    @apply hover:bg-on-danger-subtle;
+    @apply disabled:bg-action-disabled disabled:hover:bg-action-disabled;
+  }
 }

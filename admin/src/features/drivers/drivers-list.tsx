@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { AlertCircle, Inbox, LoaderCircle, Plus } from 'lucide-react';
+import { AlertCircle, Archive, ArchiveRestore, Inbox, LoaderCircle, Plus } from 'lucide-react';
 import {
   crearConductor,
   listarConductores,
@@ -23,6 +23,8 @@ export function DriversList({ esSuperAdmin }: Props) {
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [creando, setCreando] = useState(false);
+  // D306. Cierto cuando se esta viendo la lista de archivados.
+  const [archivados, setArchivados] = useState(false);
   const [saldos, setSaldos] = useState<Map<string, SaldoConductor>>(new Map());
 
   /*
@@ -32,7 +34,7 @@ export function DriversList({ esSuperAdmin }: Props) {
   const [credencial, setCredencial] = useState<{ nombre: string; password: string } | null>(null);
 
   const consultar = useCallback(async () => {
-    const r = await listarConductores();
+    const r = await listarConductores(archivados);
     if (!r.ok) {
       setError(r.mensaje);
       setCargando(false);
@@ -43,10 +45,12 @@ export function DriversList({ esSuperAdmin }: Props) {
     setCargando(false);
 
     // Los saldos van aparte de la lista: si esta consulta falla, la ficha sigue
-    // sirviendo para todo lo demas y solo se queda sin la cifra.
+    // sirviendo para todo lo demas y solo se queda sin la cifra. Los archivados no
+    // llevan saldo (el servidor no los incluye).
+    if (archivados) return;
     const s = await listarSaldos();
     if (s.ok) setSaldos(s.saldos);
-  }, []);
+  }, [archivados]);
 
   useEffect(() => {
     // La primera consulta se programa en vez de llamarse en el cuerpo del
@@ -71,20 +75,38 @@ export function DriversList({ esSuperAdmin }: Props) {
           <p className="mt-0.5 text-sm text-text-secondary">
             {cargando
               ? 'Consultando…'
-              : pendientes === 0
-                ? `${conductores.length} en total`
-                : `${conductores.length} en total · ${pendientes} ${pendientes === 1 ? 'espera' : 'esperan'} aprobación`}
+              : archivados
+                ? `${conductores.length} archivados`
+                : pendientes === 0
+                  ? `${conductores.length} en total`
+                  : `${conductores.length} en total · ${pendientes} ${pendientes === 1 ? 'espera' : 'esperan'} aprobación`}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setCreando(true)}
-          className="btn btn-primario h-10 px-3"
-        >
-          <Plus size={16} />
-          Nuevo conductor
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setCargando(true);
+              setArchivados((v) => !v);
+            }}
+            className="btn btn-secundario h-10 gap-1.5 px-3"
+          >
+            {archivados ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+            {archivados ? 'Ver activos' : 'Ver archivados'}
+          </button>
+
+          {!archivados && (
+            <button
+              type="button"
+              onClick={() => setCreando(true)}
+              className="btn btn-primario h-10 px-3"
+            >
+              <Plus size={16} />
+              Nuevo conductor
+            </button>
+          )}
+        </div>
       </header>
 
       {error !== null && (
@@ -108,9 +130,13 @@ export function DriversList({ esSuperAdmin }: Props) {
         {!cargando && conductores.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface py-12 text-center">
             <Inbox size={28} className="text-text-tertiary" />
-            <p className="font-medium text-text-primary">Todavía no hay conductores</p>
+            <p className="font-medium text-text-primary">
+              {archivados ? 'No hay conductores archivados' : 'Todavía no hay conductores'}
+            </p>
             <p className="max-w-sm text-sm text-text-secondary">
-              Da de alta el primero con el botón de arriba.
+              {archivados
+                ? 'Los que archives aparecerán aquí y podrás restaurarlos.'
+                : 'Da de alta el primero con el botón de arriba.'}
             </p>
           </div>
         )}
@@ -121,6 +147,7 @@ export function DriversList({ esSuperAdmin }: Props) {
             conductor={conductor}
             saldo={saldos.get(conductor.driver_id) ?? null}
             esSuperAdmin={esSuperAdmin}
+            archivado={archivados}
             onCambio={() => void consultar()}
           />
         ))}

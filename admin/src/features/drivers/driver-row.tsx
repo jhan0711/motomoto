@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import {
+  Archive,
+  ArchiveRestore,
   Ban,
   Check,
   ChevronDown,
@@ -10,18 +12,23 @@ import {
   KeyRound,
   Pencil,
   Star,
+  Trash2,
   Truck,
   UserCheck,
   Wallet,
 } from 'lucide-react';
 import { BlockDialog } from '@/features/shared/block-dialog';
+import { RemoveDialog } from '@/features/shared/remove-dialog';
 import type { Driver } from './types';
 import { ESTILO_APROBACION, ETIQUETA_APROBACION } from './types';
 import {
+  archivarConductor,
   cambiarAprobacion,
   cambiarEstadoCuenta,
   editarContacto,
+  eliminarConductor,
   restablecerContrasena,
+  restaurarConductor,
   type SaldoConductor,
 } from './driver-actions';
 import { BalanceDialog } from './balance-dialog';
@@ -36,10 +43,12 @@ interface Props {
   saldo: SaldoConductor | null;
   /** Decide si el dialogo de saldo trae el formulario de ajuste (D278). */
   esSuperAdmin: boolean;
+  /** Se esta viendo la lista de archivados: solo se puede restaurar (D306). */
+  archivado: boolean;
   onCambio: () => void;
 }
 
-export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
+export function DriverRow({ conductor, saldo, esSuperAdmin, archivado, onCambio }: Props) {
   const [verSaldo, setVerSaldo] = useState(false);
   const [trabajando, setTrabajando] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +56,8 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
   // La contrasena recien generada, solo mientras el dialogo la ensena.
   const [credencial, setCredencial] = useState<string | null>(null);
   const [bloqueando, setBloqueando] = useState(false);
+  // D306. Que se esta confirmando: archivar (reversible) o eliminar (definitivo).
+  const [quitando, setQuitando] = useState<'archivar' | 'eliminar' | null>(null);
 
   /*
    * Los documentos van plegados. Cada ficha abierta es una consulta mas y una
@@ -94,6 +105,11 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
             {bloqueada && (
               <span className="rounded-md bg-danger-subtle px-2 py-0.5 text-xs text-on-danger-subtle">
                 Cuenta bloqueada
+              </span>
+            )}
+            {archivado && (
+              <span className="rounded-md bg-surface-subtle px-2 py-0.5 text-xs text-text-secondary">
+                Archivado
               </span>
             )}
             {/*
@@ -148,106 +164,147 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
         </p>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
-        {!aprobado ? (
+      {archivado ? (
+        <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3">
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={trabajando}
+              onClick={() => void ejecutar(() => restaurarConductor(conductor.driver_id))}
+              className="btn btn-primario h-9 gap-1.5 px-3"
+            >
+              <ArchiveRestore size={15} />
+              Restaurar
+            </button>
+          </div>
+          <p className="text-xs text-text-secondary">
+            Al restaurarlo vuelve a la lista, pero su cuenta sigue bloqueada hasta que la
+            desbloquees.
+          </p>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
+          {!aprobado ? (
+            <button
+              type="button"
+              disabled={trabajando}
+              onClick={() =>
+                void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'approved', null))
+              }
+              className="btn btn-primario h-9 gap-1.5 px-3"
+            >
+              <Check size={15} />
+              Aprobar
+            </button>
+          ) : (
+            <button
+              type="button"
+              /*
+               * Se deshabilita cuando va conduciendo, y ademas el servidor lo
+               * rechaza con DRIVER_HAS_ACTIVE_RIDE. Las dos cosas: el boton
+               * apagado explica por que no se puede, y la comprobacion del
+               * servidor es la que de verdad lo impide, porque el estado de esta
+               * pantalla puede tener diez segundos de antiguedad.
+               */
+              disabled={trabajando || conductor.has_active_ride}
+              title={
+                conductor.has_active_ride
+                  ? 'Tiene un servicio en curso. Resuélvelo primero.'
+                  : undefined
+              }
+              onClick={() =>
+                void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'blocked', null))
+              }
+              className="btn btn-secundario h-9 gap-1.5 px-3"
+            >
+              <CircleSlash size={15} />
+              Retirar aprobación
+            </button>
+          )}
+
           <button
             type="button"
             disabled={trabajando}
-            onClick={() =>
-              void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'approved', null))
-            }
-            className="btn btn-primario h-9 gap-1.5 px-3"
+            onClick={() => setVerSaldo(true)}
+            className="btn btn-secundario h-9 gap-1.5 px-3"
           >
-            <Check size={15} />
-            Aprobar
+            <Wallet size={15} />
+            Saldo
           </button>
-        ) : (
+
           <button
             type="button"
-            /*
-             * Se deshabilita cuando va conduciendo, y ademas el servidor lo
-             * rechaza con DRIVER_HAS_ACTIVE_RIDE. Las dos cosas: el boton
-             * apagado explica por que no se puede, y la comprobacion del
-             * servidor es la que de verdad lo impide, porque el estado de esta
-             * pantalla puede tener diez segundos de antiguedad.
-             */
+            disabled={trabajando}
+            onClick={() => setEditando(true)}
+            className="btn btn-secundario h-9 gap-1.5 px-3"
+          >
+            <Pencil size={15} />
+            Editar contacto
+          </button>
+
+          <button
+            type="button"
+            disabled={trabajando}
+            onClick={async () => {
+              setTrabajando(true);
+              setError(null);
+              const r = await restablecerContrasena(conductor.driver_id);
+              setTrabajando(false);
+              if (r.ok) setCredencial(r.password);
+              else setError(r.mensaje);
+            }}
+            className="btn btn-secundario h-9 gap-1.5 px-3"
+          >
+            <KeyRound size={15} />
+            Nueva contraseña
+          </button>
+
+          {/*
+           * DESBLOQUEAR VA DIRECTO; BLOQUEAR PASA POR EL DIALOGO. Devolver a
+           * alguien al trabajo no es la decision delicada, quitarselo si, y desde
+           * el paso 11 **el servidor exige motivo si el conductor va con un
+           * pasajero dentro**. Antes este boton mandaba siempre `null` y el
+           * servidor lo rechazaba con un error que la pantalla no sabia explicar:
+           * el usuario veia "no pudimos completar la operacion" y nada mas.
+           */}
+          <button
+            type="button"
+            disabled={trabajando}
+            onClick={() => {
+              if (bloqueada) {
+                void ejecutar(() => cambiarEstadoCuenta(conductor.driver_id, 'active', null));
+                return;
+              }
+              setBloqueando(true);
+            }}
+            className="btn btn-secundario h-9 gap-1.5 px-3"
+          >
+            {bloqueada ? <UserCheck size={15} /> : <Ban size={15} />}
+            {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
+          </button>
+
+          {/*
+           * D306. UN SOLO BOTON, Y LA FICHA DECIDE CUAL. Con historial (viajes,
+           * saldo, calificaciones) solo se puede archivar: la base de datos no deja
+           * borrarlo, y aunque dejara, se perderia el registro. Sin historial se
+           * puede eliminar de verdad. El servidor lo vuelve a comprobar al ejecutar.
+           */}
+          <button
+            type="button"
             disabled={trabajando || conductor.has_active_ride}
             title={
               conductor.has_active_ride
                 ? 'Tiene un servicio en curso. Resuélvelo primero.'
                 : undefined
             }
-            onClick={() =>
-              void ejecutar(() => cambiarAprobacion(conductor.driver_id, 'blocked', null))
-            }
+            onClick={() => setQuitando(conductor.has_history ? 'archivar' : 'eliminar')}
             className="btn btn-secundario h-9 gap-1.5 px-3"
           >
-            <CircleSlash size={15} />
-            Retirar aprobación
+            {conductor.has_history ? <Archive size={15} /> : <Trash2 size={15} />}
+            {conductor.has_history ? 'Archivar' : 'Eliminar'}
           </button>
-        )}
-
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() => setVerSaldo(true)}
-          className="btn btn-secundario h-9 gap-1.5 px-3"
-        >
-          <Wallet size={15} />
-          Saldo
-        </button>
-
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() => setEditando(true)}
-          className="btn btn-secundario h-9 gap-1.5 px-3"
-        >
-          <Pencil size={15} />
-          Editar contacto
-        </button>
-
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={async () => {
-            setTrabajando(true);
-            setError(null);
-            const r = await restablecerContrasena(conductor.driver_id);
-            setTrabajando(false);
-            if (r.ok) setCredencial(r.password);
-            else setError(r.mensaje);
-          }}
-          className="btn btn-secundario h-9 gap-1.5 px-3"
-        >
-          <KeyRound size={15} />
-          Nueva contraseña
-        </button>
-
-        {/*
-         * DESBLOQUEAR VA DIRECTO; BLOQUEAR PASA POR EL DIALOGO. Devolver a
-         * alguien al trabajo no es la decision delicada, quitarselo si, y desde
-         * el paso 11 **el servidor exige motivo si el conductor va con un
-         * pasajero dentro**. Antes este boton mandaba siempre `null` y el
-         * servidor lo rechazaba con un error que la pantalla no sabia explicar:
-         * el usuario veia "no pudimos completar la operacion" y nada mas.
-         */}
-        <button
-          type="button"
-          disabled={trabajando}
-          onClick={() => {
-            if (bloqueada) {
-              void ejecutar(() => cambiarEstadoCuenta(conductor.driver_id, 'active', null));
-              return;
-            }
-            setBloqueando(true);
-          }}
-          className="btn btn-secundario h-9 gap-1.5 px-3"
-        >
-          {bloqueada ? <UserCheck size={15} /> : <Ban size={15} />}
-          {bloqueada ? 'Desbloquear cuenta' : 'Bloquear cuenta'}
-        </button>
-      </div>
+        </div>
+      )}
 
       <button
         type="button"
@@ -289,6 +346,47 @@ export function DriverRow({ conductor, saldo, esSuperAdmin, onCambio }: Props) {
             const r = await cambiarEstadoCuenta(conductor.driver_id, 'blocked', motivo);
             if (r.ok) {
               setBloqueando(false);
+              onCambio();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {quitando === 'archivar' && (
+        <RemoveDialog
+          titulo={`Archivar a ${conductor.full_name}`}
+          descripcion="Se oculta de la lista, su cuenta queda bloqueada y se le quita el motocarro. Su historial se conserva y puedes restaurarlo desde «Ver archivados»."
+          aviso={
+            conductor.is_available ? 'Ahora figura como disponible: se desconectará.' : undefined
+          }
+          etiquetaConfirmar="Archivar"
+          peligroso={false}
+          onCerrar={() => setQuitando(null)}
+          onConfirmar={async () => {
+            const r = await archivarConductor(conductor.driver_id);
+            if (r.ok) {
+              setQuitando(null);
+              onCambio();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {quitando === 'eliminar' && (
+        <RemoveDialog
+          titulo={`Eliminar a ${conductor.full_name}`}
+          descripcion="No tiene viajes, saldo ni calificaciones. Se borran su cuenta y sus documentos para siempre. Esto no se puede deshacer."
+          escribirParaConfirmar={conductor.full_name}
+          queEscribir="su nombre"
+          etiquetaConfirmar="Eliminar para siempre"
+          peligroso
+          onCerrar={() => setQuitando(null)}
+          onConfirmar={async () => {
+            const r = await eliminarConductor(conductor.driver_id);
+            if (r.ok) {
+              setQuitando(null);
               onCambio();
             }
             return r;

@@ -1182,6 +1182,12 @@ export type Database = {
         Args: { p_document_id: string };
         Returns: string;
       };
+      admin_archive_driver: { Args: { p_driver_id: string }; Returns: undefined };
+      admin_restore_driver: { Args: { p_driver_id: string }; Returns: undefined };
+      admin_delete_driver: { Args: { p_driver_id: string }; Returns: string[] };
+      admin_archive_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined };
+      admin_restore_vehicle: { Args: { p_vehicle_id: string }; Returns: undefined };
+      admin_delete_vehicle: { Args: { p_vehicle_id: string }; Returns: string[] };
       admin_get_driver_ledger: {
         Args: { p_driver: string; p_limit?: number };
         Returns: {
@@ -1412,15 +1418,17 @@ export type Database = {
         }[];
       };
       admin_list_drivers: {
-        Args: never;
+        Args: { p_archived?: boolean };
         Returns: {
           account_status: Database['public']['Enums']['user_status'];
           approval_status: Database['public']['Enums']['driver_approval_status'];
           approved_at: string;
+          archived_at: string | null;
           created_at: string;
           driver_id: string;
           full_name: string;
           has_active_ride: boolean;
+          has_history: boolean;
           is_available: boolean;
           phone: string;
           plate: string;
@@ -1572,15 +1580,17 @@ export type Database = {
         }[];
       };
       admin_list_vehicles: {
-        Args: never;
+        Args: { p_archived?: boolean };
         Returns: {
           active_driver_id: string;
           active_driver_name: string;
+          archived_at: string | null;
           created_at: string;
           driver_count: number;
           drivers: Json;
           drivers_label: string;
           has_active_ride: boolean;
+          has_history: boolean;
           max_passengers: number;
           model: string;
           notes: string;

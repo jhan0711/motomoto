@@ -3,27 +3,34 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   AlertCircle,
+  Archive,
+  ArchiveRestore,
   ChevronDown,
   ChevronRight,
   Inbox,
   LoaderCircle,
   Pencil,
   Plus,
+  Trash2,
   User,
   UserMinus,
 } from 'lucide-react';
 import {
+  archivarVehiculo,
   asignarVehiculo,
   crearVehiculo,
   editarVehiculo,
+  eliminarVehiculo,
   listarVehiculos,
   quitarVehiculo,
+  restaurarVehiculo,
 } from './vehicle-actions';
 import { ESTILO_ESTADO, ETIQUETA_ESTADO, leerConductores } from './types';
 import type { Vehicle } from './types';
 import { VehicleDialog } from './vehicle-dialog';
 import { AssignDialog } from './assign-dialog';
 import { DocumentsPanel } from '@/features/documents/documents-panel';
+import { RemoveDialog } from '@/features/shared/remove-dialog';
 
 export function VehiclesList() {
   const [vehiculos, setVehiculos] = useState<Vehicle[]>([]);
@@ -34,11 +41,18 @@ export function VehiclesList() {
   const [creando, setCreando] = useState(false);
   const [asignando, setAsignando] = useState<Vehicle | null>(null);
   const [trabajando, setTrabajando] = useState(false);
+  // D306. Cierto cuando se esta viendo la lista de archivados, y que se esta
+  // confirmando (archivar es reversible; eliminar, no).
+  const [archivados, setArchivados] = useState(false);
+  const [quitando, setQuitando] = useState<{
+    vehiculo: Vehicle;
+    modo: 'archivar' | 'eliminar';
+  } | null>(null);
   // Plegados, por lo mismo que en la ficha del conductor.
   const [conDocumentos, setConDocumentos] = useState<string | null>(null);
 
   const consultar = useCallback(async () => {
-    const r = await listarVehiculos();
+    const r = await listarVehiculos(archivados);
     if (!r.ok) {
       setError(r.mensaje);
       setCargando(false);
@@ -47,7 +61,7 @@ export function VehiclesList() {
     setVehiculos(r.vehiculos);
     setError(null);
     setCargando(false);
-  }, []);
+  }, [archivados]);
 
   useEffect(() => {
     const inicial = setTimeout(() => void consultar(), 0);
@@ -67,20 +81,38 @@ export function VehiclesList() {
           <p className="mt-0.5 text-sm text-text-secondary">
             {cargando
               ? 'Consultando…'
-              : `${vehiculos.length} en total · ${activos} activos${
-                  sinConductor === 0 ? '' : ` · ${sinConductor} sin conductor`
-                }`}
+              : archivados
+                ? `${vehiculos.length} archivados`
+                : `${vehiculos.length} en total · ${activos} activos${
+                    sinConductor === 0 ? '' : ` · ${sinConductor} sin conductor`
+                  }`}
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setCreando(true)}
-          className="btn btn-primario h-10 px-3"
-        >
-          <Plus size={16} />
-          Nuevo motocarro
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setCargando(true);
+              setArchivados((v) => !v);
+            }}
+            className="btn btn-secundario h-10 gap-1.5 px-3"
+          >
+            {archivados ? <ArchiveRestore size={16} /> : <Archive size={16} />}
+            {archivados ? 'Ver activos' : 'Ver archivados'}
+          </button>
+
+          {!archivados && (
+            <button
+              type="button"
+              onClick={() => setCreando(true)}
+              className="btn btn-primario h-10 px-3"
+            >
+              <Plus size={16} />
+              Nuevo motocarro
+            </button>
+          )}
+        </div>
       </header>
 
       {error !== null && (
@@ -104,9 +136,13 @@ export function VehiclesList() {
         {!cargando && vehiculos.length === 0 && (
           <div className="flex flex-col items-center gap-2 rounded-xl border border-border bg-surface py-12 text-center">
             <Inbox size={28} className="text-text-tertiary" />
-            <p className="font-medium text-text-primary">Todavía no hay motocarros</p>
+            <p className="font-medium text-text-primary">
+              {archivados ? 'No hay motocarros archivados' : 'Todavía no hay motocarros'}
+            </p>
             <p className="max-w-sm text-sm text-text-secondary">
-              Da de alta el primero con el botón de arriba.
+              {archivados
+                ? 'Los que archives aparecerán aquí y podrás restaurarlos.'
+                : 'Da de alta el primero con el botón de arriba.'}
             </p>
           </div>
         )}
@@ -132,6 +168,11 @@ export function VehiclesList() {
                   {vehiculo.has_active_ride && (
                     <span className="rounded-md bg-info-subtle px-2 py-0.5 text-xs text-info">
                       En servicio ahora
+                    </span>
+                  )}
+                  {archivados && (
+                    <span className="rounded-md bg-surface-subtle px-2 py-0.5 text-xs text-text-secondary">
+                      Archivado
                     </span>
                   )}
                 </div>
@@ -176,48 +217,100 @@ export function VehiclesList() {
               </div>
             </header>
 
-            <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
-              <button
-                type="button"
-                disabled={trabajando}
-                onClick={() => setEditando(vehiculo)}
-                className="btn btn-secundario h-9 gap-1.5 px-3"
-              >
-                <Pencil size={15} />
-                Editar
-              </button>
-
-              {/*
-               * Con el doble turno (D246) ya no hay "el conductor" de la unidad,
-               * asi que "Asignar" pasa a ser "Anadir al turno" en cuanto hay
-               * uno. Mismo criterio que "Agregar otra carga" en la pantalla del
-               * pasajero: el boton dice lo que va a hacer ahora, no lo que hizo
-               * la primera vez.
-               */}
-              <button
-                type="button"
-                disabled={trabajando || vehiculo.status !== 'active'}
-                title={
-                  vehiculo.status !== 'active'
-                    ? 'Solo se pueden asignar motocarros activos.'
-                    : undefined
-                }
-                onClick={() => setAsignando(vehiculo)}
-                className="btn btn-secundario h-9 gap-1.5 px-3"
-              >
-                <User size={15} />
-                {vehiculo.driver_count === 0 ? 'Asignar conductor' : 'Añadir al turno'}
-              </button>
-
-              {/*
-               * Un boton de quitar POR CADA conductor, en vez de uno solo: con
-               * varios compartiendo unidad, "Quitar conductor" a secas no diria
-               * a cual. Cada uno lleva su nombre, que es lo unico que evita
-               * quitar al equivocado.
-               */}
-              {leerConductores(vehiculo).map((conductor) => (
+            {archivados ? (
+              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-3">
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={trabajando}
+                    onClick={async () => {
+                      setTrabajando(true);
+                      const r = await restaurarVehiculo(vehiculo.vehicle_id);
+                      setTrabajando(false);
+                      if (r.ok) void consultar();
+                      else setError(r.mensaje ?? 'No pudimos restaurar el motocarro.');
+                    }}
+                    className="btn btn-primario h-9 gap-1.5 px-3"
+                  >
+                    <ArchiveRestore size={15} />
+                    Restaurar
+                  </button>
+                </div>
+                <p className="text-xs text-text-secondary">
+                  Al restaurarlo vuelve a la lista como «Activo», sin conductores.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-3">
                 <button
-                  key={conductor.id}
+                  type="button"
+                  disabled={trabajando}
+                  onClick={() => setEditando(vehiculo)}
+                  className="btn btn-secundario h-9 gap-1.5 px-3"
+                >
+                  <Pencil size={15} />
+                  Editar
+                </button>
+
+                {/*
+                 * Con el doble turno (D246) ya no hay "el conductor" de la unidad,
+                 * asi que "Asignar" pasa a ser "Anadir al turno" en cuanto hay
+                 * uno. Mismo criterio que "Agregar otra carga" en la pantalla del
+                 * pasajero: el boton dice lo que va a hacer ahora, no lo que hizo
+                 * la primera vez.
+                 */}
+                <button
+                  type="button"
+                  disabled={trabajando || vehiculo.status !== 'active'}
+                  title={
+                    vehiculo.status !== 'active'
+                      ? 'Solo se pueden asignar motocarros activos.'
+                      : undefined
+                  }
+                  onClick={() => setAsignando(vehiculo)}
+                  className="btn btn-secundario h-9 gap-1.5 px-3"
+                >
+                  <User size={15} />
+                  {vehiculo.driver_count === 0 ? 'Asignar conductor' : 'Añadir al turno'}
+                </button>
+
+                {/*
+                 * Un boton de quitar POR CADA conductor, en vez de uno solo: con
+                 * varios compartiendo unidad, "Quitar conductor" a secas no diria
+                 * a cual. Cada uno lleva su nombre, que es lo unico que evita
+                 * quitar al equivocado.
+                 */}
+                {leerConductores(vehiculo).map((conductor) => (
+                  <button
+                    key={conductor.id}
+                    type="button"
+                    disabled={trabajando || vehiculo.has_active_ride}
+                    title={
+                      vehiculo.has_active_ride
+                        ? 'Hay un servicio en curso con esta unidad. Resuélvelo primero.'
+                        : undefined
+                    }
+                    onClick={async () => {
+                      setTrabajando(true);
+                      const r = await quitarVehiculo(conductor.id);
+                      setTrabajando(false);
+                      if (r.ok) void consultar();
+                      else setError(r.mensaje ?? 'No pudimos quitar el motocarro.');
+                    }}
+                    className="btn btn-secundario h-9 gap-1.5 px-3"
+                  >
+                    <UserMinus size={15} />
+                    Quitar a {conductor.name.split(' ')[0]}
+                  </button>
+                ))}
+
+                {/*
+                 * D306. UN SOLO BOTON, Y LA FICHA DECIDE CUAL. Con viajes o con
+                 * conductores que alguna vez lo llevaron solo se archiva: la base
+                 * de datos no deja borrarlo. Sin historial se elimina de verdad. El
+                 * servidor lo vuelve a comprobar al ejecutar.
+                 */}
+                <button
                   type="button"
                   disabled={trabajando || vehiculo.has_active_ride}
                   title={
@@ -225,20 +318,19 @@ export function VehiclesList() {
                       ? 'Hay un servicio en curso con esta unidad. Resuélvelo primero.'
                       : undefined
                   }
-                  onClick={async () => {
-                    setTrabajando(true);
-                    const r = await quitarVehiculo(conductor.id);
-                    setTrabajando(false);
-                    if (r.ok) void consultar();
-                    else setError(r.mensaje ?? 'No pudimos quitar el motocarro.');
-                  }}
+                  onClick={() =>
+                    setQuitando({
+                      vehiculo,
+                      modo: vehiculo.has_history ? 'archivar' : 'eliminar',
+                    })
+                  }
                   className="btn btn-secundario h-9 gap-1.5 px-3"
                 >
-                  <UserMinus size={15} />
-                  Quitar a {conductor.name.split(' ')[0]}
+                  {vehiculo.has_history ? <Archive size={15} /> : <Trash2 size={15} />}
+                  {vehiculo.has_history ? 'Archivar' : 'Eliminar'}
                 </button>
-              ))}
-            </div>
+              </div>
+            )}
 
             <button
               type="button"
@@ -302,6 +394,51 @@ export function VehiclesList() {
             );
             if (r.ok) {
               setEditando(null);
+              void consultar();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {quitando !== null && quitando.modo === 'archivar' && (
+        <RemoveDialog
+          titulo={`Archivar el motocarro ${quitando.vehiculo.unit_number}`}
+          descripcion="Se oculta de la lista y queda como «Retirado». Su historial se conserva y puedes restaurarlo desde «Ver archivados»."
+          aviso={
+            quitando.vehiculo.driver_count > 0
+              ? `Se le quitará ${
+                  quitando.vehiculo.driver_count === 1 ? 'su conductor' : 'sus conductores'
+                }: ${quitando.vehiculo.drivers_label ?? ''}. Si estaban disponibles, se desconectarán.`
+              : undefined
+          }
+          etiquetaConfirmar="Archivar"
+          peligroso={false}
+          onCerrar={() => setQuitando(null)}
+          onConfirmar={async () => {
+            const r = await archivarVehiculo(quitando.vehiculo.vehicle_id);
+            if (r.ok) {
+              setQuitando(null);
+              void consultar();
+            }
+            return r;
+          }}
+        />
+      )}
+
+      {quitando !== null && quitando.modo === 'eliminar' && (
+        <RemoveDialog
+          titulo={`Eliminar el motocarro ${quitando.vehiculo.unit_number}`}
+          descripcion="No tiene viajes ni conductores asignados en su historial. Se borra para siempre, junto con sus documentos. Esto no se puede deshacer."
+          escribirParaConfirmar={String(quitando.vehiculo.unit_number)}
+          queEscribir="el número de la unidad"
+          etiquetaConfirmar="Eliminar para siempre"
+          peligroso
+          onCerrar={() => setQuitando(null)}
+          onConfirmar={async () => {
+            const r = await eliminarVehiculo(quitando.vehiculo.vehicle_id);
+            if (r.ok) {
+              setQuitando(null);
               void consultar();
             }
             return r;

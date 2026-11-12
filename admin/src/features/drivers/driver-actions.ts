@@ -1,6 +1,7 @@
 'use client';
 
 import { createClient } from '@/lib/supabase/client';
+import { BUCKET } from '@/features/documents/types';
 import type { Database } from '@/lib/supabase/database.types';
 import type { ApprovalStatus, Driver } from './types';
 
@@ -33,6 +34,11 @@ const MENSAJES: Record<string, string> = {
   // pide explicacion.
   ACTIVE_RIDE_NEEDS_REASON:
     'Ese conductor tiene un servicio en curso. Escribe el motivo del bloqueo, de al menos 10 caracteres.',
+  // D306: archivar, restaurar y eliminar.
+  ALREADY_ARCHIVED: 'Ese conductor ya está archivado.',
+  NOT_ARCHIVED: 'Ese conductor no está archivado.',
+  DRIVER_HAS_HISTORY:
+    'Ese conductor tiene viajes, saldo o calificaciones: no se puede eliminar, solo archivar.',
 };
 
 function traducir(error: { hint?: string | null; message: string }): string {
@@ -45,11 +51,11 @@ export interface Resultado {
   mensaje?: string;
 }
 
-export async function listarConductores(): Promise<
-  { ok: true; conductores: Driver[] } | { ok: false; mensaje: string }
-> {
+export async function listarConductores(
+  archivados = false,
+): Promise<{ ok: true; conductores: Driver[] } | { ok: false; mensaje: string }> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc('admin_list_drivers');
+  const { data, error } = await supabase.rpc('admin_list_drivers', { p_archived: archivados });
 
   if (error) return { ok: false, mensaje: traducir(error) };
   return { ok: true, conductores: data ?? [] };
@@ -217,4 +223,38 @@ export async function restablecerContrasena(
   if (error) return { ok: false, mensaje: traducir(error) };
   if (typeof data !== 'string') return { ok: false, mensaje: 'No pudimos generar la contraseña.' };
   return { ok: true, password: data };
+}
+
+/** D306. Oculta la ficha de la lista, bloquea la cuenta y le quita el motocarro. */
+export async function archivarConductor(driverId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('admin_archive_driver', { p_driver_id: driverId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/** D306. La devuelve a la lista. La cuenta SIGUE bloqueada hasta que se desbloquee. */
+export async function restaurarConductor(driverId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { error } = await supabase.rpc('admin_restore_driver', { p_driver_id: driverId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+  return { ok: true };
+}
+
+/**
+ * D306. Elimina para siempre a un conductor SIN historial.
+ *
+ * El servidor devuelve las rutas de sus documentos y es aqui donde se quitan del
+ * almacenamiento: Supabase no deja borrar archivos con SQL. Si ese borrado falla
+ * la cuenta ya no existe y los archivos quedan sueltos, pero eso no se le
+ * presenta a quien elimina como un fallo: la operacion que importaba salio bien.
+ */
+export async function eliminarConductor(driverId: string): Promise<Resultado> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc('admin_delete_driver', { p_driver_id: driverId });
+  if (error) return { ok: false, mensaje: traducir(error) };
+
+  const rutas = data ?? [];
+  if (rutas.length > 0) await supabase.storage.from(BUCKET).remove(rutas);
+  return { ok: true };
 }
