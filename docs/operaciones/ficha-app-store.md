@@ -29,7 +29,7 @@
 | Campo                   | Valor                                                                                                               | Límite       |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------- | ------------ |
 | Nombre                  | `AmalfiGoApp`                                                                                                       | 30           |
-| Subtítulo               | `Mototaxi en Amalfi, Antioquia`                                                                                     | 30 (usa 29)  |
+| Subtítulo               | `Muévete fácil, llega seguro.` (elegido por Jhan el 2026-11-13; es el lema de la app)                               | 30 (usa 28)  |
 | Texto promocional       | `Pide un motocarro en Amalfi, ve el valor antes de confirmar y sigue a tu conductor en el mapa.`                    | 170 (usa 94) |
 | Palabras clave          | `mototaxi,motocarro,Amalfi,Antioquia,transporte,taxi,moto,encomienda,conductor,viaje,Colombia`                      | 100 (usa 92) |
 | Idioma principal        | **Español (México)** — App Store Connect no tiene "Español (Colombia)"; es el que Apple usa para toda Latinoamérica | —            |
