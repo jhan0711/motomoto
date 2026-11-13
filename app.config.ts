@@ -52,7 +52,7 @@ const config: ExpoConfig = {
   // el panel, así que se deja como el proyecto ya existe: cambiarlo a `amalfigoapp`
   // rompía todos los comandos de `eas` por no cuadrar con `extra.eas.projectId`.
   slug: 'motomoto',
-  version: '1.0.0',
+  version: '1.0.1',
   orientation: 'portrait',
   icon: './assets/images/icon.png',
   scheme: 'motomoto',
@@ -113,9 +113,9 @@ const config: ExpoConfig = {
     // disco y expone por su ruta. En local sigue leyendo `./google-services.json`.
     googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? './google-services.json',
     adaptiveIcon: {
-      // El fondo del logo (Fase 25 paso 3). Color plano en vez de imagen: el
-      // logo ya trae ese tono, y una imagen de un solo color es peso de más.
-      backgroundColor: '#2A323C',
+      // Logo nuevo (2026-11-13): el dibujo va sobre blanco, que es el fondo del
+      // cuadrado del icono. Color plano en vez de imagen (Fase 25 paso 3).
+      backgroundColor: '#FFFFFF',
       foregroundImage: './assets/images/android-icon-foreground.png',
       monochromeImage: './assets/images/android-icon-monochrome.png',
     },
@@ -221,10 +221,12 @@ const config: ExpoConfig = {
     [
       'expo-splash-screen',
       {
-        // Fase 25 paso 3: el fondo del logo y la marca centrada.
-        backgroundColor: '#2A323C',
+        // Logo nuevo (2026-11-13): la ficha blanca del icono sobre el carbon de la
+        // marca (#14171A). La imagen ya es la ficha redondeada, con margen
+        // transparente: `imageWidth` 200 deja la ficha visible en ~150.
+        backgroundColor: '#14171A',
         image: './assets/images/splash-icon.png',
-        imageWidth: 160,
+        imageWidth: 200,
       },
     ],
     [
