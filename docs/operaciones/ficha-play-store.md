@@ -21,16 +21,16 @@ En la sección 4 (Data Safety), la URL de eliminación de datos es
 
 ## 1. Detalles de la app (App content → Store listing)
 
-| Campo                  | Valor                                                                                            |
-| ---------------------- | ------------------------------------------------------------------------------------------------ |
-| Nombre de la app       | `AmalfiGoApp` (máx. 30)                                                                          |
-| Descripción breve      | `Pide un mototaxi en Amalfi. Ve el precio antes y sigue al conductor en el mapa.` (máx. 80 → 79) |
-| Categoría de la app    | **Mapas y navegación**                                                                           |
-| Etiquetas              | mototaxi, transporte, Amalfi, motocarro                                                         |
-| Correo de contacto     | `soporte@amalfigo.app`                                                                           |
-| Sitio web              | `https://amalfigo.app`                                                                           |
-| Teléfono               | (opcional)                                                                                       |
-| Política de privacidad | `https://amalfigo.app/privacidad`                                                                |
+| Campo                  | Valor                                                                                                                                                            |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Nombre de la app       | `AmalfiGoApp` (máx. 30)                                                                                                                                          |
+| Descripción breve      | `Pide un motocarro en Amalfi. Ve el precio antes y sigue al conductor en el mapa.` (máx. 80 → 80; "mototaxi" pasó a "motocarro" el 2026-11-13, decisión de Jhan) |
+| Categoría de la app    | **Mapas y navegación**                                                                                                                                           |
+| Etiquetas              | mototaxi, transporte, Amalfi, motocarro                                                                                                                          |
+| Correo de contacto     | `soporte@amalfigo.app`                                                                                                                                           |
+| Sitio web              | `https://amalfigo.app`                                                                                                                                           |
+| Teléfono               | (opcional)                                                                                                                                                       |
+| Política de privacidad | `https://amalfigo.app/privacidad`                                                                                                                                |
 
 ### Descripción completa (máx. 4000)
 
@@ -64,12 +64,12 @@ AmalfiGoApp es para Amalfi, Antioquia. Hoy no funciona en otros municipios.
 
 ## 2. Gráficos (Store listing → Graphics)
 
-| Recurso                                | Especificación                                                 | Estado                                                                                                                                                                                              |
-| -------------------------------------- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Icono                                  | 512 × 512 PNG, 32 bits                                         | **Existe:** `assets/images/icon.png`                                                                                                                                                                |
-| Gráfico de funciones (feature graphic) | 1024 × 500 PNG/JPG, sin texto crítico en los bordes            | **HECHO:** `assets/store/feature-graphic.png` (lo genera `assets/brand/feature-graphic.mjs`)                                                                                                        |
+| Recurso                                | Especificación                                                 | Estado                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| -------------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Icono                                  | 512 × 512 PNG, 32 bits                                         | **Existe:** `assets/images/icon.png`                                                                                                                                                                                                                                                                                                                                                                                                     |
+| Gráfico de funciones (feature graphic) | 1024 × 500 PNG/JPG, sin texto crítico en los bordes            | **HECHO:** `assets/store/feature-graphic.png` (lo genera `assets/brand/feature-graphic.mjs`)                                                                                                                                                                                                                                                                                                                                             |
 | Capturas de teléfono                   | 2 a 8, PNG/JPG, lado mín. 320 px, máx. 3840, ratio 16:9 o 9:16 | **7 hechas y uniformes** en `assets/store/capturas/` (1080×2340, sin barra de estado, datos limpios en Amalfi). 1-4: bienvenida, inicio, perfil, historial. 5-7: tarifa, conductor en camino, solicitud del conductor. Todo el set usa la misma pasajera ("Camila Restrepo") y el mismo conductor ("Luis Fernando Muñoz"). El historial se siembra con `supabase/dev-tools/seed_qa_history.sql` (se deshace con `remove_qa_history.sql`) |
-| Capturas de tablet 7" / 10"            | Opcionales                                                     | —                                                                                                                                                                                                   |
+| Capturas de tablet 7" / 10"            | Opcionales                                                     | —                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 **Las 3 capturas que faltaban — HECHAS (2026-09-09).** Viaje simulado
 pasajero (tablet, vc 8) ↔ conductor (emulador), cuentas QA
