@@ -173,6 +173,8 @@ Cuestionario nuevo de Apple (4+, 9+, 13+, 16+, 18+). Respuestas:
 | Compras dentro de la app                             | **No** (no hay compra de productos digitales; ver riesgo 2 de la sección 6)                                |
 | Ubicación compartida con otros usuarios              | **Sí**, durante un viaje                                                                                   |
 
+**Controles en la app (In-App Controls), añadido el 2026-11-13.** El cuestionario de Apple tiene una sección de "Parental Controls" y "Age Assurance". Las dos van en **Ninguno**: la app no tiene ni controles parentales ni verificación de edad. Si quedan marcadas, Apple rechaza con la guía 2.3.6 (le pasó a la versión 1.0.1, revisada el 2026-11-13 en un iPad Air 11" M4).
+
 Resultado esperado: **4+**. Si el cuestionario pide una edad mínima, la
 recomendada por el producto es **18+ como público objetivo** (igual que en Play,
 sección 6 de `ficha-play-store.md`), pero eso no es lo mismo que la
