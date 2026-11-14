@@ -1,5 +1,5 @@
 import { LocateOff, MapPinOff, RotateCw, Settings } from 'lucide-react-native';
-import { StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -127,8 +127,12 @@ function resolve(state: BlockingState): GateContent {
         : {
             icon: Settings,
             title: 'El permiso está desactivado',
+            // El texto dice la verdad de CADA sistema: antes decia "Android" tambien
+            // en el iPhone (visto en TestFlight el 2026-11-14).
             description:
-              'Denegaste el permiso de ubicación, así que Android ya no vuelve a preguntarlo. Puedes activarlo desde los ajustes del teléfono, en Permisos.',
+              Platform.OS === 'ios'
+                ? 'Denegaste el permiso de ubicación, así que el iPhone ya no vuelve a preguntarlo. Puedes activarlo en Ajustes, en AmalfiGoApp, en Ubicación.'
+                : 'Denegaste el permiso de ubicación, así que Android ya no vuelve a preguntarlo. Puedes activarlo desde los ajustes del teléfono, en Permisos.',
             actionLabel: 'Abrir ajustes',
             action: 'settings',
           };
