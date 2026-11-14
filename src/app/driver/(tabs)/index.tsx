@@ -575,7 +575,7 @@ export default function DriverHome() {
           detalle="Sin tu ubicación no podemos ofrecerte servicios cercanos. Revisa el permiso de ubicación."
           accion={
             location.state.kind === 'permission-required' && location.state.canAsk
-              ? { etiqueta: 'Dar permiso', onPress: () => void location.requestPermission() }
+              ? { etiqueta: 'Continuar', onPress: () => void location.requestPermission() }
               : location.state.kind === 'permission-required'
                 ? { etiqueta: 'Abrir ajustes', onPress: () => void location.openSettings() }
                 : location.state.kind === 'services-disabled'

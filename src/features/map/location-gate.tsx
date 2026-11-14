@@ -68,6 +68,16 @@ export function LocationGate({
 }: LocationGateProps) {
   const content = resolve(state);
 
+  // Guia 5.1.1(iv) de Apple (rechazo de la 1.0.1, 2026-11-14): la pantalla que
+  // explica el permiso NO puede ofrecer saltarse el dialogo del sistema, y su
+  // boton tiene que decir "Continuar", no "Permitir". Por eso, mientras el
+  // sistema todavia puede preguntar (`canAsk`), solo hay un camino: continuar
+  // hasta el dialogo. "Continuar sin ubicacion" queda para DESPUES de que el
+  // pasajero haya decidido (denegado el permiso, ubicacion apagada o sin senal):
+  // ahi ya no se esta retrasando la peticion, y sigue valiendo el criterio 6 del
+  // MVP -negar la ubicacion no rompe la app-.
+  const puedeSaltar = !(state.kind === 'permission-required' && state.canAsk);
+
   return (
     <Screen>
       <View style={styles.container}>
@@ -86,7 +96,7 @@ export function LocationGate({
           }
         />
 
-        <Button label="Continuar sin ubicación" variant="ghost" onPress={onSkip} />
+        {puedeSaltar && <Button label="Continuar sin ubicación" variant="ghost" onPress={onSkip} />}
       </View>
     </Screen>
   );
@@ -111,7 +121,7 @@ function resolve(state: BlockingState): GateContent {
             title: 'Necesitamos saber dónde estás',
             description:
               'AmalfiGoApp usa tu ubicación para mostrarte en el mapa y para que el conductor sepa dónde recogerte. Solo mientras tengas la aplicación abierta.',
-            actionLabel: 'Permitir ubicación',
+            actionLabel: 'Continuar',
             action: 'request',
           }
         : {
